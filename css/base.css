@@ -1,0 +1,33 @@
+:root {
+  /* SAP Fiori & UI Color Palette */
+  --color-sap-blue: #0064d1;
+  --color-sap-dark-blue: #004085;
+  --color-sap-shell: #354a5f;
+  --color-sap-bg: #f7f7f7;
+  --color-sap-card: #ffffff;
+  --color-sap-border: #d9d9d9;
+  --color-sap-text: #32363a;
+  --color-sap-secondary-text: #6a6d70;
+  
+  /* Dark Mode Palette */
+  --color-dark-bg: #0f172a;
+  --color-dark-card: #1e293b;
+  --color-dark-border: #334155;
+  --color-dark-text-body: #f1f5f9;
+  --color-dark-text-sidebar: #94a3b8;
+  
+  /* Semantic & Alert Colors */
+  --color-success: #10b981;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
+  --color-vision-accent: #27bfc3;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  
+  /* Layout Sizing & Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --radius-fiori: 0.25rem;
+  --height-header: 3rem; /* 12 unidades Tailwind correspondientes a h-12 */
+}
