@@ -1978,9 +1978,35 @@ function clearAllFiltersMobile() {
                </div>
                ${crimpData ? `<button onclick="openCrimpingModal('${termOrig}', '${c.seccion}')" class="p-2 bg-sap-blue/10 text-sap-blue rounded-full hover:bg-sap-blue hover:text-white transition-all shadow-sm"><i data-lucide="wrench" class="w-4 h-4"></i></button>` : ''}
            </div>
-           ${m && m !== "S/M" ? `<div class="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl flex items-center gap-3"><div class="w-10 h-10 bg-yellow-500/20 flex items-center justify-center rounded-lg text-yellow-700"><i data-lucide="tag" class="w-6 h-6"></i></div><div class="min-w-0"><p class="text-[9px] font-bold uppercase opacity-60">Manguito</p><p class="text-base font-black truncate">${m}</p><p class="text-[10px] text-slate-600 italic truncate">${masterMap.sleeves[m?.trim()]||""}</p></div></div>`:''}
-           ${obs ? `<div class="p-3 bg-blue-50 dark:bg-slate-700/50 rounded-xl border border-blue-100 dark:border-slate-600 text-[11px] text-blue-800 dark:text-slate-300 italic"><strong>NOTAS:</strong> ${obs}</div>` : ''}
-       </div>`; 
+          ${m && m !== "S/M" ? `
+                    <div class="mt-2 flex flex-col w-full">
+                        <div class="p-3 bg-sap-bg dark:bg-slate-900 rounded-xl flex items-center gap-3 mb-2 border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <div class="w-12 h-10 flex items-center justify-center shrink-0 bg-white rounded border border-slate-200 dark:border-slate-500 overflow-hidden p-0.5">
+                                <img src="manguitos/${m.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <i data-lucide="layers" class="w-5 h-5 text-sap-blue" style="display: none;"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[9px] font-bold uppercase opacity-60">Manguito</p>
+                                <p class="text-base font-black truncate">${m}</p>
+                                <p class="text-[10px] text-sap-blue italic truncate">${masterMap.sleeves[m?.trim()] || 'Sin descripción técnica'}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col gap-1 w-full">
+                            <div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Marcaje Físico</div>
+                            <div class="flex border border-black/30 rounded shadow-sm overflow-hidden font-mono text-[11px] text-black bg-[#FFFF99]">
+                                <div class="w-1/2 border-r border-black/20 p-2 flex flex-col items-center justify-center text-center font-bold">
+                                    <span>${c.cable_marca || ''}</span>
+                                </div>
+                                <div class="w-1/2 p-2 flex flex-col items-center justify-center text-center font-bold leading-tight">
+                                    <span class="truncate w-full">${c.de_elemento || ''} ${c.de_punto || ''}</span>
+                                    <span class="truncate w-full">${c.para_elemento || ''} ${c.para_punto || ''}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+`; 
    }).join(''); 
    lucide.createIcons(); 
 }
@@ -2163,41 +2189,58 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
            const crimpData = getCrimpingInfo(cn.term, section);
  
            html += `<div class="${idx > 0 ? 'mt-4 pt-3 border-t-2 border-slate-200 dark:border-slate-600' : ''}">
-               <div class="flex items-center justify-between mb-2">
-                   <span class="bg-sap-blue text-white px-2 py-0.5 rounded text-[9px] font-black uppercase cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: cn.label}))}')">Cable: ${cn.label}</span>
-                   ${crimpData ? `<button onclick="openCrimpingModal('${cn.term}', '${section}')" class="p-1 bg-sap-blue text-white rounded hover:bg-sap-darkBlue transition-colors"><i data-lucide="wrench" class="w-3 h-3"></i></button>` : ''}
-               </div>
-               <div class="space-y-3">
-                   <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-600">
-                       <div class="flex items-center gap-2 text-sap-blue dark:text-sky-400 mb-1">
-                           <div class="w-12 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-500 overflow-hidden shrink-0">
-                               ${!isPseudoTerminal && cn.term ? 
-                                   `<img src="${CRIMP_PATHS.terminales}${cn.term.trim()}.jpg" 
-                                         class="max-h-full max-w-full object-contain" 
-                                         onerror="handlePinError(this)">`
-                                   : (isPseudoTerminal ? '' : `<i data-lucide="pin" class="w-3.5 h-3.5"></i>`)
-                               }
-                           </div>
-                           <span class="font-bold uppercase tracking-tighter text-[10px]">${isPseudoTerminal ? 'Instrucción' : 'Terminal'}</span>
-                       </div>
-                       <div class="${!isPseudoTerminal ? 'pl-14' : ''}">
-                           <div class="font-black text-xs text-slate-800 dark:text-slate-100">${isPseudoTerminal ? cn.term.substring(3) : cn.term || 'S/T'}</div>
-                           <div class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-tight">${tDesc}</div>
-                       </div>
-                   </div>
-                  ${cn.sleeve && cn.sleeve !== 'S/M' ? `
-   <div class="p-3 bg-amber-50 dark:bg-amber-900/30 rounded-xl border border-amber-200 dark:border-amber-700 flex items-center gap-3">
-       <div class="w-10 h-10 bg-amber-500/20 dark:bg-amber-500/30 flex items-center justify-center rounded-lg text-amber-600 dark:text-amber-400">
-           <i data-lucide="tag" class="w-6 h-6"></i>
-       </div>
-       <div class="min-w-0">
-           <p class="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 tracking-widest">Manguito</p>
-           <p class="text-xs font-black text-amber-900 dark:text-amber-200 truncate">${cn.sleeve}</p>
-           <p class="text-[10px] text-amber-700 dark:text-amber-400 italic truncate leading-tight">${sDesc}</p>
-       </div>
-   </div>` : ''}
-               </div>
-           </div>`;
+                <div class="flex items-center justify-between mb-2">
+                    <span class="bg-sap-blue text-white px-2 py-0.5 rounded text-[9px] font-black uppercase cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: cn.label}))}')">Cable: ${cn.label}</span>
+                    ${crimpData ? `<button onclick="openCrimpingModal('${cn.term}', '${section}')" class="p-1 bg-sap-blue text-white rounded hover:bg-sap-darkBlue transition-colors"><i data-lucide="wrench" class="w-3 h-3"></i></button>` : ''}
+                </div>
+                <div class="space-y-3">
+                    <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-600">
+                        <div class="flex items-center gap-2 text-sap-blue dark:text-sky-400 mb-1">
+                            <div class="w-12 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-500 overflow-hidden shrink-0">
+                                ${!isPseudoTerminal && cn.term ? 
+                                    `<img src="${CRIMP_PATHS.terminales}${cn.term.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)">`
+                                    : (isPseudoTerminal ? '' : `<i data-lucide="pin" class="w-3.5 h-3.5"></i>`)
+                                }
+                            </div>
+                            <span class="font-bold uppercase tracking-tighter text-[10px]">${isPseudoTerminal ? 'Instrucción' : 'Terminal'}</span>
+                        </div>
+                        <div class="${!isPseudoTerminal ? 'pl-14' : ''}">
+                            <div class="font-black text-xs text-slate-800 dark:text-slate-100">${isPseudoTerminal ? cn.term.substring(3) : cn.term || 'S/T'}</div>
+                            <div class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-tight">${tDesc}</div>
+                        </div>
+                    </div>
+
+                    ${cn.sleeve && cn.sleeve !== 'S/M' ? `
+                    <div class="mt-2 flex flex-col gap-2 w-full">
+                        <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-600">
+                            <div class="flex items-center gap-2 text-sap-blue dark:text-sky-400 mb-1">
+                                <div class="w-12 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-500 overflow-hidden shrink-0 p-0.5">
+                                    <img src="manguitos/${cn.sleeve.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                    <i data-lucide="layers" class="w-3.5 h-3.5" style="display: none;"></i>
+                                </div>
+                                <span class="font-bold uppercase tracking-tighter text-[10px]">Manguito</span>
+                            </div>
+                            <div class="pl-14">
+                                <div class="font-black text-xs text-slate-800 dark:text-slate-100">${cn.sleeve}</div>
+                                <div class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-tight">${sDesc || 'Sin descripción técnica'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col gap-1 w-full">
+                            <div class="flex border border-black/30 rounded shadow-sm overflow-hidden font-mono text-[11px] text-black bg-[#FFFF99]">
+                                <div class="w-1/2 border-r border-black/20 p-2 flex flex-col items-center justify-center text-center font-bold">
+                                    <span>${cn.label || ''}</span>
+                                </div>
+                                <div class="w-1/2 p-2 flex flex-col items-center justify-center text-center font-bold leading-tight">
+                                    <span class="truncate w-full">${cableData ? (cableData.de_elemento || '') + ' ' + (cableData.de_punto || '') : ''}</span>
+                                    <span class="truncate w-full">${cableData ? (cableData.para_elemento || '') + ' ' + (cableData.para_punto || '') : ''}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>`;
        });
   } else if (d.type === 'cable') {
        const cd = d.posicion
