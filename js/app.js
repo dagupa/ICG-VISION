@@ -2524,24 +2524,29 @@ internalBridges.forEach((b, idx) => {
        if (extIn.length > 0) {
            const stubX = mX - 100, blockRightEdge = stubX - 100;
            const anyLocalOk = extIn.some(c => (progressMap[c.posicion] || {}).para === true && (c.cable_marca||'') !== '');
-           extIn.forEach((c, idx) => {
+           const extInConCable = extIn.filter(c => (c.cable_marca || '') !== '' || (c.observaciones || '').toUpperCase() === 'BUSBAR');
+           extIn.forEach((c) => {
                const tieneCable = (c.cable_marca || '') !== '';
                const tieneObturador = !tieneCable && (c.para_terminal || '') !== '' && (c.para_terminal || '').toUpperCase() !== 'S/T' && !isKN(c.para_terminal);
-               if (!tieneCable && !tieneObturador) return;
+               const isBusbar = (c.observaciones || '').toUpperCase() === 'BUSBAR';
+               if (!tieneCable && !tieneObturador && !isBusbar) return;
                if (tieneObturador) {
                    svg.innerHTML += `<circle cx="${mX + mainW - 8}" cy="${y + 8}" r="4" fill="#64748b" opacity="0.8" pointer-events="none"/>`;
                    return;
                }
+               const idx = extInConCable.indexOf(c);
                const isLocalOk = (progressMap[c.posicion] || {}).para === true;
-               const lY = extIn.length > 1 ? y+(idx-(extIn.length-1)/2)*32 : y;
-               const xInicio = extIn.length > 1 ? stubX : mX;
-               svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockRightEdge}" y2="${lY}" class="diag-line" style="${isLocalOk?'stroke:#10b981;':''}"/>
+               const lY = extInConCable.length > 1 ? y+(idx-(extInConCable.length-1)/2)*32 : y;
+               const xInicio = extInConCable.length > 1 ? stubX : mX;
+               const lineStyle = isBusbar ? `stroke:#a855f7; stroke-dasharray:4 3;` : `${isLocalOk?'stroke:#10b981;':''}`;
+               const wireLabel = isBusbar ? 'BUSBAR' : c.cable_marca;
+               const wireColor = isBusbar ? '#a855f7' : `${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}`;
+               svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockRightEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
                    <rect x="${blockRightEdge - 160}" y="${lY-12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${c.de_elemento}')"/>
                    <text x="${document.dir === 'rtl' ? blockRightEdge - 8 : blockRightEdge - 152}" y="${lY+4}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${c.de_elemento.toUpperCase()}</text>
                    <text x="${document.dir === 'rtl' ? blockRightEdge - 150 : blockRightEdge - 10}" y="${lY+4}" text-anchor="${document.dir === 'rtl' ? 'start' : 'end'}" class="diag-text-label" style="font-weight:900; pointer-events:none;">${c.de_punto}</text>
-                  <text x="${(xInicio + blockRightEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: c.cable_marca, posicion: c.posicion}))}')" style="${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}">${c.cable_marca}</text>`;
+                  <text x="${(xInicio + blockRightEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: wireLabel, posicion: c.posicion}))}')" style="${wireColor}">${wireLabel}</text>`;
            });
-           const extInConCable = extIn.filter(c => (c.cable_marca || '') !== '');
            if (extInConCable.length > 1) {
                svg.innerHTML += `<line x1="${mX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>
                                  <line x1="${stubX}" y1="${y+(-(extInConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extInConCable.length-1)/2)*32}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>`;
@@ -2552,24 +2557,29 @@ internalBridges.forEach((b, idx) => {
        if (extOut.length > 0) {
            const origX = mX + mainW, stubX = origX + 100, blockLeftEdge = stubX + 100;
            const anyLocalOk = extOut.some(c => (progressMap[c.posicion] || {}).de === true && (c.cable_marca||'') !== '');
-           extOut.forEach((c, idx) => {
+           const extOutConCable = extOut.filter(c => (c.cable_marca || '') !== '' || (c.observaciones || '').toUpperCase() === 'BUSBAR');
+           extOut.forEach((c) => {
                const tieneCable = (c.cable_marca || '') !== '';
                const tieneObturador = !tieneCable && (c.de_terminal || '') !== '' && (c.de_terminal || '').toUpperCase() !== 'S/T' && !isKN(c.de_terminal);
-               if (!tieneCable && !tieneObturador) return;
+               const isBusbar = (c.observaciones || '').toUpperCase() === 'BUSBAR';
+               if (!tieneCable && !tieneObturador && !isBusbar) return;
                if (tieneObturador) {
                    svg.innerHTML += `<circle cx="${mX + mainW - 8}" cy="${y + 8}" r="4" fill="#64748b" opacity="0.8" pointer-events="none"/>`;
                    return;
                }
+               const idx = extOutConCable.indexOf(c);
                const isLocalOk = (progressMap[c.posicion] || {}).de === true;
-               const lY = extOut.length > 1 ? y+(idx-(extOut.length-1)/2)*32 : y;
-               const xInicio = extOut.length > 1 ? stubX : origX;
-               svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockLeftEdge}" y2="${lY}" class="diag-line" style="${isLocalOk?'stroke:#10b981;':''}"/>
+               const lY = extOutConCable.length > 1 ? y+(idx-(extOutConCable.length-1)/2)*32 : y;
+               const xInicio = extOutConCable.length > 1 ? stubX : origX;
+               const lineStyle = isBusbar ? `stroke:#a855f7; stroke-dasharray:4 3;` : `${isLocalOk?'stroke:#10b981;':''}`;
+               const wireLabel = isBusbar ? 'BUSBAR' : c.cable_marca;
+               const wireColor = isBusbar ? '#a855f7' : `${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}`;
+               svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockLeftEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
                    <rect x="${blockLeftEdge}" y="${lY-12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${c.para_elemento}')"/>
                    <text x="${document.dir === 'rtl' ? blockLeftEdge + 10 : blockLeftEdge + 152}" y="${lY+4}" text-anchor="${document.dir === 'rtl' ? 'start' : 'end'}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${c.para_elemento.toUpperCase()}</text>
                    <text x="${document.dir === 'rtl' ? blockLeftEdge + 150 : blockLeftEdge + 10}" y="${lY+4}" class="diag-text-label" style="font-weight:900; pointer-events:none;">${c.para_punto}</text>
-                  <text x="${(xInicio + blockLeftEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: c.cable_marca, posicion: c.posicion}))}')" style="${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}">${c.cable_marca}</text>`;
+                  <text x="${(xInicio + blockLeftEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: wireLabel, posicion: c.posicion}))}')" style="${wireColor}">${wireLabel}</text>`;
            });
-           const extOutConCable = extOut.filter(c => (c.cable_marca || '') !== '');
            if (extOutConCable.length > 1) {
                svg.innerHTML += `<line x1="${origX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>
                                  <line x1="${stubX}" y1="${y+(-(extOutConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extOutConCable.length-1)/2)*32}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>`;
