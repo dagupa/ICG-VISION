@@ -1898,9 +1898,39 @@ function clearAllFiltersMobile() {
            document.getElementById('detailElementName').innerText = elN.toUpperCase(); document.getElementById('detailModal').classList.remove('hidden'); document.getElementById('detailModal').classList.add('flex');
            renderDetailStep(); renderProgressList();
        }
-       function closeDetailMode() { document.getElementById('detailModal').classList.add('hidden'); const s = filterText.trim(); if (s) drawDiagram(s); updateView(); }
-       
-      function renderDetailStep() {
+       function closeDetailMode() {
+    document.getElementById('detailModal').classList.add('hidden');
+    const s = filterText.trim();
+    if (s) drawDiagram(s);
+    updateView();
+}
+
+// LOGICA COLOR MANGUITOS
+const MANGUITOS_BLANCOS = [
+    '649D20021', '649D20022', '649D20023', '649964', '649962', 
+    '649963', '649965', '649966', '649D20002', '649D20000', 
+    '649D20001', '649D20003'
+];
+
+function getManguitoBgClass(codigo) {
+    if (!codigo) return 'border-black/30 bg-[#FFFF99]';
+    const cleanCode = codigo.toString().trim().toUpperCase();
+    if (MANGUITOS_BLANCOS.includes(cleanCode)) {
+        return 'border-black bg-white';
+    }
+    return 'border-black/30 bg-[#FFFF99]';
+}
+
+function getHoleRightClass(codigo) {
+    if (!codigo) return 'bg-gradient-to-l from-yellow-600 to-[#FFFF99]';
+    const cleanCode = codigo.toString().trim().toUpperCase();
+    if (MANGUITOS_BLANCOS.includes(cleanCode)) {
+        return 'bg-gradient-to-l from-gray-400 to-white';
+    }
+    return 'bg-gradient-to-l from-yellow-600 to-[#FFFF99]';
+}
+
+function renderDetailStep() {
    const pin = detailPinSequence[currentDetailIndex], connections = detailPinDataMap.get(pin);
    const currentElName = document.getElementById('detailElementName').innerText.toLowerCase();
    
@@ -1992,18 +2022,22 @@ function clearAllFiltersMobile() {
                             </div>
                         </div>
                         
-                        <div class="flex flex-col gap-1 w-full">
-                            <div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Marcaje Físico</div>
-                            <div class="flex border border-black/30 rounded shadow-sm overflow-hidden font-mono text-[11px] text-black bg-[#FFFF99]">
-                                <div class="w-1/2 border-r border-black/20 p-2 flex flex-col items-center justify-center text-center font-bold">
-                                    <span>${c.cable_marca || ''}</span>
-                                </div>
-                                <div class="w-1/2 p-2 flex flex-col items-center justify-center text-center font-bold leading-tight">
-                                    <span class="truncate w-full">${c.de_elemento || ''} ${c.de_punto || ''}</span>
-                                    <span class="truncate w-full">${c.para_elemento || ''} ${c.para_punto || ''}</span>
-                                </div>
-                            </div>
-                        </div>
+                       <div class="flex flex-col gap-1 w-full">
+                <div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Marcaje Físico</div>
+                <div class="flex items-stretch border ${getManguitoBgClass(m)} rounded-r-lg shadow-sm overflow-hidden font-mono text-[11px] text-black">
+                 <div class="flex-1 flex">
+    <div class="w-1/2 border-r border-black/20 py-1 px-2 flex flex-col items-center justify-center text-center font-bold">
+        <span>${c.cable_marca || ''}</span>
+    </div>
+    <div class="w-1/2 py-1 px-2 flex flex-col items-center justify-center text-center font-bold leading-tight">
+        <span class="truncate w-full">${c.de_elemento || ''} ${c.de_punto || ''}</span>
+        <span class="truncate w-full">${c.para_elemento || ''} ${c.para_punto || ''}</span>
+    </div>
+</div>
+
+                  <div class="w-1.5 ${getHoleRightClass(m)} shadow-inner flex-shrink-0"></div>
+                </div>
+              </div>
                     </div>
                     ` : ''}
 `; 
@@ -2227,16 +2261,21 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
                         </div>
                         
                         <div class="flex flex-col gap-1 w-full">
-                            <div class="flex border border-black/30 rounded shadow-sm overflow-hidden font-mono text-[11px] text-black bg-[#FFFF99]">
-                                <div class="w-1/2 border-r border-black/20 p-2 flex flex-col items-center justify-center text-center font-bold">
-                                    <span>${cn.label || ''}</span>
-                                </div>
-                                <div class="w-1/2 p-2 flex flex-col items-center justify-center text-center font-bold leading-tight">
-                                    <span class="truncate w-full">${cableData ? (cableData.de_elemento || '') + ' ' + (cableData.de_punto || '') : ''}</span>
-                                    <span class="truncate w-full">${cableData ? (cableData.para_elemento || '') + ' ' + (cableData.para_punto || '') : ''}</span>
+                                <div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Marcaje Físico</div>
+                                <div class="flex items-stretch border ${getManguitoBgClass(cn.sleeve)} rounded-r-lg shadow-sm overflow-hidden font-mono text-[11px] text-black">
+                                 <div class="flex-1 flex">
+    <div class="w-1/2 border-r border-black/20 py-1 px-2 flex flex-col items-center justify-center text-center font-bold">
+        <span>${cn.label || ''}</span>
+    </div>
+    <div class="w-1/2 py-1 px-2 flex flex-col items-center justify-center text-center font-bold leading-tight">
+        <span class="truncate w-full">${cableData ? (cableData.de_elemento || '') + ' ' + (cableData.de_punto || '') : ''}</span>
+        <span class="truncate w-full">${cableData ? (cableData.para_elemento || '') + ' ' + (cableData.para_punto || '') : ''}</span>
+    </div>
+</div>
+
+                                    <div class="w-1.5 ${getHoleRightClass(cn.sleeve)} shadow-inner flex-shrink-0"></div>
                                 </div>
                             </div>
-                        </div>
                     </div>
                     ` : ''}
                 </div>
