@@ -220,3 +220,21 @@ th { position: relative; }
   }
   #mainSidebar.sidebar-open { transform: translateX(0); }
 }
+
+/* Estilo unificado para encabezados de tarjetas */
+.card-header-uniform {
+    background-color: #0d757a; /* bg-gray-800 */
+    color: #ffffff;
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-header-uniform span.title-text {
+    font-size: 0.625rem; /* text-[10px] */
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em; /* tracking-widest */
+    color: #ffffff; /* text-emerald-400 */
+}

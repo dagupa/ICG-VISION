@@ -1898,9 +1898,39 @@ function clearAllFiltersMobile() {
            document.getElementById('detailElementName').innerText = elN.toUpperCase(); document.getElementById('detailModal').classList.remove('hidden'); document.getElementById('detailModal').classList.add('flex');
            renderDetailStep(); renderProgressList();
        }
-       function closeDetailMode() { document.getElementById('detailModal').classList.add('hidden'); const s = filterText.trim(); if (s) drawDiagram(s); updateView(); }
-       
-      function renderDetailStep() {
+       function closeDetailMode() {
+    document.getElementById('detailModal').classList.add('hidden');
+    const s = filterText.trim();
+    if (s) drawDiagram(s);
+    updateView();
+}
+
+// LOGICA COLOR MANGUITOS
+const MANGUITOS_BLANCOS = [
+    '649D20021', '649D20022', '649D20023', '649964', '649962', 
+    '649963', '649965', '649966', '649D20002', '649D20000', 
+    '649D20001', '649D20003'
+];
+
+function getManguitoBgClass(codigo) {
+    if (!codigo) return 'border-black/30 bg-[#FFFF99]';
+    const cleanCode = codigo.toString().trim().toUpperCase();
+    if (MANGUITOS_BLANCOS.includes(cleanCode)) {
+        return 'border-black bg-white';
+    }
+    return 'border-black/30 bg-[#FFFF99]';
+}
+
+function getHoleRightClass(codigo) {
+    if (!codigo) return 'bg-gradient-to-l from-yellow-600 to-[#FFFF99]';
+    const cleanCode = codigo.toString().trim().toUpperCase();
+    if (MANGUITOS_BLANCOS.includes(cleanCode)) {
+        return 'bg-gradient-to-l from-gray-400 to-white';
+    }
+    return 'bg-gradient-to-l from-yellow-600 to-[#FFFF99]';
+}
+
+function renderDetailStep() {
    const pin = detailPinSequence[currentDetailIndex], connections = detailPinDataMap.get(pin);
    const currentElName = document.getElementById('detailElementName').innerText.toLowerCase();
    
@@ -1978,9 +2008,39 @@ function clearAllFiltersMobile() {
                </div>
                ${crimpData ? `<button onclick="openCrimpingModal('${termOrig}', '${c.seccion}')" class="p-2 bg-sap-blue/10 text-sap-blue rounded-full hover:bg-sap-blue hover:text-white transition-all shadow-sm"><i data-lucide="wrench" class="w-4 h-4"></i></button>` : ''}
            </div>
-           ${m && m !== "S/M" ? `<div class="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl flex items-center gap-3"><div class="w-10 h-10 bg-yellow-500/20 flex items-center justify-center rounded-lg text-yellow-700"><i data-lucide="tag" class="w-6 h-6"></i></div><div class="min-w-0"><p class="text-[9px] font-bold uppercase opacity-60">Manguito</p><p class="text-base font-black truncate">${m}</p><p class="text-[10px] text-slate-600 italic truncate">${masterMap.sleeves[m?.trim()]||""}</p></div></div>`:''}
-           ${obs ? `<div class="p-3 bg-blue-50 dark:bg-slate-700/50 rounded-xl border border-blue-100 dark:border-slate-600 text-[11px] text-blue-800 dark:text-slate-300 italic"><strong>NOTAS:</strong> ${obs}</div>` : ''}
-       </div>`; 
+          ${m && m !== "S/M" ? `
+                    <div class="mt-2 flex flex-col w-full">
+                        <div class="p-3 bg-sap-bg dark:bg-slate-900 rounded-xl flex items-center gap-3 mb-2 border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <div class="w-12 h-10 flex items-center justify-center shrink-0 bg-white rounded border border-slate-200 dark:border-slate-500 overflow-hidden p-0.5">
+                                <img src="manguitos/${m.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <i data-lucide="layers" class="w-5 h-5 text-sap-blue" style="display: none;"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[9px] font-bold uppercase opacity-60">Manguito</p>
+                                <p class="text-base font-black truncate">${m}</p>
+                                <p class="text-[10px] text-sap-blue italic truncate">${masterMap.sleeves[m?.trim()] || 'Sin descripción técnica'}</p>
+                            </div>
+                        </div>
+                        
+                       <div class="flex flex-col gap-1 w-full">
+                <div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Marcaje Físico</div>
+                <div class="flex items-stretch border ${getManguitoBgClass(m)} rounded-r-lg shadow-sm overflow-hidden font-mono text-[11px] text-black">
+                 <div class="flex-1 flex">
+    <div class="w-1/2 border-r border-black/20 py-1 px-2 flex flex-col items-center justify-center text-center font-bold">
+        <span>${c.cable_marca || ''}</span>
+    </div>
+    <div class="w-1/2 py-1 px-2 flex flex-col items-center justify-center text-center font-bold leading-tight">
+        <span class="truncate w-full">${c.de_elemento || ''} ${c.de_punto || ''}</span>
+        <span class="truncate w-full">${c.para_elemento || ''} ${c.para_punto || ''}</span>
+    </div>
+</div>
+
+                  <div class="w-1.5 ${getHoleRightClass(m)} shadow-inner flex-shrink-0"></div>
+                </div>
+              </div>
+                    </div>
+                    ` : ''}
+`; 
    }).join(''); 
    lucide.createIcons(); 
 }
@@ -2163,41 +2223,63 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
            const crimpData = getCrimpingInfo(cn.term, section);
  
            html += `<div class="${idx > 0 ? 'mt-4 pt-3 border-t-2 border-slate-200 dark:border-slate-600' : ''}">
-               <div class="flex items-center justify-between mb-2">
-                   <span class="bg-sap-blue text-white px-2 py-0.5 rounded text-[9px] font-black uppercase cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: cn.label}))}')">Cable: ${cn.label}</span>
-                   ${crimpData ? `<button onclick="openCrimpingModal('${cn.term}', '${section}')" class="p-1 bg-sap-blue text-white rounded hover:bg-sap-darkBlue transition-colors"><i data-lucide="wrench" class="w-3 h-3"></i></button>` : ''}
-               </div>
-               <div class="space-y-3">
-                   <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-600">
-                       <div class="flex items-center gap-2 text-sap-blue dark:text-sky-400 mb-1">
-                           <div class="w-12 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-500 overflow-hidden shrink-0">
-                               ${!isPseudoTerminal && cn.term ? 
-                                   `<img src="${CRIMP_PATHS.terminales}${cn.term.trim()}.jpg" 
-                                         class="max-h-full max-w-full object-contain" 
-                                         onerror="handlePinError(this)">`
-                                   : (isPseudoTerminal ? '' : `<i data-lucide="pin" class="w-3.5 h-3.5"></i>`)
-                               }
-                           </div>
-                           <span class="font-bold uppercase tracking-tighter text-[10px]">${isPseudoTerminal ? 'Instrucción' : 'Terminal'}</span>
-                       </div>
-                       <div class="${!isPseudoTerminal ? 'pl-14' : ''}">
-                           <div class="font-black text-xs text-slate-800 dark:text-slate-100">${isPseudoTerminal ? cn.term.substring(3) : cn.term || 'S/T'}</div>
-                           <div class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-tight">${tDesc}</div>
-                       </div>
-                   </div>
-                  ${cn.sleeve && cn.sleeve !== 'S/M' ? `
-   <div class="p-3 bg-amber-50 dark:bg-amber-900/30 rounded-xl border border-amber-200 dark:border-amber-700 flex items-center gap-3">
-       <div class="w-10 h-10 bg-amber-500/20 dark:bg-amber-500/30 flex items-center justify-center rounded-lg text-amber-600 dark:text-amber-400">
-           <i data-lucide="tag" class="w-6 h-6"></i>
-       </div>
-       <div class="min-w-0">
-           <p class="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 tracking-widest">Manguito</p>
-           <p class="text-xs font-black text-amber-900 dark:text-amber-200 truncate">${cn.sleeve}</p>
-           <p class="text-[10px] text-amber-700 dark:text-amber-400 italic truncate leading-tight">${sDesc}</p>
-       </div>
-   </div>` : ''}
-               </div>
-           </div>`;
+                <div class="flex items-center justify-between mb-2">
+                    <span class="bg-sap-blue text-white px-2 py-0.5 rounded text-[9px] font-black uppercase cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: cn.label}))}')">Cable: ${cn.label}</span>
+                    ${crimpData ? `<button onclick="openCrimpingModal('${cn.term}', '${section}')" class="p-1 bg-sap-blue text-white rounded hover:bg-sap-darkBlue transition-colors"><i data-lucide="wrench" class="w-3 h-3"></i></button>` : ''}
+                </div>
+                <div class="space-y-3">
+                    <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-600">
+                        <div class="flex items-center gap-2 text-sap-blue dark:text-sky-400 mb-1">
+                            <div class="w-12 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-500 overflow-hidden shrink-0">
+                                ${!isPseudoTerminal && cn.term ? 
+                                    `<img src="${CRIMP_PATHS.terminales}${cn.term.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)">`
+                                    : (isPseudoTerminal ? '' : `<i data-lucide="pin" class="w-3.5 h-3.5"></i>`)
+                                }
+                            </div>
+                            <span class="font-bold uppercase tracking-tighter text-[10px]">${isPseudoTerminal ? 'Instrucción' : 'Terminal'}</span>
+                        </div>
+                        <div class="${!isPseudoTerminal ? 'pl-14' : ''}">
+                            <div class="font-black text-xs text-slate-800 dark:text-slate-100">${isPseudoTerminal ? cn.term.substring(3) : cn.term || 'S/T'}</div>
+                            <div class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-tight">${tDesc}</div>
+                        </div>
+                    </div>
+
+                    ${cn.sleeve && cn.sleeve !== 'S/M' ? `
+                    <div class="mt-2 flex flex-col gap-2 w-full">
+                        <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-600">
+                            <div class="flex items-center gap-2 text-sap-blue dark:text-sky-400 mb-1">
+                                <div class="w-12 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-500 overflow-hidden shrink-0 p-0.5">
+                                    <img src="manguitos/${cn.sleeve.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                    <i data-lucide="layers" class="w-3.5 h-3.5" style="display: none;"></i>
+                                </div>
+                                <span class="font-bold uppercase tracking-tighter text-[10px]">Manguito</span>
+                            </div>
+                            <div class="pl-14">
+                                <div class="font-black text-xs text-slate-800 dark:text-slate-100">${cn.sleeve}</div>
+                                <div class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-tight">${sDesc || 'Sin descripción técnica'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col gap-1 w-full">
+                                <div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Marcaje Físico</div>
+                                <div class="flex items-stretch border ${getManguitoBgClass(cn.sleeve)} rounded-r-lg shadow-sm overflow-hidden font-mono text-[11px] text-black">
+                                 <div class="flex-1 flex">
+    <div class="w-1/2 border-r border-black/20 py-1 px-2 flex flex-col items-center justify-center text-center font-bold">
+        <span>${cn.label || ''}</span>
+    </div>
+    <div class="w-1/2 py-1 px-2 flex flex-col items-center justify-center text-center font-bold leading-tight">
+        <span class="truncate w-full">${cableData ? (cableData.de_elemento || '') + ' ' + (cableData.de_punto || '') : ''}</span>
+        <span class="truncate w-full">${cableData ? (cableData.para_elemento || '') + ' ' + (cableData.para_punto || '') : ''}</span>
+    </div>
+</div>
+
+                                    <div class="w-1.5 ${getHoleRightClass(cn.sleeve)} shadow-inner flex-shrink-0"></div>
+                                </div>
+                            </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>`;
        });
   } else if (d.type === 'cable') {
        const cd = d.posicion
@@ -2481,24 +2563,29 @@ internalBridges.forEach((b, idx) => {
        if (extIn.length > 0) {
            const stubX = mX - 100, blockRightEdge = stubX - 100;
            const anyLocalOk = extIn.some(c => (progressMap[c.posicion] || {}).para === true && (c.cable_marca||'') !== '');
-           extIn.forEach((c, idx) => {
+           const extInConCable = extIn.filter(c => (c.cable_marca || '') !== '' || (c.observaciones || '').toUpperCase() === 'BUSBAR');
+           extIn.forEach((c) => {
                const tieneCable = (c.cable_marca || '') !== '';
                const tieneObturador = !tieneCable && (c.para_terminal || '') !== '' && (c.para_terminal || '').toUpperCase() !== 'S/T' && !isKN(c.para_terminal);
-               if (!tieneCable && !tieneObturador) return;
+               const isBusbar = (c.observaciones || '').toUpperCase() === 'BUSBAR';
+               if (!tieneCable && !tieneObturador && !isBusbar) return;
                if (tieneObturador) {
                    svg.innerHTML += `<circle cx="${mX + mainW - 8}" cy="${y + 8}" r="4" fill="#64748b" opacity="0.8" pointer-events="none"/>`;
                    return;
                }
+               const idx = extInConCable.indexOf(c);
                const isLocalOk = (progressMap[c.posicion] || {}).para === true;
-               const lY = extIn.length > 1 ? y+(idx-(extIn.length-1)/2)*32 : y;
-               const xInicio = extIn.length > 1 ? stubX : mX;
-               svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockRightEdge}" y2="${lY}" class="diag-line" style="${isLocalOk?'stroke:#10b981;':''}"/>
+               const lY = extInConCable.length > 1 ? y+(idx-(extInConCable.length-1)/2)*32 : y;
+               const xInicio = extInConCable.length > 1 ? stubX : mX;
+               const lineStyle = isBusbar ? `stroke:#a855f7; stroke-dasharray:4 3;` : `${isLocalOk?'stroke:#10b981;':''}`;
+               const wireLabel = isBusbar ? 'BUSBAR' : c.cable_marca;
+               const wireColor = isBusbar ? '#a855f7' : `${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}`;
+               svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockRightEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
                    <rect x="${blockRightEdge - 160}" y="${lY-12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${c.de_elemento}')"/>
                    <text x="${document.dir === 'rtl' ? blockRightEdge - 8 : blockRightEdge - 152}" y="${lY+4}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${c.de_elemento.toUpperCase()}</text>
                    <text x="${document.dir === 'rtl' ? blockRightEdge - 150 : blockRightEdge - 10}" y="${lY+4}" text-anchor="${document.dir === 'rtl' ? 'start' : 'end'}" class="diag-text-label" style="font-weight:900; pointer-events:none;">${c.de_punto}</text>
-                  <text x="${(xInicio + blockRightEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: c.cable_marca, posicion: c.posicion}))}')" style="${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}">${c.cable_marca}</text>`;
+                  <text x="${(xInicio + blockRightEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: wireLabel, posicion: c.posicion}))}')" style="${wireColor}">${wireLabel}</text>`;
            });
-           const extInConCable = extIn.filter(c => (c.cable_marca || '') !== '');
            if (extInConCable.length > 1) {
                svg.innerHTML += `<line x1="${mX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>
                                  <line x1="${stubX}" y1="${y+(-(extInConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extInConCable.length-1)/2)*32}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>`;
@@ -2509,24 +2596,29 @@ internalBridges.forEach((b, idx) => {
        if (extOut.length > 0) {
            const origX = mX + mainW, stubX = origX + 100, blockLeftEdge = stubX + 100;
            const anyLocalOk = extOut.some(c => (progressMap[c.posicion] || {}).de === true && (c.cable_marca||'') !== '');
-           extOut.forEach((c, idx) => {
+           const extOutConCable = extOut.filter(c => (c.cable_marca || '') !== '' || (c.observaciones || '').toUpperCase() === 'BUSBAR');
+           extOut.forEach((c) => {
                const tieneCable = (c.cable_marca || '') !== '';
                const tieneObturador = !tieneCable && (c.de_terminal || '') !== '' && (c.de_terminal || '').toUpperCase() !== 'S/T' && !isKN(c.de_terminal);
-               if (!tieneCable && !tieneObturador) return;
+               const isBusbar = (c.observaciones || '').toUpperCase() === 'BUSBAR';
+               if (!tieneCable && !tieneObturador && !isBusbar) return;
                if (tieneObturador) {
                    svg.innerHTML += `<circle cx="${mX + mainW - 8}" cy="${y + 8}" r="4" fill="#64748b" opacity="0.8" pointer-events="none"/>`;
                    return;
                }
+               const idx = extOutConCable.indexOf(c);
                const isLocalOk = (progressMap[c.posicion] || {}).de === true;
-               const lY = extOut.length > 1 ? y+(idx-(extOut.length-1)/2)*32 : y;
-               const xInicio = extOut.length > 1 ? stubX : origX;
-               svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockLeftEdge}" y2="${lY}" class="diag-line" style="${isLocalOk?'stroke:#10b981;':''}"/>
+               const lY = extOutConCable.length > 1 ? y+(idx-(extOutConCable.length-1)/2)*32 : y;
+               const xInicio = extOutConCable.length > 1 ? stubX : origX;
+               const lineStyle = isBusbar ? `stroke:#a855f7; stroke-dasharray:4 3;` : `${isLocalOk?'stroke:#10b981;':''}`;
+               const wireLabel = isBusbar ? 'BUSBAR' : c.cable_marca;
+               const wireColor = isBusbar ? '#a855f7' : `${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}`;
+               svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockLeftEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
                    <rect x="${blockLeftEdge}" y="${lY-12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${c.para_elemento}')"/>
                    <text x="${document.dir === 'rtl' ? blockLeftEdge + 10 : blockLeftEdge + 152}" y="${lY+4}" text-anchor="${document.dir === 'rtl' ? 'start' : 'end'}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${c.para_elemento.toUpperCase()}</text>
                    <text x="${document.dir === 'rtl' ? blockLeftEdge + 150 : blockLeftEdge + 10}" y="${lY+4}" class="diag-text-label" style="font-weight:900; pointer-events:none;">${c.para_punto}</text>
-                  <text x="${(xInicio + blockLeftEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: c.cable_marca, posicion: c.posicion}))}')" style="${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}">${c.cable_marca}</text>`;
+                  <text x="${(xInicio + blockLeftEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: wireLabel, posicion: c.posicion}))}')" style="${wireColor}">${wireLabel}</text>`;
            });
-           const extOutConCable = extOut.filter(c => (c.cable_marca || '') !== '');
            if (extOutConCable.length > 1) {
                svg.innerHTML += `<line x1="${origX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>
                                  <line x1="${stubX}" y1="${y+(-(extOutConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extOutConCable.length-1)/2)*32}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>`;
@@ -2589,9 +2681,9 @@ internalBridges.forEach((b, idx) => {
                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <!-- PANEL 1: PELADO (Mantiene su estilo) -->
                        <div class="bg-white dark:bg-sap-darkCard border border-sap-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-                           <div class="bg-emerald-500/5 px-4 py-2 border-b border-sap-border">
-                               <span class="text-[10px] font-black uppercase tracking-widest text-emerald-700">INSTRUCCIONES DE PELADO</span>
-                           </div>
+                           <div class="card-header-uniform">
+                            <span class="title-text">INSTRUCCIONES DE PELADO</span>
+                        </div>
                            <div class="p-4 flex flex-col flex-grow">
                                <div class="bg-white rounded-lg flex items-center justify-center p-2 mb-4 h-64 border border-gray-50 shadow-inner overflow-hidden">
                                    <img src="${CRIMP_PATHS.pelacables}${data.img_pela}.jpg" class="max-h-full w-full object-contain" onerror="${imgFallback}">
@@ -2608,10 +2700,10 @@ internalBridges.forEach((b, idx) => {
  
                        <!-- PANEL 2: CRIMPADO (Dinámico) -->
                        <div class="bg-white dark:bg-sap-darkCard border-2 border-sap-blue/30 rounded-xl shadow-md overflow-hidden flex flex-col text-left">
-                           <div class="bg-sap-blue px-4 py-2 flex justify-between items-center text-white">
-                               <span class="text-[10px] font-black uppercase tracking-widest text-white">HERRAMIENTA DE CRIMPADO</span>
-                               <div class="px-2 py-0.5 bg-white/20 rounded text-[10px] font-bold">Matriz: ${data.txt_matriz || 'N/A'}</div>
-                           </div>
+                           <div class="card-header-uniform">
+                            <span class="title-text">HERRAMIENTA DE CRIMPADO</span>
+                            <div class="px-2 py-0.5 bg-white/20 rounded text-[10px] font-bold text-white">Matriz: ${data.txt_matriz || 'N/A'}</div>
+                        </div>
                            
                            <div class="p-4 flex flex-col gap-4 flex-grow">
                                ${!hasAccessories ? `
@@ -2660,10 +2752,10 @@ internalBridges.forEach((b, idx) => {
  
                        <!-- PANEL 3: CALIDAD (Ancho completo abajo) -->
                        <div class="md:col-span-2 bg-white dark:bg-sap-darkCard border border-sap-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-                           <div class="bg-gray-800 text-white px-4 py-2 flex justify-between items-center">
-                               <span class="text-[10px] font-black uppercase tracking-widest text-emerald-400">AYUDA VISUAL / CRITERIO DE CALIDAD</span>
-                               ${data.txt_ext ? `<span class="text-[9px] font-bold text-white uppercase opacity-80">Extractor: ${data.txt_ext}</span>` : ''}
-                           </div>
+                           <div class="card-header-uniform">
+                            <span class="title-text">AYUDA VISUAL / CRITERIO DE CALIDAD</span>
+                            ${data.txt_ext ? `<span class="text-[9px] font-bold text-white uppercase opacity-80">Extractor: ${data.txt_ext}</span>` : ''}
+                        </div>
                            <div class="p-4 flex items-center justify-center bg-white h-80 shadow-inner">
                                <img src="${CRIMP_PATHS.ayuda}${data.img_obs}.jpg" class="max-h-full w-auto object-contain" onerror="${imgFallback}">
                            </div>
