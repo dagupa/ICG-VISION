@@ -706,6 +706,7 @@
        let progressMap = {};
        let _lastPinPopoverArgs = null;
        let _schemaSortedPins = [], _schemaPinDataCache = {};
+       let _termTipTimeout = null;
        let errorsMap = {};
        let incidenciaModeActive = false;
        let currentSummaryStats = {};
@@ -2021,6 +2022,7 @@ function renderDetailStep() {
  
        const obs = c.observaciones && c.observaciones !== "---" ? c.observaciones : "";
        const crimpData = getCrimpingInfo(termOrig, c.seccion);
+       const sectionCheck = !isPseudo ? checkSectionCompatibility(termOrig, c.seccion) : null;
        const defaultSvg = `<svg viewBox="0 0 64 32" class="w-full h-full text-slate-600"><rect x="2" y="8" width="25" height="16" rx="2" fill="#ef4444"/><circle cx="45" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="4"/><circle cx="45" cy="16" r="4" fill="currentColor"/><path d="M25 16 L35 16" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg>`;
  
        return `<div class="bg-sap-card dark:bg-sap-darkCard p-6 rounded-2xl border-l-8 ${isOut ? 'border-l-sap-blue' : 'border-l-emerald-500'} shadow-xl flex flex-col gap-4 ${isCurrentSideOk ? 'opacity-50 ring-2 ring-[#10b981]/30' : ''}">
@@ -2039,6 +2041,7 @@ function renderDetailStep() {
                </div>
                ${crimpData ? `<button onclick="openCrimpingModal('${termOrig}', '${c.seccion}')" class="p-2 bg-sap-blue/10 text-sap-blue rounded-full hover:bg-sap-blue hover:text-white transition-all shadow-sm"><i data-lucide="wrench" class="w-4 h-4"></i></button>` : ''}
            </div>
+           ${sectionCheck && !sectionCheck.ok ? `<div class="flex items-center gap-3 px-3 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-xl"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-500 shrink-0"></i><div><p class="text-[11px] font-black text-red-600 dark:text-red-400 uppercase tracking-wide">Secci\u00f3n incompatible</p><p class="text-[10px] text-red-500 dark:text-red-400 leading-snug">El terminal <strong>${termOrig}</strong> no admite <strong>${c.seccion} mm\u00b2</strong>. V\u00e1lidas: <strong>${sectionCheck.validSections.join(', ')} mm\u00b2</strong></p></div></div>` : ''}
           ${m && m !== "S/M" ? `
                     <div class="mt-2 flex flex-col w-full">
                         <div class="p-3 bg-sap-bg dark:bg-slate-900 rounded-xl flex items-center gap-3 mb-2 border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -2265,6 +2268,7 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
                || rawData.find(wire => wire.cable_marca === cn.label);
            const section = cableData ? cableData.seccion : "";
            const crimpData = getCrimpingInfo(cn.term, section);
+           const sectionCheck = !isPseudoTerminal ? checkSectionCompatibility(cn.term, section) : null;
            const prog = progressMap[cn.posicion] || { de: false, para: false };
            let isDone = false;
            if (cableData) {
@@ -2295,6 +2299,7 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
                             <div class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-tight">${tDesc}</div>
                         </div>
                     </div>
+                    ${sectionCheck && !sectionCheck.ok ? `<div class="flex items-center gap-2 px-2 py-1.5 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded text-[10px]"><i data-lucide="triangle-alert" class="w-3.5 h-3.5 text-red-500 shrink-0"></i><span class="text-red-600 dark:text-red-400"><strong>${cn.term}</strong> no admite <strong>${section} mm\u00b2</strong>. V\u00e1lidas: <strong>${sectionCheck.validSections.join(', ')} mm\u00b2</strong></span></div>` : ''}
 
                     ${cn.sleeve && cn.sleeve !== 'S/M' ? `
                     <div class="mt-2 flex flex-col gap-2 w-full">
@@ -2814,6 +2819,42 @@ internalBridges.forEach((b, idx) => {
                item.seccion === normSection
            );
        }
+
+       function checkSectionCompatibility(terminalId, seccion) {
+           if (!terminalId || !seccion) return null;
+           const idToSearch = terminalId.toString().trim().toUpperCase();
+           const termEntries = crimpingMasterData.filter(item => item.id.toString().toUpperCase() === idToSearch);
+           if (termEntries.length === 0) return null; // terminal sin datos de crimpado, sin validación
+           const normSection = seccion.toString().replace('.', ',');
+           if (termEntries.some(item => item.seccion === normSection)) return { ok: true };
+           return { ok: false, validSections: termEntries.map(item => item.seccion) };
+       }
+
+       function showTermCompatTip(el, termId, seccion, validSections) {
+           const tip = document.getElementById('termCompatTip');
+           const body = document.getElementById('termCompatTipBody');
+           if (!tip || !body) return;
+           clearTimeout(_termTipTimeout);
+           body.innerHTML = `<p>El terminal <strong>${termId}</strong> no admite <strong>${seccion} mm\u00b2</strong>.</p><p>V\u00e1lidas: <strong>${validSections} mm\u00b2</strong></p>`;
+           tip.classList.remove('hidden');
+           const rect = el.getBoundingClientRect();
+           const tipH = tip.offsetHeight || 90;
+           const top = rect.top > tipH + 10 ? rect.top - tipH - 6 : rect.bottom + 6;
+           tip.style.top = top + 'px';
+           tip.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 272)) + 'px';
+           // Auto-cierre a los 4 segundos (pantallas táctiles)
+           _termTipTimeout = setTimeout(hideTermCompatTip, 4000);
+           // Cualquier toque fuera lo cierra de inmediato
+           setTimeout(() => {
+               document.addEventListener('touchstart', hideTermCompatTip, { once: true, capture: true });
+           }, 150);
+       }
+       function hideTermCompatTip() {
+           clearTimeout(_termTipTimeout);
+           _termTipTimeout = null;
+           const tip = document.getElementById('termCompatTip');
+           if (tip) tip.classList.add('hidden');
+       }
  
  function openCrimpingModal(terminalId, seccion) {
            const data = getCrimpingInfo(terminalId, seccion);
@@ -3050,10 +3091,16 @@ function handleHelpEasterEgg() {
                        const isElementCol = v && c.key.includes('_elemento');
                        const isCellModified = changedValue !== undefined || (c.key === 'orden' && r.orderChanged && !r.deleted);
                        const cellClass = isCellModified ? (c.key === 'orden' && r.orderChanged ? 'cell-order-changed' : 'cell-modified') : '';
-                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass}"
+                       const isTerminalCol = c.key === 'de_terminal' || c.key === 'para_terminal';
+                       const termSC = isTerminalCol && v && v !== 'S/T' && !isKN(v) && r.seccion ? checkSectionCompatibility(v, r.seccion) : null;
+                       const hasIncompat = termSC && !termSC.ok;
+                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'bg-red-50 dark:bg-red-900/10':''}"
                                    style="width: ${c.width}px;" 
                                    ${isElementCol ? `onclick="applyTableFilter('${v}')"` : ''}>
-                                   <div class="truncate">${v}</div>
+                                   <div class="flex items-center gap-1 min-w-0 ${hasIncompat?'text-red-600 dark:text-red-400':''}">
+                                       <span class="truncate">${v}</span>
+                                       ${hasIncompat ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-red-500 cursor-help" onmouseenter="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}')" onmouseleave="hideTermCompatTip()" ontouchstart="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}'); event.stopPropagation()"></i>` : ''}
+                                   </div>
                                </td>`;
                    }).join('')}
                    <td class="p-1 text-center min-w-[5rem] border-l border-sap-border/30 dark:border-slate-700">
