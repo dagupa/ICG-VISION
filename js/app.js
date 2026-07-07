@@ -704,6 +704,7 @@
        let lastTouchX = 0, lastTouchY = 0, lastTouchDist = 0; 
        let detailPinSequence = [], detailPinDataMap = new Map(), currentDetailIndex = 0;
        let progressMap = {};
+       let _lastPinPopoverArgs = null;
        let errorsMap = {};
        let incidenciaModeActive = false;
        let currentSummaryStats = {};
@@ -1010,6 +1011,14 @@ function toggleProgress(pos, contextElement = null) {
    }
 }
  
+function markConnectionDone(posicion) {
+   const elName = document.getElementById('graphElementName')?.innerText || '';
+   toggleProgress(posicion, elName);
+   if (_lastPinPopoverArgs) {
+       showInfoPopover({ stopPropagation: () => {} }, _lastPinPopoverArgs);
+   }
+}
+
        function updateGlobalProgress() {
     if (!rawData || rawData.length === 0) return;
 
@@ -1962,15 +1971,10 @@ function renderDetailStep() {
        const isPseudo = isKN(termOrig);
        
        // --- CONTROL ANTICRUZADO ESTRICTO PARA MANGUITOS EN MODO VISION ---
-       let m = isOut ? c.de_manguito : (c.para_manguito || "S/M");
-       if (m && (m === c.cable_marca || m === 'S/M' || m === 'S/E')) {
-           // Si por desajuste de columnas coincide con la marca o es nulo, miramos si el manguito real está en de_manguito
-           if (c.de_manguito && c.de_manguito !== c.cable_marca && c.de_manguito !== 'S/M') {
-               m = c.de_manguito;
-           } else {
-               m = "S/M";
-           }
-       }
+       // La única columna fiable de manguito es de_manguito (K).
+       // para_manguito (L = "De Marca") no es un manguito y no debe usarse como tal.
+       const rawM = c.de_manguito || "";
+       const m = (rawM && rawM !== 'S/M' && rawM !== 'S/E' && rawM !== c.cable_marca) ? rawM : "S/M";
        // ------------------------------------------------------------------
        
        const peer = isOut ? c.para_elemento : c.de_elemento;
@@ -2000,7 +2004,7 @@ function renderDetailStep() {
            <div class="grid grid-cols-2 gap-4"><div><p class="text-[9px] font-bold uppercase opacity-60">ID</p><p class="text-sm font-bold truncate">${c.cod_cable}</p></div><div><p class="text-[9px] font-bold uppercase opacity-60">Secc.</p><p class="text-sm font-bold">${c.seccion} mm²</p></div></div>
            <div class="p-3 bg-sap-shell/5 rounded-xl flex items-center gap-3"><div class="w-10 h-10 bg-sap-blue/10 flex items-center justify-center rounded-lg text-sap-blue"><i data-lucide="arrow-right-left" class="w-5 h-5"></i></div><div class="min-w-0"><p class="text-[9px] font-bold uppercase opacity-60">${isOut?'Destino':'Origen'}</p><p class="text-base font-black truncate text-sap-blue">${peer}</p></div></div>
            <div class="p-3 bg-sap-bg dark:bg-slate-900 rounded-xl flex items-center gap-3">
-               ${!isPseudo ? `<div class="w-12 h-10 flex items-center justify-center shrink-0">${crimpData ? `<img src="${CRIMP_PATHS.terminales}${crimpData.img_pin}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)">` : `<div class="w-full h-full">${defaultSvg}</div>`}</div>` : ''}
+               ${!isPseudo ? `<div class="w-12 h-10 flex items-center justify-center shrink-0"><img src="${CRIMP_PATHS.terminales}${termOrig.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)"></div>` : ''}
                <div class="min-w-0 flex-1">
                    <p class="text-[9px] font-bold uppercase opacity-60">${isPseudo?'Instrucción':'Terminal'}</p>
                    <p class="text-base font-black truncate">${isPseudo?termOrig.substring(3):termOrig}</p>
@@ -2038,8 +2042,10 @@ function renderDetailStep() {
                   <div class="w-1.5 ${getHoleRightClass(m)} shadow-inner flex-shrink-0"></div>
                 </div>
               </div>
+              ${obs ? `<div class="flex flex-col gap-1 w-full mt-1"><div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Observaciones</div><div class="px-2 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded text-[10px] text-amber-700 dark:text-amber-400 font-medium italic leading-snug">${obs}</div></div>` : ''}
                     </div>
                     ` : ''}
+          ${obs && !(m && m !== "S/M") ? `<div class="flex flex-col gap-1 w-full mt-1"><div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Observaciones</div><div class="px-2 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded text-[10px] text-amber-700 dark:text-amber-400 font-medium italic leading-snug">${obs}</div></div>` : ''}
 `; 
    }).join(''); 
    lucide.createIcons(); 
@@ -2139,7 +2145,7 @@ function selectMaterial(name) {
                const reportRow = json[1]; if (reportRow) { reportMetadata = { equipo: reportRow['Q']||'', desc: reportRow['R']||'', plano: reportRow['S']||'', lista: reportRow['T']||'', edicion: reportRow['U']||'', fecha: parseDate(reportRow['V']) }; }
                rawData = json.slice(1).map(row => ({ posicion: row['A']||'', orden: row['B']||'', cod_cable: row['C']||'', seccion: row['D']||'', longitud: row['E']||'', marcado: row['F']||'', cable_marca: row['G']||'', de_elemento: row['H']||'', de_punto: row['I']||'', de_terminal: row['J']||'', de_manguito: row['K']||'', para_elemento: row['M']||'', para_punto: row['N']||'', para_terminal: row['O']||'', para_manguito: row['L']||'', observaciones: row['P']||'', desc_cable: row['X']||'', desc_manguito: row['Y']||'', desc_terminal_de: row['Z']||'', desc_terminal_para: row['AA']||'' })).filter(r => r.posicion);
                rawData.forEach(r => { if (r.cod_cable && r.desc_cable) masterMap.cables[r.cod_cable.toString().trim()] = r.desc_cable; if (r.de_terminal && r.desc_terminal_de) masterMap.terminals[r.de_terminal.toString().trim()] = r.desc_terminal_de; if (r.para_terminal && r.desc_terminal_para) masterMap.terminals[r.para_terminal.toString().trim()] = r.desc_terminal_para; if (r.de_manguito && r.desc_manguito) masterMap.sleeves[r.de_manguito.toString().trim()] = r.desc_manguito; if (r.para_manguito && r.desc_manguito) masterMap.sleeves[r.para_manguito.toString().trim()] = r.desc_manguito; });
-loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); updateView();
+loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); clearAllFilters();
            }; reader.readAsArrayBuffer(f);
        }
        function handleBreakerClick(event) { if (event) event.stopPropagation(); const b = document.getElementById('landingBreaker'), e = document.getElementById('landingEye'); b.classList.add('is-on'); if (e) e.classList.add('eye-on'); setTimeout(() => { const input = document.getElementById('csvInputLanding'); if (input) input.click(); }, 400); }
@@ -2212,20 +2218,33 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
  
    if (d.type === 'pin') {
        h.innerText = `Punto de Conexión: ${d.pin}`;
+       _lastPinPopoverArgs = s;
+       const currentEl = document.getElementById('graphElementName')?.innerText?.toLowerCase() || '';
        d.connections.forEach((cn, idx) => {
            const tDesc = masterMap.terminals[cn.term?.trim()] || "",
                sDesc = masterMap.sleeves[cn.sleeve?.trim()] || "",
                isPseudoTerminal = isKN(cn.term);
  
-           // Buscamos los datos del cable para obtener la sección necesaria para el crimpado
-           const cableData = rawData.find(wire => wire.cable_marca === cn.label);
+           // Buscamos los datos del cable por posición (identificador único) para evitar
+           // confusión cuando varios cables comparten el mismo nombre/marca.
+           const cableData = (cn.posicion ? rawData.find(wire => wire.posicion === cn.posicion) : null)
+               || rawData.find(wire => wire.cable_marca === cn.label);
            const section = cableData ? cableData.seccion : "";
            const crimpData = getCrimpingInfo(cn.term, section);
+           const prog = progressMap[cn.posicion] || { de: false, para: false };
+           let isDone = false;
+           if (cableData) {
+               if ((cableData.de_elemento || '').toLowerCase() === currentEl) isDone = prog.de === true;
+               else if ((cableData.para_elemento || '').toLowerCase() === currentEl) isDone = prog.para === true;
+           }
  
            html += `<div class="${idx > 0 ? 'mt-4 pt-3 border-t-2 border-slate-200 dark:border-slate-600' : ''}">
                 <div class="flex items-center justify-between mb-2">
                     <span class="bg-sap-blue text-white px-2 py-0.5 rounded text-[9px] font-black uppercase cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: cn.label}))}')">Cable: ${cn.label}</span>
-                    ${crimpData ? `<button onclick="openCrimpingModal('${cn.term}', '${section}')" class="p-1 bg-sap-blue text-white rounded hover:bg-sap-darkBlue transition-colors"><i data-lucide="wrench" class="w-3 h-3"></i></button>` : ''}
+                    <div class="flex items-center gap-1">
+                        ${crimpData ? `<button onclick="openCrimpingModal('${cn.term}', '${section}')" class="p-1 bg-sap-blue text-white rounded hover:bg-sap-darkBlue transition-colors"><i data-lucide="wrench" class="w-3 h-3"></i></button>` : ''}
+                        ${cn.posicion ? `<button onclick="markConnectionDone('${cn.posicion}')" class="p-1 ${isDone ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300'} rounded hover:bg-emerald-500 hover:text-white transition-colors" title="${isDone ? 'Marcar como pendiente' : 'Marcar como realizado'}"><i data-lucide="check" class="w-3 h-3"></i></button>` : ''}
+                    </div>
                 </div>
                 <div class="space-y-3">
                     <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-600">
@@ -2249,7 +2268,7 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
                         <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-600">
                             <div class="flex items-center gap-2 text-sap-blue dark:text-sky-400 mb-1">
                                 <div class="w-12 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-500 overflow-hidden shrink-0 p-0.5">
-                                    <img src="manguitos/${cn.sleeve.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                    <img src="Manguitos/${cn.sleeve.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                     <i data-lucide="layers" class="w-3.5 h-3.5" style="display: none;"></i>
                                 </div>
                                 <span class="font-bold uppercase tracking-tighter text-[10px]">Manguito</span>
@@ -2276,8 +2295,10 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
                                     <div class="w-1.5 ${getHoleRightClass(cn.sleeve)} shadow-inner flex-shrink-0"></div>
                                 </div>
                             </div>
+                            ${cn.observaciones ? `<div class="flex flex-col gap-1 w-full mt-1"><div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Observaciones</div><div class="px-2 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded text-[10px] text-amber-700 dark:text-amber-400 font-medium italic leading-snug">${cn.observaciones}</div></div>` : ''}
                     </div>
                     ` : ''}
+                ${cn.observaciones && !(cn.sleeve && cn.sleeve !== 'S/M') ? `<div class="flex flex-col gap-1 w-full mt-2"><div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Observaciones</div><div class="px-2 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded text-[10px] text-amber-700 dark:text-amber-400 font-medium italic leading-snug">${cn.observaciones}</div></div>` : ''}
                 </div>
             </div>`;
        });
@@ -2535,13 +2556,15 @@ internalBridges.forEach((b, idx) => {
                term: c.para_terminal, 
                sleeve: (c.de_manguito !== c.cable_marca) ? c.de_manguito : 'S/M', 
                label: c.cable_marca,
-               posicion: c.posicion
+               posicion: c.posicion,
+               observaciones: c.observaciones || ''
            })), 
            ...pD.out.map(c => ({ 
                term: c.de_terminal, 
                sleeve: (c.de_manguito !== c.cable_marca) ? c.de_manguito : 'S/M', 
                label: c.cable_marca,
-               posicion: c.posicion
+               posicion: c.posicion,
+               observaciones: c.observaciones || ''
            }))
        ];
        
@@ -2563,12 +2586,13 @@ internalBridges.forEach((b, idx) => {
        if (extIn.length > 0) {
            const stubX = mX - 100, blockRightEdge = stubX - 100;
            const anyLocalOk = extIn.some(c => (progressMap[c.posicion] || {}).para === true && (c.cable_marca||'') !== '');
-           const extInConCable = extIn.filter(c => (c.cable_marca || '') !== '' || (c.observaciones || '').toUpperCase() === 'BUSBAR');
+           const extInConCable = extIn.filter(c => (c.cable_marca || '') !== '');
            extIn.forEach((c) => {
                const tieneCable = (c.cable_marca || '') !== '';
                const tieneObturador = !tieneCable && (c.para_terminal || '') !== '' && (c.para_terminal || '').toUpperCase() !== 'S/T' && !isKN(c.para_terminal);
-               const isBusbar = (c.observaciones || '').toUpperCase() === 'BUSBAR';
+               const isBusbar = (c.observaciones || '').trim().toUpperCase() === 'BUSBAR';
                if (!tieneCable && !tieneObturador && !isBusbar) return;
+               if (isBusbar) return; // Renderizado en bloque BUSBAR post-loop
                if (tieneObturador) {
                    svg.innerHTML += `<circle cx="${mX + mainW - 8}" cy="${y + 8}" r="4" fill="#64748b" opacity="0.8" pointer-events="none"/>`;
                    return;
@@ -2596,12 +2620,13 @@ internalBridges.forEach((b, idx) => {
        if (extOut.length > 0) {
            const origX = mX + mainW, stubX = origX + 100, blockLeftEdge = stubX + 100;
            const anyLocalOk = extOut.some(c => (progressMap[c.posicion] || {}).de === true && (c.cable_marca||'') !== '');
-           const extOutConCable = extOut.filter(c => (c.cable_marca || '') !== '' || (c.observaciones || '').toUpperCase() === 'BUSBAR');
+           const extOutConCable = extOut.filter(c => (c.cable_marca || '') !== '');
            extOut.forEach((c) => {
                const tieneCable = (c.cable_marca || '') !== '';
                const tieneObturador = !tieneCable && (c.de_terminal || '') !== '' && (c.de_terminal || '').toUpperCase() !== 'S/T' && !isKN(c.de_terminal);
-               const isBusbar = (c.observaciones || '').toUpperCase() === 'BUSBAR';
+               const isBusbar = (c.observaciones || '').trim().toUpperCase() === 'BUSBAR';
                if (!tieneCable && !tieneObturador && !isBusbar) return;
+               if (isBusbar) return; // Renderizado en bloque BUSBAR post-loop
                if (tieneObturador) {
                    svg.innerHTML += `<circle cx="${mX + mainW - 8}" cy="${y + 8}" r="4" fill="#64748b" opacity="0.8" pointer-events="none"/>`;
                    return;
@@ -2625,6 +2650,107 @@ internalBridges.forEach((b, idx) => {
            }
        }
    });
+
+   // ---- REPRESENTACIÓN VISUAL DEL BUSBAR ----
+   // Los BUSBAR se renderizan como grupo: barra vertical física + línea punteada a destino.
+   // Esto refleja la realidad física del busbar (barra que une varios puntos de conexión).
+   const origX_bb = mX + mainW;
+   const stubX_bb = origX_bb + 100;
+   const destX_bb = stubX_bb + 100;
+
+   // a) BUSBAR SALIENTES (de_elemento = elemento actual)
+   const busbarOutGroups = {};
+   allRelated.forEach(c => {
+       if ((c.de_elemento||'').toLowerCase() !== search) return;
+       if ((c.para_elemento||'').toLowerCase() === search) return;
+       if ((c.observaciones||'').trim().toUpperCase() !== 'BUSBAR') return;
+       if (pinYMap[c.de_punto] === undefined) return;
+       const k = (c.para_elemento||'').toLowerCase();
+       if (!busbarOutGroups[k]) busbarOutGroups[k] = [];
+       busbarOutGroups[k].push(c);
+   });
+   Object.entries(busbarOutGroups).forEach(([, conns]) => {
+       conns.sort((a, b) => String(a.de_punto).localeCompare(String(b.de_punto), undefined, {numeric:true}));
+       const ys = conns.map(c => pinYMap[c.de_punto]);
+       const minY = Math.min(...ys), maxY = Math.max(...ys);
+       const midY = (minY + maxY) / 2;
+       const barX = origX_bb + 8;
+
+       // Líneas cortas de cada pin al barX
+       conns.forEach(c => {
+           const py = pinYMap[c.de_punto];
+           svg.innerHTML += `<line x1="${origX_bb}" y1="${py}" x2="${barX}" y2="${py}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:3 2;"/>`;
+       });
+       // Barra vertical (el busbar físico)
+       svg.innerHTML += `<line x1="${barX}" y1="${minY - 14}" x2="${barX}" y2="${maxY + 14}" class="diag-line" style="stroke:#a855f7; stroke-width:5; stroke-linecap:round;" pointer-events="none"/>`;
+       // Círculos en cada punto de conexión
+       conns.forEach(c => {
+           svg.innerHTML += `<circle cx="${barX}" cy="${pinYMap[c.de_punto]}" r="5" fill="#a855f7" stroke="#7c3aed" stroke-width="1.5" pointer-events="none"/>`;
+       });
+       // Etiqueta BUSBAR rotada
+       if (conns.length > 1) {
+           svg.innerHTML += `<text x="${barX + 15}" y="${midY}" text-anchor="middle" transform="rotate(-90, ${barX + 15}, ${midY})" style="fill:#a855f7; font-size:9px; font-weight:900; letter-spacing:0.5px;" pointer-events="none">BUSBAR</text>`;
+       }
+       // Ruta punteada por debajo de los pines BUSBAR → evita superposición con cables
+       const bbRouteY = maxY + 35;
+       svg.innerHTML += `<line x1="${barX}" y1="${maxY + 14}" x2="${barX}" y2="${bbRouteY}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:4 3;"/>`;
+       svg.innerHTML += `<line x1="${barX}" y1="${bbRouteY}" x2="${destX_bb}" y2="${bbRouteY}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:4 3;"/>`;
+       // Bloque destino
+       const para_elem = conns[0].para_elemento;
+       svg.innerHTML += `<rect x="${destX_bb}" y="${bbRouteY - 12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${para_elem}')"/>`;
+       svg.innerHTML += `<text x="${destX_bb + 8}" y="${bbRouteY + 4}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${para_elem.toUpperCase()}</text>`;
+       const ptsOut = conns.map(c => c.para_punto).join(', ');
+       svg.innerHTML += `<text x="${destX_bb + 152}" y="${bbRouteY + 4}" text-anchor="end" class="diag-text-label" style="font-weight:900; font-size:9px; pointer-events:none;">${ptsOut}</text>`;
+   });
+
+   // b) BUSBAR ENTRANTES (para_elemento = elemento actual)
+   const mXLeft_bb = mX;
+   const stubXLeft_bb = mXLeft_bb - 100;
+   const destXLeft_bb = stubXLeft_bb - 100;
+   const busbarInGroups = {};
+   allRelated.forEach(c => {
+       if ((c.para_elemento||'').toLowerCase() !== search) return;
+       if ((c.de_elemento||'').toLowerCase() === search) return;
+       if ((c.observaciones||'').trim().toUpperCase() !== 'BUSBAR') return;
+       if (pinYMap[c.para_punto] === undefined) return;
+       const k = (c.de_elemento||'').toLowerCase();
+       if (!busbarInGroups[k]) busbarInGroups[k] = [];
+       busbarInGroups[k].push(c);
+   });
+   Object.entries(busbarInGroups).forEach(([, conns]) => {
+       conns.sort((a, b) => String(a.para_punto).localeCompare(String(b.para_punto), undefined, {numeric:true}));
+       const ys = conns.map(c => pinYMap[c.para_punto]);
+       const minY = Math.min(...ys), maxY = Math.max(...ys);
+       const midY = (minY + maxY) / 2;
+       const barX = mXLeft_bb - 8;
+
+       // Líneas cortas de cada pin al barX
+       conns.forEach(c => {
+           const py = pinYMap[c.para_punto];
+           svg.innerHTML += `<line x1="${barX}" y1="${py}" x2="${mXLeft_bb}" y2="${py}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:3 2;"/>`;
+       });
+       // Barra vertical
+       svg.innerHTML += `<line x1="${barX}" y1="${minY - 14}" x2="${barX}" y2="${maxY + 14}" class="diag-line" style="stroke:#a855f7; stroke-width:5; stroke-linecap:round;" pointer-events="none"/>`;
+       // Círculos
+       conns.forEach(c => {
+           svg.innerHTML += `<circle cx="${barX}" cy="${pinYMap[c.para_punto]}" r="5" fill="#a855f7" stroke="#7c3aed" stroke-width="1.5" pointer-events="none"/>`;
+       });
+       // Etiqueta
+       if (conns.length > 1) {
+           svg.innerHTML += `<text x="${barX - 15}" y="${midY}" text-anchor="middle" transform="rotate(-90, ${barX - 15}, ${midY})" style="fill:#a855f7; font-size:9px; font-weight:900; letter-spacing:0.5px;" pointer-events="none">BUSBAR</text>`;
+       }
+       // Ruta punteada por debajo de los pines BUSBAR → evita superposición con cables
+       const bbRouteY = maxY + 35;
+       svg.innerHTML += `<line x1="${barX}" y1="${maxY + 14}" x2="${barX}" y2="${bbRouteY}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:4 3;"/>`;
+       svg.innerHTML += `<line x1="${destXLeft_bb + 160}" y1="${bbRouteY}" x2="${barX}" y2="${bbRouteY}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:4 3;"/>`;
+       // Bloque origen
+       const de_elem = conns[0].de_elemento;
+       svg.innerHTML += `<rect x="${destXLeft_bb}" y="${bbRouteY - 12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${de_elem}')"/>`;
+       svg.innerHTML += `<text x="${destXLeft_bb + 8}" y="${bbRouteY + 4}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${de_elem.toUpperCase()}</text>`;
+       const ptsIn = conns.map(c => c.de_punto).join(', ');
+       svg.innerHTML += `<text x="${destXLeft_bb + 152}" y="${bbRouteY + 4}" text-anchor="end" class="diag-text-label" style="font-weight:900; font-size:9px; pointer-events:none;">${ptsIn}</text>`;
+   });
+
    if (window.lucide) lucide.createIcons();
 }
  
