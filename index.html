@@ -595,6 +595,18 @@
       </div>
    </div>
 
+   <!-- Tooltip global para incompatibilidad de sección/terminal -->
+   <div id="termCompatTip" class="fixed z-[9999] hidden" style="width:260px;" ontouchstart="hideTermCompatTip()">
+       <div class="bg-white dark:bg-slate-800 border border-red-300 dark:border-red-700 rounded-xl shadow-2xl p-3 text-left">
+           <div class="flex items-center gap-2 mb-2">
+               <i data-lucide="triangle-alert" class="w-4 h-4 text-red-500 shrink-0"></i>
+               <span class="text-[11px] font-black text-red-600 dark:text-red-400 uppercase tracking-wide">Sección incompatible</span>
+           </div>
+           <div id="termCompatTipBody" class="text-[10px] text-red-500 dark:text-red-400 leading-snug space-y-0.5"></div>
+           <p class="text-[9px] text-red-300 dark:text-red-600 mt-2 italic">Toca para cerrar</p>
+       </div>
+   </div>
+
    <!-- Inicialización de Scripts en orden de precedencia lógica -->
     <script src="js/master-data.js"></script>
     <script src="js/app.js?v=folder-save-10" defer></script>
