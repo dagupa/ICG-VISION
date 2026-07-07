@@ -705,6 +705,7 @@
        let detailPinSequence = [], detailPinDataMap = new Map(), currentDetailIndex = 0;
        let progressMap = {};
        let _lastPinPopoverArgs = null;
+       let _schemaSortedPins = [], _schemaPinDataCache = {};
        let errorsMap = {};
        let incidenciaModeActive = false;
        let currentSummaryStats = {};
@@ -1015,6 +1016,37 @@ function markConnectionDone(posicion) {
    const elName = document.getElementById('graphElementName')?.innerText || '';
    toggleProgress(posicion, elName);
    if (_lastPinPopoverArgs) {
+       try {
+           const current = JSON.parse(decodeURIComponent(_lastPinPopoverArgs));
+           if (current.type === 'pin' && _schemaSortedPins.length > 0) {
+               // Comprobar si TODAS las conexiones del pin actual están ya marcadas
+               const currentEl = elName.toLowerCase();
+               const allDone = current.connections.every(cn => {
+                   if (!cn.posicion) return true;
+                   const prog = progressMap[cn.posicion] || { de: false, para: false };
+                   const cableData = rawData.find(r => r.posicion === cn.posicion);
+                   if (!cableData) return true;
+                   if ((cableData.de_elemento || '').toLowerCase() === currentEl) return prog.de === true;
+                   if ((cableData.para_elemento || '').toLowerCase() === currentEl) return prog.para === true;
+                   return true;
+               });
+               if (allDone) {
+                   // Todas hechas → saltar al siguiente punto de conexión
+                   const idx = _schemaSortedPins.indexOf(current.pin);
+                   const nextIdx = idx + 1;
+                   if (nextIdx < _schemaSortedPins.length) {
+                       const nextPin = _schemaSortedPins[nextIdx];
+                       const nextPCs = _schemaPinDataCache[nextPin];
+                       if (nextPCs) {
+                           const nextArgs = encodeURIComponent(JSON.stringify({ type: 'pin', pin: nextPin, connections: nextPCs }));
+                           showInfoPopover({ stopPropagation: () => {} }, nextArgs);
+                           return;
+                       }
+                   }
+               }
+           }
+       } catch (e) { /* fallback al comportamiento anterior */ }
+       // Quedan conexiones pendientes o error → refrescar el popover actual
        showInfoPopover({ stopPropagation: () => {} }, _lastPinPopoverArgs);
    }
 }
@@ -1994,12 +2026,7 @@ function renderDetailStep() {
        return `<div class="bg-sap-card dark:bg-sap-darkCard p-6 rounded-2xl border-l-8 ${isOut ? 'border-l-sap-blue' : 'border-l-emerald-500'} shadow-xl flex flex-col gap-4 ${isCurrentSideOk ? 'opacity-50 ring-2 ring-[#10b981]/30' : ''}">
            <div class="flex justify-between items-start text-left">
                <span class="px-3 py-1 bg-sap-shell/10 rounded text-[10px] font-black uppercase text-sap-secondaryText">${isOut?'Salida':'Entrada'}</span>
-               <div class="flex items-center gap-2">
-                   <input type="checkbox" ${isCurrentSideOk ? 'checked' : ''} 
-                       onchange="toggleProgress('${c.posicion}', '${currentElName}')" 
-                       class="w-4 h-4 accent-[#10b981] cursor-pointer">
-                   <span class="text-2xl font-black text-sap-blue ml-2">${c.cable_marca}</span>
-               </div>
+               <span class="text-2xl font-black text-sap-blue">${c.cable_marca}</span>
            </div>
            <div class="grid grid-cols-2 gap-4"><div><p class="text-[9px] font-bold uppercase opacity-60">ID</p><p class="text-sm font-bold truncate">${c.cod_cable}</p></div><div><p class="text-[9px] font-bold uppercase opacity-60">Secc.</p><p class="text-sm font-bold">${c.seccion} mm²</p></div></div>
            <div class="p-3 bg-sap-shell/5 rounded-xl flex items-center gap-3"><div class="w-10 h-10 bg-sap-blue/10 flex items-center justify-center rounded-lg text-sap-blue"><i data-lucide="arrow-right-left" class="w-5 h-5"></i></div><div class="min-w-0"><p class="text-[9px] font-bold uppercase opacity-60">${isOut?'Destino':'Origen'}</p><p class="text-base font-black truncate text-sap-blue">${peer}</p></div></div>
@@ -2046,6 +2073,13 @@ function renderDetailStep() {
                     </div>
                     ` : ''}
           ${obs && !(m && m !== "S/M") ? `<div class="flex flex-col gap-1 w-full mt-1"><div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Observaciones</div><div class="px-2 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded text-[10px] text-amber-700 dark:text-amber-400 font-medium italic leading-snug">${obs}</div></div>` : ''}
+           <label class="flex items-center justify-center gap-3 w-full rounded-xl cursor-pointer select-none border-2 transition-all mt-1 ${isCurrentSideOk ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'bg-sap-shell/5 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400'}" style="min-height:52px;">
+               <input type="checkbox" ${isCurrentSideOk ? 'checked' : ''} 
+                   onchange="toggleProgress('${c.posicion}', '${currentElName}')" 
+                   class="sr-only">
+               <i data-lucide="${isCurrentSideOk ? 'check-circle-2' : 'circle'}" class="w-5 h-5 shrink-0"></i>
+               <span class="text-sm font-bold uppercase tracking-wide">${isCurrentSideOk ? 'Conexión realizada' : 'Marcar como hecho'}</span>
+           </label>
 `; 
    }).join(''); 
    lucide.createIcons(); 
@@ -2243,7 +2277,6 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
                     <span class="bg-sap-blue text-white px-2 py-0.5 rounded text-[9px] font-black uppercase cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: cn.label}))}')">Cable: ${cn.label}</span>
                     <div class="flex items-center gap-1">
                         ${crimpData ? `<button onclick="openCrimpingModal('${cn.term}', '${section}')" class="p-1 bg-sap-blue text-white rounded hover:bg-sap-darkBlue transition-colors"><i data-lucide="wrench" class="w-3 h-3"></i></button>` : ''}
-                        ${cn.posicion ? `<button onclick="markConnectionDone('${cn.posicion}')" class="p-1 ${isDone ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300'} rounded hover:bg-emerald-500 hover:text-white transition-colors" title="${isDone ? 'Marcar como pendiente' : 'Marcar como realizado'}"><i data-lucide="check" class="w-3 h-3"></i></button>` : ''}
                     </div>
                 </div>
                 <div class="space-y-3">
@@ -2299,6 +2332,7 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
                     </div>
                     ` : ''}
                 ${cn.observaciones && !(cn.sleeve && cn.sleeve !== 'S/M') ? `<div class="flex flex-col gap-1 w-full mt-2"><div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Observaciones</div><div class="px-2 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded text-[10px] text-amber-700 dark:text-amber-400 font-medium italic leading-snug">${cn.observaciones}</div></div>` : ''}
+                ${cn.posicion ? `<button onclick="markConnectionDone('${cn.posicion}')" class="mt-3 flex items-center justify-center gap-2 w-full rounded-xl border-2 font-bold uppercase tracking-wide text-sm transition-all ${isDone ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400'}" style="min-height:48px;" title="${isDone ? 'Marcar como pendiente' : 'Marcar como realizado'}"><i data-lucide="${isDone ? 'check-circle-2' : 'circle'}" class="w-5 h-5 shrink-0"></i>${isDone ? 'Conexión realizada' : 'Marcar como hecho'}</button>` : ''}
                 </div>
             </div>`;
        });
@@ -2518,6 +2552,7 @@ function closeGraphicalView() {
    });
  
    const sortedPins = Array.from(pinMap.keys()).sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+   _schemaSortedPins = sortedPins; _schemaPinDataCache = {};
    const rowH = 80, colW = 350, mainW = 120; 
    const totalW = (colW * 2) + mainW + 100, totalH = (sortedPins.length * rowH) + 150;
    const pinYMap = {}; const mX = 50 + colW, sY = 80; 
@@ -2567,6 +2602,7 @@ internalBridges.forEach((b, idx) => {
                observaciones: c.observaciones || ''
            }))
        ];
+       _schemaPinDataCache[pin] = pCs;
        
        const cablesConMarcaIn  = pD.in.filter(c => (c.cable_marca||'') !== '' && (c.de_elemento||'').toLowerCase() !== search);
        const cablesConMarcaOut = pD.out.filter(c => (c.cable_marca||'') !== '' && (c.para_elemento||'').toLowerCase() !== search);
