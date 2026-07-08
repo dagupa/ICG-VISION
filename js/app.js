@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.5.1';
+    const VERSION = '0.5.2';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -3217,8 +3217,6 @@ function handleHelpEasterEgg() {
        window.onload = () => {
            // Título dinámico con versión
            document.title = `ICG Vision – V.${VERSION}`;
-           const hv = document.getElementById('headerVersion');
-           if (hv) hv.textContent = `V.${VERSION}`;
            const lv = document.getElementById('landingVersion');
            if (lv) lv.textContent = `V.${VERSION}`;
            const hmv = document.getElementById('helpModalVersion');

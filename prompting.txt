@@ -130,3 +130,59 @@ SOLUCIÓN:
   completo. Así, cualquier fila de cabecera del Excel (p.ej. 'Pos.') que haya
   entrado en rawData porque la columna A tenía valor queda excluida del TXT.
 ================================================================================
+================================================================================
+2026-07-08 11:51
+PROMPT:
+Añadir la versión (constante VERSION) en tres sitios:
+1) Landing page: centrado justo debajo de ICG VISION.
+2) Encabezado: a la derecha de ICG VISION alineado en la zona inferior.
+3) Encabezado del modal de ayuda.
+
+SOLUCIÓN:
+- index.html landing: el <p id="landingVersion"> estaba en absolute bottom-5.
+  Se elimina ese párrafo y se añade uno nuevo justo tras el </h1>, con clases
+  text-center text-white/40 text-[10px] tracking-[0.3em] mb-8. Se reduce mb-3
+  del h1 a mb-1 para ajustar espaciado.
+- index.html encabezado: se añade self-end y leading-none al
+  <span id="headerVersion"> para que quede alineado con la zona inferior del
+  texto ICG VISION dentro del flex items-baseline padre.
+- index.html modal ayuda: <span id="helpModalVersion"> ya estaba correctamente
+  colocado tras "Manual de Usuario". Sin cambios necesarios.
+- app.js: sin cambios (ya rellenaba los tres elementos en window.onload).
+================================================================================
+================================================================================
+2026-07-08 11:55
+PROMPT:
+La versión en el encabezado queda desalineada respecto a ICG VISION.
+
+SOLUCIÓN:
+- index.html encabezado: se cambia el contenedor padre de items-baseline a
+  items-end. Con items-baseline el fondo del contenedor flex incluía el
+  espacio de layout del SVG (w-5 h-5 = 20px) y self-end bajaba la versión
+  más de lo visual. Con items-end todos los elementos (ICG, Visi👁n, versión)
+  se alinean por su borde inferior real. Se eliminan self-end y leading-none
+  del span #headerVersion.
+================================================================================
+================================================================================
+2026-07-08 12:01
+PROMPT:
+Con items-end la version aun queda un poco alta. Necesita bajar y que su
+parte inferior coincida con la parte inferior de ICG VISION.
+
+SOLUCION:
+- index.html: se revierte el contenedor a items-baseline (el borde inferior
+  visual de letras mayusculas = su linea de base, de modo que items-baseline
+  alinea exactamente los fondos visibles de ICG VISION y V.x.x.x).
+  Se anade translate-y-[1px] al span #headerVersion para compensar el leve
+  desplazamiento que introduce el SVG del ojo al fijar la linea de base del
+  contenedor interno mas abajo que la del texto ICG.
+================================================================================
+================================================================================
+2026-07-08 12:18
+PROMPT:
+Quitar la versión del encabezado. Dejarla solo en landing page y modal ayuda.
+
+SOLUCIÓN:
+- index.html: eliminado el <span id="headerVersion"> del encabezado.
+- js/app.js: eliminadas las dos líneas que obtenían y rellenaban headerVersion.
+================================================================================
