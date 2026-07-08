@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>ICG Vision – V.0.4.2</title>
+   <title>ICG Vision</title>
    <!-- Librerías locales (vendor/) — sin dependencia de internet -->
    <script src="vendor/tailwind.min.js"></script>
    <script src="vendor/lucide.min.js"></script>
@@ -68,6 +68,7 @@
                </div>
            </div>
        </div>
+       <p id="landingVersion" class="absolute bottom-5 left-0 w-full text-center text-white/25 text-[10px] font-bold tracking-[0.3em] uppercase"></p>
    </div>
  
    <input type="file" id="csvInputLanding" accept=".xlsx, .xls" class="hidden">
@@ -94,7 +95,7 @@
                    </svg>
                </div>
                <span class="font-bold text-sm tracking-tight flex items-baseline gap-1">
-                   ICG <span class="font-light opacity-80 italic flex items-baseline ml-0.5">Visi<svg class="logo-eye w-5 h-5 inline-block ml-0.5 -mr-0.5 translate-y-[15%]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M7 6.5l-1-2M12 4.5V2M17 6.5l1-2M8 17.5l-0.5 2M16 17.5l0.5 2"/></svg><span>n</span></span>
+                   ICG <span class="font-light opacity-80 italic flex items-baseline ml-0.5">Visi<svg class="logo-eye w-5 h-5 inline-block ml-0.5 -mr-0.5 translate-y-[15%]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M7 6.5l-1-2M12 4.5V2M17 6.5l1-2M8 17.5l-0.5 2M16 17.5l0.5 2"/></svg><span>n</span></span><span id="headerVersion" class="text-[9px] font-normal opacity-50 ml-2"></span>
                </span>
            </div>
        </div>
@@ -155,9 +156,9 @@
            </div>
  
            <div class="flex items-center gap-1 ml-auto shrink-0">
-               <button onclick="exportConnectionListToTxt()" class="p-1.5 rounded transition-all" style="color:#a304ed" onmouseover="this.style.background='#a304ed1a'" onmouseout="this.style.background=''" title="EXPORTAR LISTA CONEXIONES (.TXT)"><i data-lucide="file-down" class="w-6 h-6"></i></button>
                <button id="btnSave" onclick="saveDataToFile()" class="p-1.5 rounded transition-all cursor-not-allowed opacity-40" title="GUARDAR CAMBIOS" disabled><i data-lucide="save" class="w-6 h-6 text-slate-400"></i></button>
                <button onclick="loadDataFromFile()" class="p-1.5 rounded transition-all" title="CARGAR CAMBIOS GUARDADOS"><i data-lucide="folder-open" class="w-6 h-6 text-amber-300"></i></button>
+               <button onclick="exportConnectionListToTxt()" class="p-1.5 rounded transition-all" style="color:#a304ed" onmouseover="this.style.background='#a304ed1a'" onmouseout="this.style.background=''" title="EXPORTAR LISTA CONEXIONES (.TXT)"><i data-lucide="file-down" class="w-6 h-6"></i></button>
            </div>
  
            <div id="elementQuickActions" class="hidden items-center gap-1 md:ml-0 justify-end shrink-0">
@@ -411,12 +412,113 @@
    <div id="helpModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[250] p-4 text-left">
        <div class="bg-white dark:bg-sap-darkCard max-w-3xl w-full rounded-xl shadow-2xl border border-sap-border overflow-hidden flex flex-col max-h-[90vh]">
            <div class="bg-sap-shell p-4 flex justify-between items-center text-white shrink-0">
-               <div class="flex items-center gap-3"><div onclick="handleHelpEasterEgg()" class="cursor-default"><i data-lucide="help-circle" class="w-5 h-5 text-sap-blue"></i></div><h3 class="font-bold text-sm uppercase tracking-widest">Manual de Usuario</h3></div>
+               <div class="flex items-center gap-3"><div onclick="handleHelpEasterEgg()" class="cursor-default"><i data-lucide="help-circle" class="w-5 h-5 text-sap-blue"></i></div><h3 class="font-bold text-sm uppercase tracking-widest">Manual de Usuario</h3><span id="helpModalVersion" class="text-[10px] font-normal opacity-50 ml-1"></span></div>
                <button onclick="toggleHelp()"><i data-lucide="x"></i></button>
            </div>
            <div class="p-6 overflow-y-auto custom-scrollbar space-y-8 bg-sap-bg dark:bg-sap-darkBg text-sap-text dark:text-slate-300">
-               <div id="easterEggMessage" class="hidden mb-4 p-4 bg-sap-blue/10 border border-sap-blue/30 rounded-xl text-center animate-bounce"><p class="text-xs font-bold text-sap-blue">Este programa ha sido desarrollado por David Gutiérrez Pastor.</p></div>
-               <section><h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">1. Control de Vistas y Datos</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit"><i data-lucide="panel-left" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Panel Lateral</p><p class="text-[11px] leading-tight opacity-80">Muestra datos del equipo y el resumen de materiales por elemento seleccionado.</p></div></div></div></section>
+               <div id="easterEggMessage" class="hidden mb-4 p-4 bg-sap-blue/10 border border-sap-blue/30 rounded-xl text-center animate-bounce"><p class="text-xs font-bold text-sap-blue">Este programa ha sido desarrollado por David Gutiérrez Pastor.Si has visto este mensaje y te ha gustado el programa, se lo puedes decir, que promete que no cobra por sonreir :-)</p></div>
+
+               <!-- 1. Barra de encabezado -->
+               <section>
+                   <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">1. Barra de encabezado</h4>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="panel-left" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Panel lateral</p><p class="text-[11px] leading-tight opacity-80">Muestra u oculta el panel izquierdo con los datos del equipo, materiales y barra de progreso.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="help-circle" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Ayuda</p><p class="text-[11px] leading-tight opacity-80">Abre este manual de usuario.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="settings" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Ajustes</p><p class="text-[11px] leading-tight opacity-80">Accede a las opciones generales: tema oscuro/claro, reinicio de progreso y panel de administrador.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="maximize" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Pantalla completa</p><p class="text-[11px] leading-tight opacity-80">Alterna entre pantalla completa y ventana normal.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="file-up" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Cargar informe</p><p class="text-[11px] leading-tight opacity-80">Vuelve a la pantalla de inicio para cargar un nuevo fichero Excel (.xlsx / .xls) con el informe de cableado.</p></div></div>
+                   </div>
+               </section>
+
+               <!-- 2. Barra de herramientas -->
+               <section>
+                   <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">2. Barra de herramientas</h4>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="layout-list" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Selector de vista</p><p class="text-[11px] leading-tight opacity-80">Cambia entre <em>Lista de conexiones</em>, <em>Lista de cables</em>, <em>Lista de terminales</em> y <em>Lista de manguitos</em>.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="filter" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Filtro por elemento</p><p class="text-[11px] leading-tight opacity-80">Filtra el informe mostrando únicamente las conexiones del elemento indicado. Al activarse aparecen los iconos de acción rápida.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="filter" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Filtro por cable nº</p><p class="text-[11px] leading-tight opacity-80">Filtra las filas que contienen la referencia de cable indicada.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="search" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Búsqueda global</p><p class="text-[11px] leading-tight opacity-80">Localiza cualquier texto en toda la tabla y resalta las coincidencias. Pulsa el botón repetidamente para navegar entre resultados.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="trash-2" class="w-5 h-5 text-red-400"></i></div><div><p class="text-xs font-bold">Limpiar filtros</p><p class="text-[11px] leading-tight opacity-80">Elimina todos los filtros activos y restaura la vista completa.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="save" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Guardar cambios</p><p class="text-[11px] leading-tight opacity-80">Guarda el progreso e incidencias registradas en un fichero JSON. Se activa (azul) cuando hay cambios pendientes.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="folder-open" class="w-5 h-5 text-amber-400"></i></div><div><p class="text-xs font-bold">Cargar cambios guardados</p><p class="text-[11px] leading-tight opacity-80">Carga un fichero JSON previamente guardado para restaurar el progreso e incidencias de un equipo.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="file-down" class="w-5 h-5" style="color:#a304ed"></i></div><div><p class="text-xs font-bold">Exportar lista (.TXT)</p><p class="text-[11px] leading-tight opacity-80">Descarga la lista de conexiones completa (columnas A–P) como fichero de texto delimitado por tabulaciones, listo para importar en otros sistemas.</p></div></div>
+                   </div>
+               </section>
+
+               <!-- 3. Acciones rápidas de elemento -->
+               <section>
+                   <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">3. Acciones rápidas de elemento</h4>
+                   <p class="text-[11px] opacity-70 mb-3">Aparecen en la barra de herramientas al filtrar por un elemento concreto.</p>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="circuit-board" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Esquema gráfico</p><p class="text-[11px] leading-tight opacity-80">Abre el croquis gráfico del elemento: representación visual de sus puntos de conexión con información de crimpado accesible al pulsar cada pin.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="eye" class="w-5 h-5 text-[#27BFC3]"></i></div><div><p class="text-xs font-bold">Modo Visión</p><p class="text-[11px] leading-tight opacity-80">Activa el asistente paso a paso de conexionado. Guía al operario punto a punto mostrando el cable, terminal y manguito a instalar en cada paso.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="map" class="w-5 h-5 text-amber-500"></i></div><div><p class="text-xs font-bold">Mapa de progreso</p><p class="text-[11px] leading-tight opacity-80">Muestra la vista general de todos los elementos del informe con su porcentaje de conexiones completadas.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-500"></i></div><div><p class="text-xs font-bold">Incidencias</p><p class="text-[11px] leading-tight opacity-80">Despliega el menú de incidencias: corregir datos de una fila, añadir un cable nuevo, eliminar un cable o exportar el informe de incidencias a Excel.</p></div></div>
+                   </div>
+               </section>
+
+               <!-- 4. Tabla de conexiones -->
+               <section>
+                   <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">4. Tabla de conexiones</h4>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="check-square" class="w-5 h-5 text-emerald-500"></i></div><div><p class="text-xs font-bold">Checkbox de estado</p><p class="text-[11px] leading-tight opacity-80">Indica si la conexión ha sido marcada como completada. Se activa desde el Modo Visión o el Esquema Gráfico.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-400"></i></div><div><p class="text-xs font-bold">Icono de incompatibilidad</p><p class="text-[11px] leading-tight opacity-80">Aparece en las columnas <em>De Terminal</em> y <em>Para Terminal</em> cuando el código de terminal no es compatible con la sección del cable. Al pasar el ratón muestra las secciones válidas.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-300 term-warn-blink"></i></div><div><p class="text-xs font-bold">Aviso en encabezado de columna</p><p class="text-[11px] leading-tight opacity-80">El icono parpadeante en la cabecera de <em>De Terminal</em> o <em>Para Terminal</em> indica que existen incompatibilidades en esa columna. Pulsar sobre él filtra el informe mostrando solo las filas con error.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="settings" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Personalizar columnas</p><p class="text-[11px] leading-tight opacity-80">El botón de engranaje en la última columna del encabezado abre un panel para mostrar u ocultar columnas y reordenarlas arrastrando.</p></div></div>
+                   </div>
+               </section>
+
+               <!-- 5. Panel lateral -->
+               <section>
+                   <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">5. Panel lateral</h4>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="info" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Tarjeta DATOS</p><p class="text-[11px] leading-tight opacity-80">Muestra los metadatos del informe cargado: equipo, lista, edición, descripción, fecha y número de plano. El plano es clicable para copiarlo al portapapeles.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="plug" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Tarjeta Materiales</p><p class="text-[11px] leading-tight opacity-80">Visible al filtrar por un elemento. Lista los terminales y manguitos necesarios con su cantidad. Al pulsar uno, resalta sus filas en la tabla.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="bar-chart-2" class="w-5 h-5 text-emerald-500"></i></div><div><p class="text-xs font-bold">Barra de progreso global</p><p class="text-[11px] leading-tight opacity-80">Muestra el porcentaje de conexiones completadas sobre el total del informe.</p></div></div>
+                   </div>
+               </section>
+
+               <!-- 6. Vistas resumen -->
+               <section>
+                   <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">6. Vistas resumen</h4>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="cable" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Lista de cables</p><p class="text-[11px] leading-tight opacity-80">Agrupa todos los códigos de cable distintos con su descripción y cantidad de apariciones.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="plug" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Lista de terminales</p><p class="text-[11px] leading-tight opacity-80">Agrupa todos los terminales/pines del informe con su descripción y cantidad total.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="tag" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Lista de manguitos</p><p class="text-[11px] leading-tight opacity-80">Agrupa todos los manguitos con su cantidad. Incluye botones para descargar los ficheros de marcado o enviarlos por Outlook.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-600"></i></div><div><p class="text-xs font-bold">Exportar resumen a Excel</p><p class="text-[11px] leading-tight opacity-80">Descarga la vista resumen activa (cables, terminales o manguitos) como fichero .xlsx.</p></div></div>
+                   </div>
+               </section>
+
+               <!-- 7. Esquema gráfico -->
+               <section>
+                   <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">7. Esquema gráfico</h4>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="zoom-in" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Zoom y paneo</p><p class="text-[11px] leading-tight opacity-80">Controla el nivel de zoom con los botones +/− o la rueda del ratón. Arrastra el esquema para desplazarte. El botón de reinicio restaura la vista original.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="wrench" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Especificaciones de crimpado</p><p class="text-[11px] leading-tight opacity-80">Al pulsar un pin en el esquema, se abre un panel con los detalles técnicos de crimpado: tenaza, posicionador, extractor, pelacables y longitud de pelado.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="check-circle" class="w-5 h-5 text-emerald-500"></i></div><div><p class="text-xs font-bold">Marcar elemento completo</p><p class="text-[11px] leading-tight opacity-80">El botón verde marca todas las conexiones del elemento actual como completadas.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="eye" class="w-5 h-5 text-[#27BFC3]"></i></div><div><p class="text-xs font-bold">Acceso a Modo Visión</p><p class="text-[11px] leading-tight opacity-80">Desde el esquema gráfico se puede saltar directamente al Modo Visión para el mismo elemento.</p></div></div>
+                   </div>
+               </section>
+
+               <!-- 8. Modo Visión -->
+               <section>
+                   <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">8. Modo Visión (asistente de conexionado)</h4>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="chevron-right" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Navegación paso a paso</p><p class="text-[11px] leading-tight opacity-80">Los botones ANTERIOR y SIGUIENTE guían al operario por cada punto de conexión del elemento. Muestra el cable a instalar, el terminal, el manguito y las especificaciones de crimpado.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="list" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Panel de puntos</p><p class="text-[11px] leading-tight opacity-80">Panel lateral izquierdo con todos los puntos de conexión del elemento, indicando cuáles están completados.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-500"></i></div><div><p class="text-xs font-bold">Notificar incidencia</p><p class="text-[11px] leading-tight opacity-80">Permite registrar o exportar incidencias directamente desde el Modo Visión sin salir del asistente.</p></div></div>
+                   </div>
+               </section>
+
+               <!-- 9. Ajustes -->
+               <section>
+                   <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">9. Ajustes</h4>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="moon" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Modo oscuro / claro</p><p class="text-[11px] leading-tight opacity-80">Alterna el tema visual de la aplicación entre modo claro y oscuro.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="rotate-ccw" class="w-5 h-5 text-red-500"></i></div><div><p class="text-xs font-bold">Reiniciar progreso</p><p class="text-[11px] leading-tight opacity-80">Borra el progreso de conexionado del equipo actualmente cargado. No afecta a otros equipos ni a las incidencias.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="shield" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Panel de Administrador</p><p class="text-[11px] leading-tight opacity-80">Acceso protegido por contraseña. Permite configurar la carpeta de destino para el guardado automático de los ficheros JSON de progreso.</p></div></div>
+                   </div>
+               </section>
            </div>
        </div>
    </div>

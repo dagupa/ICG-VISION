@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const APP_VERSION = '0.4.0';
+    const VERSION = '0.5.0';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -3213,7 +3213,13 @@ function handleHelpEasterEgg() {
        }
        window.onload = () => {
            // Título dinámico con versión
-           document.title = `ICG Vision – V.${APP_VERSION}`;
+           document.title = `ICG Vision – V.${VERSION}`;
+           const hv = document.getElementById('headerVersion');
+           if (hv) hv.textContent = `V.${VERSION}`;
+           const lv = document.getElementById('landingVersion');
+           if (lv) lv.textContent = `V.${VERSION}`;
+           const hmv = document.getElementById('helpModalVersion');
+           if (hmv) hmv.textContent = `V.${VERSION}`;
 
            // 0. Cargar carpeta de autoguardado del Administrador (IndexedDB)
            _initAdminDirHandle();
