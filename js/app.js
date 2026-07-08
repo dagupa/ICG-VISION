@@ -698,7 +698,7 @@
  
         let currentSortCol = null, sortAsc = true;
        let rawData = [], reportMetadata = {}, masterMap = { cables: {}, terminals: {}, sleeves: {} };
-       let currentView = 'table', filterText = '', filterMarcaText = '', selectedMaterial = null, currentLang = 'es';
+       let currentView = 'table', filterText = '', filterMarcaText = '', filterTerminalError = null, selectedMaterial = null, currentLang = 'es';
        let summaryViewMode = 'cards'; 
        let currentZoom = 1, panX = 0, panY = 0, isPanning = false, resizingCol = null, startX, startWidth, thDragIdx = null, baseViewBox = { x: 0, y: 0, w: 0, h: 0 };
        let lastTouchX = 0, lastTouchY = 0, lastTouchDist = 0; 
@@ -2158,6 +2158,12 @@ function nextDetailStep() {
  
        function updateMetadataUI() { document.getElementById('meta-equipo').innerText = reportMetadata.equipo || '---'; document.getElementById('meta-desc').innerText = reportMetadata.desc || '---'; document.getElementById('meta-lista').innerText = reportMetadata.lista || '---'; document.getElementById('meta-edicion').innerText = reportMetadata.edicion || '---'; document.getElementById('meta-fecha').innerText = reportMetadata.fecha || '---'; document.getElementById('meta-plano').innerText = reportMetadata.plano || '---'; }
        function clearAllFilters() { document.getElementById('filterInput').value = ''; document.getElementById('filterMarcaInput').value = ''; document.getElementById('globalSearchInput').value = ''; filterText = ''; filterMarcaText = ''; selectedMaterial = null; currentMatchIdx = -1; document.getElementById('searchCounter').innerText = ''; document.getElementById('elementQuickActions').classList.add('hidden'); updateView(); }
+       function toggleTerminalErrorFilter(key) {
+           filterTerminalError = (filterTerminalError === key) ? null : key;
+           renderTable();
+           lucide.createIcons();
+       }
+
        function applyTableFilter(v) { 
    filterText = v; 
    selectedMaterial = null; 
@@ -3027,11 +3033,37 @@ function handleHelpEasterEgg() {
  
        function renderTable() {
            const h = document.getElementById('tableHeader'), b = document.getElementById('tableBody'), a = columns.filter(c => c.visible);
-           
+
+           // Pre-filtrado (elemento + marca) para poder detectar errores de terminal antes de generar la cabecera
+           let d = [...rawData];
+           if (filterText.trim()) {
+               const s = filterText.trim().toLowerCase();
+               d = d.filter(r => (r.de_elemento||'').toLowerCase()===s || (r.para_elemento||'').toLowerCase()===s);
+           }
+           if (filterMarcaText.trim()) {
+               const s = filterMarcaText.trim().toLowerCase();
+               d = d.filter(r => (r.cable_marca||'').toLowerCase().includes(s));
+           }
+
+           // Pre-scan: detectar si hay filas con incompatibilidad de sección en cada columna de terminal
+           const _hasTermError = key => d.some(r => {
+               const v = r[key] || '';
+               if (!v || v === 'S/T' || isKN(v) || !r.seccion) return false;
+               const sc = checkSectionCompatibility(v, r.seccion);
+               return sc && !sc.ok;
+           });
+           const hasDeTerminalErrors   = _hasTermError('de_terminal');
+           const hasParaTerminalErrors = _hasTermError('para_terminal');
+
            // 1. Generar Cabecera
            h.innerHTML = `<tr class="bg-sap-shell text-white">${a.map((c, i) => {
                const isSorted = currentSortCol === c.key;
                const sortIcon = isSorted ? (sortAsc ? ' <i data-lucide="chevron-up" class="inline w-3 h-3"></i>' : ' <i data-lucide="chevron-down" class="inline w-3 h-3"></i>') : '';
+               const colHasTermErrors = (c.key === 'de_terminal' && hasDeTerminalErrors) || (c.key === 'para_terminal' && hasParaTerminalErrors);
+               const isTermFiltered   = filterTerminalError === c.key;
+               const warnIcon = colHasTermErrors
+                   ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 ${isTermFiltered ? 'text-yellow-300' : 'text-red-300 term-warn-blink'} cursor-pointer" title="${isTermFiltered ? 'Mostrando solo errores — clic para quitar filtro' : 'Hay terminales con sección incompatible — clic para filtrar'}" onclick="event.stopPropagation(); toggleTerminalErrorFilter('${c.key}')"></i>`
+                   : '';
                return `<th class="p-3 text-[10px] font-black uppercase border-r border-white/10 text-left relative cursor-pointer hover:bg-white/10 active:bg-sap-darkBlue transition-all select-none bg-sap-shell" 
                            style="width: ${c.width}px; min-width: ${c.width}px;" 
                            draggable="true" 
@@ -3039,7 +3071,7 @@ function handleHelpEasterEgg() {
                            ondragover="hTHDragOver(event)" 
                            ondrop="hTHDrop(event, ${i})"
                            onclick="sortTable('${c.key}')">
-                           <span class="flex items-center gap-1">${c[currentLang]||c.en}${sortIcon}</span>
+                           <span class="flex items-center gap-1">${c[currentLang]||c.en}${warnIcon}${sortIcon}</span>
                            <div class="resizer" onmousedown="event.stopPropagation(); startResize(event, columns.find(col => col.id === '${c.id}'))"></div>
                        </th>`;
           }).join('')}<th class="p-3 w-20 text-center bg-sap-shell border-l border-white/10">
@@ -3048,16 +3080,15 @@ function handleHelpEasterEgg() {
         <button onclick="event.stopPropagation(); toggleColConfig()"><i data-lucide="settings" class="w-4 h-4"></i></button>
     </div>
 </th></tr>`;
- 
-           // 2. Filtrado
-           let d = [...rawData]; 
-           if (filterText.trim()) { 
-               const s = filterText.trim().toLowerCase(); 
-               d = d.filter(r => (r.de_elemento||'').toLowerCase()===s || (r.para_elemento||'').toLowerCase()===s); 
-           } 
-           if (filterMarcaText.trim()) { 
-               const s = filterMarcaText.trim().toLowerCase(); 
-               d = d.filter(r => (r.cable_marca||'').toLowerCase().includes(s)); 
+
+           // 2. Filtrado por incompatibilidad de terminal (sobre los ya pre-filtrados)
+           if (filterTerminalError) {
+               d = d.filter(r => {
+                   const v = r[filterTerminalError] || '';
+                   if (!v || v === 'S/T' || isKN(v) || !r.seccion) return false;
+                   const sc = checkSectionCompatibility(v, r.seccion);
+                   return sc && !sc.ok;
+               });
            }
  
            // 3. Ordenación

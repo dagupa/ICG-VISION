@@ -1,0 +1,48 @@
+================================================================================
+2026-07-08
+PROMPT:
+Quiero que el icono que has añadido parpadee para que llame la atención.
+
+SOLUCIÓN:
+- En css/app.css se añadió el keyframe `termWarnBlink` (opacidad 1→0.25 +
+  escala 1→0.8 + drop-shadow rojo, ciclo 1 s ease-in-out infinite) y la
+  clase `.term-warn-blink` que lo aplica.
+- En js/app.js se añade `term-warn-blink` al icono ⚠ del encabezado solo
+  cuando el filtro no está activo (estado rojo). En estado activo (amarillo)
+  el icono queda fijo para indicar que el filtro ya está seleccionado.
+================================================================================
+2026-07-08
+PROMPT:
+Actualmente si en la columna "De terminal" o "Para terminal" se encuentra un
+código que no es el apropiado para la sección del cable, ese terminal se marca
+de color rojo y se le añade un icono de warning. Quiero que el icono de warning
+aparezca en el encabezado cada vez que exista un error de este tipo. Al hacer
+clic sobre el icono, se filtrará el informe por los registros que contienen ese
+error.
+
+SOLUCIÓN:
+Se han realizado tres cambios en js/app.js:
+
+1. Nueva variable de estado `filterTerminalError = null` junto a los demás
+   filtros (filterText, filterMarcaText). Puede valer 'de_terminal',
+   'para_terminal' o null.
+
+2. Reestructuración de renderTable():
+   - El filtrado por elemento y marca se desplaza ANTES de generar la cabecera
+     para poder hacer un pre-scan sobre los datos ya filtrados.
+   - Pre-scan con _hasTermError(key): comprueba si alguna fila del conjunto
+     filtrado tiene una incompatibilidad de sección en la columna indicada,
+     usando checkSectionCompatibility().
+   - En la generación del <th> de las columnas 'de_terminal' y 'para_terminal',
+     si hay errores se inyecta un <i data-lucide="triangle-alert"> clicable:
+       · Color rojo (text-red-300) cuando el filtro NO está activo.
+       · Color amarillo (text-yellow-300) cuando el filtro SÍ está activo.
+       · onclick llama a toggleTerminalErrorFilter(key), que no propaga el
+         evento al <th> (event.stopPropagation()) para no activar el ordenado.
+   - Tras la cabecera, si filterTerminalError está activo, se filtra d para
+     mostrar solo las filas con error en esa columna.
+
+3. Nueva función toggleTerminalErrorFilter(key): activa o desactiva el filtro
+   según si ya estaba activo para esa columna; llama a renderTable() y
+   lucide.createIcons() para actualizar los iconos SVG.
+================================================================================

@@ -69,6 +69,12 @@ tr:hover td { background-color: rgba(0, 100, 209, 0.05) !important; }
 }
 .animate-icon-glow { animation: iconGlow 2s ease-in-out infinite; }
 
+@keyframes termWarnBlink {
+  0%, 100% { opacity: 1;   transform: scale(1);    filter: drop-shadow(0 0 3px rgba(239,68,68,0.8)); }
+  50%       { opacity: 0.25; transform: scale(0.8); filter: drop-shadow(0 0 0px rgba(239,68,68,0)); }
+}
+.term-warn-blink { animation: termWarnBlink 1s ease-in-out infinite; }
+
 .eye-on { 
   color: var(--color-warning) !important; 
   filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.9));
