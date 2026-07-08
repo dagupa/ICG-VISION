@@ -116,3 +116,17 @@ Se han realizado tres cambios en js/app.js:
    según si ya estaba activo para esa columna; llama a renderTable() y
    lucide.createIcons() para actualizar los iconos SVG.
 ================================================================================
+================================================================================
+2026-07-08 11:29
+PROMPT:
+Al guardar el archivo .txt, cuando los campos EQUIPO y LISTA están vacíos,
+no se elimina el encabezado. Cuando ambos tienen valor sí funciona.
+Todo lo anterior a la primera fila con posicion '001' debe eliminarse.
+
+SOLUCIÓN:
+- js/app.js: en exportConnectionListToTxt(), antes del .map() de líneas,
+  se localiza el índice de la primera fila con posicion === '001' mediante
+  findIndex. Se exporta solo rawData.slice(firstDataIdx) en lugar del array
+  completo. Así, cualquier fila de cabecera del Excel (p.ej. 'Pos.') que haya
+  entrado en rawData porque la columna A tenía valor queda excluida del TXT.
+================================================================================

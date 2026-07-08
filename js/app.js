@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.5.0';
+    const VERSION = '0.5.1';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -1302,7 +1302,10 @@ function markConnectionDone(posicion) {
                'de_manguito', 'para_manguito', 'para_elemento', 'para_punto', 'para_terminal', 'observaciones'
            ];
            const TXT_BLANK_IF = { de_terminal: ['S/T','S/M'], de_manguito: ['S/T','S/M'], para_terminal: ['S/T','S/M'] };
-           const lines = rawData.map(r => {
+           // Eliminar todo lo anterior a la primera fila con posicion '001'
+           const firstDataIdx = rawData.findIndex(r => String(r.posicion).trim() === '001');
+           const exportRows = firstDataIdx >= 0 ? rawData.slice(firstDataIdx) : rawData;
+           const lines = exportRows.map(r => {
                const changes = errorsMap[r.posicion] || {};
                return TXT_KEYS.map(k => {
                    const v = changes[k] !== undefined ? changes[k] : (r[k] || '');
