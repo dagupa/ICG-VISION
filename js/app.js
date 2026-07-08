@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.6.0';
+    const VERSION = '0.6.1';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -2245,28 +2245,39 @@ function selectMaterial(name) {
            const f = event.target.files[0]; if (!f) return;
            const reader = new FileReader();
            reader.onload = (e) => {
-               const d = new Uint8Array(e.target.result), wb = XLSX.read(d, { type: 'array' }), sh = wb.Sheets[wb.SheetNames[0]], json = XLSX.utils.sheet_to_json(sh, { header: "A" });
+               const d = new Uint8Array(e.target.result), wb = XLSX.read(d, { type: 'array' }), sh = wb.Sheets[wb.SheetNames[0]];
+               // header:'A' + defval:'' → objetos con clave = letra de columna Excel (A,B,C...)
+               // defval:'' garantiza que las celdas vacías tengan '' en lugar de undefined
+               const json = XLSX.utils.sheet_to_json(sh, { header: 'A', defval: '' });
+               const gc  = (ri, col) => { const r = json[ri]; return r ? (r[col] ?? '') : ''; };
+               const _sv = v => (v != null ? String(v) : '');
                const parseDate = (val) => { if (!val) return ''; let date = (typeof val === 'number') ? new Date((val - 25569) * 86400 * 1000) : new Date(val); return isNaN(date.getTime()) ? val.toString() : `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`; };
-               // Detectar inicio de datos: primera fila cuya col. A sea un número puro (001, 002...)
+               // Detectar inicio de datos: primera fila cuya col. A sea número puro (001..n)
                const _isNumPos = v => !!v && /^\d+$/.test(String(v).trim());
                const _firstDataIdx = json.findIndex(row => _isNumPos(row['A']));
                const _multiHdr = _firstDataIdx >= 3; // encabezado de más de una fila
                if (_multiHdr) {
-                   // Mapeo alternativo para encabezado multi-fila:
-                   // EQUIPO=D3, DESCRIPCIÓN=D2, PLANO=D5, LISTA=J4, EDICIÓN=J2, FECHA=P2
-                   reportMetadata = {
-                       equipo:  String(json[2]?.['D'] ?? ''),
-                       desc:    String(json[1]?.['D'] ?? ''),
-                       plano:   String(json[4]?.['D'] ?? ''),
-                       lista:   String(json[3]?.['J'] ?? ''),
-                       edicion: String(json[1]?.['J'] ?? ''),
-                       fecha:   parseDate(json[1]?.['P'])
-                   };
+                   // Mapeo encabezado multi-fila: EQUIPO=D3, DESC=D2, PLANO=D5, LISTA=J4, EDICIÓN=J2, FECHA=P2
+                   reportMetadata = { equipo: _sv(gc(2,'D')), desc: _sv(gc(1,'D')), plano: _sv(gc(4,'D')), lista: _sv(gc(3,'J')), edicion: _sv(gc(1,'J')), fecha: parseDate(gc(1,'P')) };
                } else {
-                   const reportRow = json[1]; if (reportRow) { reportMetadata = { equipo: reportRow['Q']||'', desc: reportRow['R']||'', plano: reportRow['S']||'', lista: reportRow['T']||'', edicion: reportRow['U']||'', fecha: parseDate(reportRow['V']) }; }
+                   // Mapeo encabezado simple: fila 1 columnas Q-V
+                   reportMetadata = { equipo: _sv(gc(1,'Q')), desc: _sv(gc(1,'R')), plano: _sv(gc(1,'S')), lista: _sv(gc(1,'T')), edicion: _sv(gc(1,'U')), fecha: parseDate(gc(1,'V')) };
                }
-               // Solo filas con posición numérica — excluye todas las filas de encabezado
-               rawData = json.map(row => ({ posicion: row['A']||'', orden: row['B']||'', cod_cable: row['C']||'', seccion: row['D']||'', longitud: row['E']||'', marcado: row['F']||'', cable_marca: row['G']||'', de_elemento: row['H']||'', de_punto: row['I']||'', de_terminal: row['J']||'', de_manguito: row['K']||'', para_elemento: row['M']||'', para_punto: row['N']||'', para_terminal: row['O']||'', para_manguito: row['L']||'', observaciones: row['P']||'', desc_cable: row['X']||'', desc_manguito: row['Y']||'', desc_terminal_de: row['Z']||'', desc_terminal_para: row['AA']||'' })).filter(r => _isNumPos(r.posicion));
+               // Mapeo de datos (igual en ambos formatos): A=posicion B=orden C=cod_cable D=seccion
+               // E=longitud F=marcado G=cable_marca H=de_elemento I=de_punto J=de_terminal
+               // K=de_manguito L=para_manguito M=para_elemento N=para_punto O=para_terminal P=observaciones
+               rawData = json.map(row => ({
+                   posicion:       _sv(row['A']), orden:          _sv(row['B']),
+                   cod_cable:      _sv(row['C']), seccion:        _sv(row['D']),
+                   longitud:       _sv(row['E']), marcado:        _sv(row['F']),
+                   cable_marca:    _sv(row['G']), de_elemento:    _sv(row['H']),
+                   de_punto:       _sv(row['I']), de_terminal:    _sv(row['J']),
+                   de_manguito:    _sv(row['K']), para_manguito:  _sv(row['L']),
+                   para_elemento:  _sv(row['M']), para_punto:     _sv(row['N']),
+                   para_terminal:  _sv(row['O']), observaciones:  _sv(row['P']),
+                   desc_cable:         _sv(row['X']), desc_manguito:      _sv(row['Y']),
+                   desc_terminal_de:   _sv(row['Z']), desc_terminal_para: _sv(row['AA'])
+               })).filter(r => _isNumPos(r.posicion));
                rawData.forEach(r => { if (r.cod_cable && r.desc_cable) masterMap.cables[r.cod_cable.toString().trim()] = r.desc_cable; if (r.de_terminal && r.desc_terminal_de) masterMap.terminals[r.de_terminal.toString().trim()] = r.desc_terminal_de; if (r.para_terminal && r.desc_terminal_para) masterMap.terminals[r.para_terminal.toString().trim()] = r.desc_terminal_para; if (r.de_manguito && r.desc_manguito) masterMap.sleeves[r.de_manguito.toString().trim()] = r.desc_manguito; if (r.para_manguito && r.desc_manguito) masterMap.sleeves[r.para_manguito.toString().trim()] = r.desc_manguito; });
 loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); _checkDuplicateColumns(rawData); clearAllFilters();
            }; reader.readAsArrayBuffer(f);
@@ -2281,7 +2292,7 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
            exportGroup.classList.toggle('hidden', currentView !== 'summary-sleeves');
  
            if (currentView === 'summary-cables') { 
-               title.innerText = i18n[currentLang].cableSum; rawData.forEach(r => { if(r.cod_cable) { const c = r.cod_cable.trim(); if(!stats[c]) stats[c]={count:0,length:0,desc:masterMap.cables[c]||""}; stats[c].count++; stats[c].length+=parseFloat((r.longitud||"0").toString().replace(',','.'))||0; } }); 
+               title.innerText = i18n[currentLang].cableSum; rawData.forEach(r => { if(r.cod_cable && r.cod_cable.trim()) { const c = r.cod_cable.trim(); if(!stats[c]) stats[c]={count:0,length:0,desc:masterMap.cables[c]||""}; stats[c].count++; stats[c].length+=parseFloat((r.longitud||"0").toString().replace(',','.'))||0; } }); 
            } else if (currentView === 'summary-terminals') { 
                title.innerText = i18n[currentLang].termList; rawData.forEach(r => { [r.de_terminal, r.para_terminal].forEach(t => { if (t && t.toUpperCase()!=='S/T' && !isKN(t)) { const c = t.trim(); if(!stats[c]) stats[c]={count:0,desc:masterMap.terminals[c]||""}; stats[c].count++; } }); }); 
            } else { 
@@ -2293,7 +2304,7 @@ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); upd
            document.getElementById('btnSummaryTable').classList.toggle('text-sap-blue', summaryViewMode === 'table');
            if (summaryViewMode === 'cards') {
                grid.classList.remove('hidden'); tableC.classList.add('hidden');
-               grid.innerHTML = entries.map(([ref, val]) => `<div class="bg-blue-50/20 dark:bg-slate-800/50 p-4 rounded-sm border-t-4 border-t-sap-blue border-l-4 border-l-sap-blue/20 border-r border-b border-sap-border dark:border-slate-700 shadow-sm group hover:shadow-lg transition-all text-left"><div class="text-[9px] font-black text-sap-secondaryText uppercase mb-1 tracking-wider">${ref}</div><div class="text-xs font-bold mb-4 h-8 overflow-hidden leading-snug">${val.desc || '---'}</div><div class="flex justify-between items-end"><div><div class="text-[9px] uppercase font-black text-sap-blue/60">Cantidad</div><div class="text-2xl font-black tabular-nums">${val.count}</div></div>${val.length?`<div><div class="text-[9px] uppercase font-black text-sap-blue/60">Longitud</div><div class="text-lg font-black text-sap-blue">${val.length.toFixed(2)}m</div></div>`:''}</div></div>`).join('');
+               grid.innerHTML = entries.map(([ref, val]) => `<div class="bg-blue-50/20 dark:bg-slate-800/50 p-4 rounded-sm border-t-4 border-t-sap-blue border-l-4 border-l-sap-blue/20 border-r border-b border-sap-border dark:border-slate-700 shadow-sm group hover:shadow-lg transition-all text-left"><div class="text-[9px] font-black text-sap-secondaryText uppercase mb-1 tracking-wider">${ref}</div><div class="text-xs font-bold mb-4 h-8 overflow-hidden leading-snug">${val.desc || '---'}</div><div class="flex justify-between items-end"><div><div class="text-[9px] uppercase font-black text-sap-blue/60">${currentView === 'summary-cables' ? 'Cortes' : 'Cantidad'}</div><div class="text-2xl font-black tabular-nums">${val.count}</div></div>${val.length?`<div><div class="text-[9px] uppercase font-black text-sap-blue/60">Cantidad</div><div class="text-lg font-black text-sap-blue">${val.length.toFixed(2)}m</div></div>`:''}</div></div>`).join('');
            } else {
                grid.classList.add('hidden'); tableC.classList.remove('hidden');
                tableB.innerHTML = entries.map(([ref, val]) => `<tr class="border-b border-sap-border dark:border-slate-700 hover:bg-sap-blue/5 transition-colors"><td class="p-3 text-xs font-bold text-sap-blue">${ref}</td><td class="p-3 text-xs">${val.desc || '---'}</td><td class="p-3 text-sm font-black text-center tabular-nums">${val.count}</td></tr>`).join('');

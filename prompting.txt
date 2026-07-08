@@ -1,4 +1,54 @@
 ================================================================================
+2026-07-08 (vuelta a header:'A' + defval:'' para acceso robusto por columna)
+PROMPT:
+Con { header: 1 } las filas con celdas vacías podían devolver arrays
+compactos, desplazando las posiciones. Se revierte a { header:'A', defval:'' }
+que garantiza acceso por letra de columna Excel, y se aclara el mapeo de
+los dos formatos con comentarios explícitos.
+
+SOLUCIÓN:
+- js/app.js, handleFileUpload():
+  · XLSX.utils.sheet_to_json con { header:'A', defval:'' }:
+    - 'A': columnas nombradas por letra Excel (A,B,C...) siempre por posición.
+    - defval:'': celdas vacías dan '' en lugar de undefined (sin sparse arrays).
+  · Mapeo de datos explícito con claves letra (row['C'], row['J'], etc.)
+    idéntico para ambos formatos de Excel, con comentario de cada columna.
+  · Detección multiHdr y mapeo de metadatos sin cambios.
+  · Resumen cables: fallback a cable_marca (G) cuando cod_cable (C) está vacío.
+================================================================================
+2026-07-08 (acceso por índice en lugar de letra de columna)
+PROMPT:
+Las vistas de resumen seguían sin funcionar. El problema raíz era que
+XLSX.utils.sheet_to_json con { header: "A" } puede usar el texto de la
+primera fila como nombres de columna en lugar de letras fijas por posición,
+dando nombres distintos según el tipo de encabezado del Excel.
+
+SOLUCIÓN:
+- js/app.js, handleFileUpload(): se cambia XLSX.utils.sheet_to_json a
+  { header: 1 } que devuelve ARRAYS por fila. El acceso pasa a ser por
+  índice numérico (0=A, 1=B, 2=C… 9=J, 10=K, 14=O, 23=X, 26=AA, etc.)
+  garantizando mapeo por POSICIÓN absoluta independiente del contenido.
+  Helpers añadidos: gc(ri,ci) para extraer una celda y _sv(v) para
+  convertir a string seguramente.
+  El resto de la lógica (_isNumPos, _multiHdr, masterMap) no cambia.
+================================================================================
+2026-07-08 (resumen cables vacío en Excel multi-fila)
+PROMPT:
+En Excel con encabezado de más de una fila, la vista "Resumen Cables" no
+mostraba ningún dato porque la columna C (Cód. cable) está vacía en ese
+formato; los identificadores de cable están en la columna G (Cable / nº).
+
+SOLUCIÓN:
+- js/app.js, renderSummary(), rama summary-cables:
+  Se sustituye la búsqueda estricta de r.cod_cable por una clave con
+  fallback: _ckey = cod_cable.trim() || cable_marca.trim().
+  · Si cod_cable tiene valor (Excel de una sola cabecera): comportamiento
+    idéntico al anterior.
+  · Si cod_cable está vacío (Excel multi-fila): se agrupa por cable_marca
+    (col. G), mostrando los contadores por "507(1)", "CFM(1)", etc.
+  Las vistas de terminales y manguitos no cambian; si en ese Excel las
+  columnas J, K y O están vacías, esas vistas quedarán vacías (correcto).
+================================================================================
 2026-07-08 (soporte encabezado multi-fila en Excel)
 PROMPT:
 Al cargar un Excel con encabezado de más de una fila, la fila de cabecera
