@@ -186,3 +186,34 @@ SOLUCIÓN:
 - index.html: eliminado el <span id="headerVersion"> del encabezado.
 - js/app.js: eliminadas las dos líneas que obtenían y rellenaban headerVersion.
 ================================================================================
+================================================================================
+2026-07-08 12:50
+PROMPT:
+Cuando la lista de conexiones del popover es muy grande, hay que poder hacer
+scroll para ver la parte oculta.
+
+SOLUCIÓN:
+- index.html, #pinPopover: añadidos flex flex-col y max-h-[80vh] para limitar
+  la altura máxima al 80% de la pantalla y max-w-[340px] para uniformidad.
+- Cabecera (pin name + botón X): shrink-0 para que no se comprima.
+- #popoverContent: overflow-y-auto custom-scrollbar flex-1 pr-1 para que el
+  área de contenido ocupe el espacio disponible y habilite el scroll vertical
+  cuando el contenido supera la altura máxima.
+================================================================================
+================================================================================
+2026-07-08 12:58
+PROMPT:
+En pantalla completa con tablet/smartphone, permitir pinch-to-zoom y pan para
+ver contenido oculto del diagrama SVG.
+
+SOLUCIÓN:
+- js/app.js, handlers touch del SVG (#diagramSvg):
+  1. touchstart: se añade e.preventDefault() para impedir que iOS Safari
+     intercepte el gesto de pinch antes que el JS. Se almacena el punto
+     medio (cx,cy) entre los dos dedos en lastTouchX/Y al iniciar pinch.
+  2. touchmove (2 dedos): además del zoom proporcional a la distancia entre
+     dedos, ahora también actualiza panX/panY con el desplazamiento del punto
+     medio. Así se puede pellizcar y mover el diagrama simultáneamente.
+  3. touchend: si queda 1 dedo al levantar el segundo, se reactiva el pan
+     desde la posición actual de ese dedo (evita salto brusco).
+================================================================================

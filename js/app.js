@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.5.2';
+    const VERSION = '0.5.3';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -3287,34 +3287,59 @@ function handleHelpEasterEgg() {
                    e.preventDefault();
                    adjustZoom(e.deltaY < 0 ? 1.1 : 0.9);
                }, { passive: false });
-               s.addEventListener('touchstart', (e) => { 
-                   hidePinPopover(); 
-                   if (e.touches.length === 1) { 
-                       isPanning = true; 
-                       lastTouchX = e.touches[0].clientX; 
-                       lastTouchY = e.touches[0].clientY; 
-                   } else if (e.touches.length === 2) { 
-                       isPanning = false; 
-                       lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); 
-                   } 
+               s.addEventListener('touchstart', (e) => {
+                   e.preventDefault();
+                   hidePinPopover();
+                   if (e.touches.length === 1) {
+                       isPanning = true;
+                       lastTouchX = e.touches[0].clientX;
+                       lastTouchY = e.touches[0].clientY;
+                   } else if (e.touches.length >= 2) {
+                       isPanning = false;
+                       lastTouchDist = Math.hypot(
+                           e.touches[0].clientX - e.touches[1].clientX,
+                           e.touches[0].clientY - e.touches[1].clientY
+                       );
+                       lastTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                       lastTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                   }
                }, { passive: false });
-               s.addEventListener('touchmove', (e) => { 
-                   e.preventDefault(); 
-                   if (e.touches.length === 1 && isPanning) { 
-                       panX += (e.touches[0].clientX - lastTouchX); 
-                       panY += (e.touches[0].clientY - lastTouchY); 
-                       lastTouchX = e.touches[0].clientX; 
-                       lastTouchY = e.touches[0].clientY; 
-                       updateViewBox(); 
-                   } else if (e.touches.length === 2) { 
-                       const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); 
-                       if (lastTouchDist > 0) adjustZoom(d / lastTouchDist); 
-                       lastTouchDist = d; 
-                   } 
+               s.addEventListener('touchmove', (e) => {
+                   e.preventDefault();
+                   if (e.touches.length === 1 && isPanning) {
+                       panX += (e.touches[0].clientX - lastTouchX);
+                       panY += (e.touches[0].clientY - lastTouchY);
+                       lastTouchX = e.touches[0].clientX;
+                       lastTouchY = e.touches[0].clientY;
+                       updateViewBox();
+                   } else if (e.touches.length >= 2) {
+                       const d = Math.hypot(
+                           e.touches[0].clientX - e.touches[1].clientX,
+                           e.touches[0].clientY - e.touches[1].clientY
+                       );
+                       const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                       const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                       // Pan por desplazamiento del punto medio entre los dos dedos
+                       panX += cx - lastTouchX;
+                       panY += cy - lastTouchY;
+                       // Zoom proporcional a la distancia entre dedos
+                       if (lastTouchDist > 0) adjustZoom(d / lastTouchDist);
+                       lastTouchDist = d;
+                       lastTouchX = cx;
+                       lastTouchY = cy;
+                   }
                }, { passive: false });
-               s.addEventListener('touchend', () => { 
-                   isPanning = false; 
-                   lastTouchDist = 0; 
+               s.addEventListener('touchend', (e) => {
+                   if (e.touches.length === 0) {
+                       isPanning = false;
+                       lastTouchDist = 0;
+                   } else if (e.touches.length === 1) {
+                       // Queda un dedo: reanudar pan desde su posición actual
+                       isPanning = true;
+                       lastTouchX = e.touches[0].clientX;
+                       lastTouchY = e.touches[0].clientY;
+                       lastTouchDist = 0;
+                   }
                });
            }
            lucide.createIcons();
