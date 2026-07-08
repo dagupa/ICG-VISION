@@ -75,6 +75,12 @@ tr:hover td { background-color: rgba(0, 100, 209, 0.05) !important; }
 }
 .term-warn-blink { animation: termWarnBlink 1s ease-in-out infinite; }
 
+@keyframes dupCellBlink {
+  0%, 100% { background-color: rgba(239, 68, 68, 0.30); }
+  50%       { background-color: rgba(239, 68, 68, 0.05); }
+}
+.cell-dup-blink { animation: dupCellBlink 0.8s ease-in-out infinite; }
+
 .eye-on { 
   color: var(--color-warning) !important; 
   filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.9));

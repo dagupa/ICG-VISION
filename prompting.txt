@@ -1,4 +1,64 @@
 ================================================================================
+2026-07-08 (soporte encabezado multi-fila en Excel)
+PROMPT:
+Al cargar un Excel con encabezado de más de una fila, la fila de cabecera
+aparecía en la tabla y la tarjeta DATOS quedaba vacía. El mapeo de metadatos
+para este formato es: EQUIPO=D3, DESCRIPCIÓN=D2, PLANO=D5, LISTA=J4,
+EDICIÓN=J2, FECHA=P2. La primera fila de datos siempre empieza por 001..n.
+
+SOLUCIÓN:
+- js/app.js, handleFileUpload():
+  · Nueva constante _isNumPos: detecta si el valor de col. A es un número
+    puro (/^\d+$/), lo que identifica una fila de datos real.
+  · _firstDataIdx: índice de la primera fila con posición numérica.
+  · _multiHdr = true cuando _firstDataIdx >= 3 (encabezado de varias filas).
+  · Si _multiHdr: se usa el mapeo alternativo con celdas absolutas
+    json[2]['D']=EQUIPO, json[1]['D']=DESC, json[4]['D']=PLANO,
+    json[3]['J']=LISTA, json[1]['J']=EDICIÓN, json[1]['P']=FECHA.
+  · Si no: se mantiene el mapeo original (filas Q-V de json[1]).
+  · rawData ahora usa .filter(r => _isNumPos(r.posicion)) en lugar de
+    .filter(r => r.posicion), excluyendo automáticamente cualquier fila
+    de encabezado independientemente de cuántas haya.
+================================================================================
+2026-07-08 (validación duplicados al cargar Excel)
+PROMPT:
+Cada vez que se cargue un fichero Excel debe comprobarse que no hay campos
+duplicados en las dos primeras columnas. Si hay alguna celda duplicada se
+mostrará un mensaje indicando cuál es.
+
+SOLUCIÓN:
+- js/app.js: nueva función _checkDuplicateColumns(data) añadida justo antes
+  de handleFileUpload. Recorre rawData buscando valores repetidos en los
+  campos 'posicion' (col. A) y 'orden' (col. B). Si detecta duplicados,
+  construye un mensaje listando los valores afectados por columna y lo
+  muestra con window.alert() tras un setTimeout de 200 ms (para que la UI
+  termine de renderizarse antes de que aparezca el diálogo).
+  La carga del fichero continúa con normalidad; el mensaje es solo un aviso.
+  Además, las celdas duplicadas quedan marcadas con fondo rojo parpadeante
+  (clase CSS cell-dup-blink / animación dupCellBlink en app.css).
+  Para ello se mantienen dos Sets de módulo (_dupPosicions, _dupOrdenes) que
+  _checkDuplicateColumns rellena en cada carga, y renderTable los consulta al
+  generar cada celda de las columnas posicion y orden.
+================================================================================
+2026-07-08 (filtro multi-valor con "+")
+PROMPT:
+Al filtrar usando la caja ELEMENTO o CABLE quiero que añadas la opción de que
+al poner el signo "+" filtre por ambos valores. Ejemplo: si escribo X10 + X11
+el filtrado se hará por los elementos X10 y X11.
+
+SOLUCIÓN:
+- js/app.js: en renderTable(), los filtros de ELEMENTO y CABLE/MARCA se
+  parsean por "+" y se aplica lógica OR con Array.some().
+  · ELEMENTO: coincidencia exacta (===) en de_elemento / para_elemento
+    contra cada término del split.
+  · CABLE/MARCA: coincidencia parcial (includes) en cable_marca contra cada
+    término del split.
+  · Sidebar de materiales: también actualizado para agregar materiales de
+    todos los elementos filtrados simultáneamente.
+- Los botones de "Acciones rápidas" (detalle, gráfico, marcar completado)
+  se ocultan automáticamente cuando el filtro contiene "+", ya que esas
+  acciones solo tienen sentido para un único elemento.
+================================================================================
 2026-07-08
 PROMPT:
 Implementar gestión de versión semántica (MAYOR.MEJORA.CORRECCIÓN) en el

@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.5.4';
+    const VERSION = '0.6.0';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -711,6 +711,7 @@
        let lastTouchX = 0, lastTouchY = 0, lastTouchDist = 0; 
        let detailPinSequence = [], detailPinDataMap = new Map(), currentDetailIndex = 0;
        let progressMap = {};
+       let _dupPosicions = new Set(), _dupOrdenes = new Set();
        let _lastPinPopoverArgs = null;
        let _schemaSortedPins = [], _schemaPinDataCache = {};
        let _termTipTimeout = null;
@@ -2211,8 +2212,9 @@ function nextDetailStep() {
    selectedMaterial = null; 
    document.getElementById('filterInput').value = v;
    const qa = document.getElementById('elementQuickActions');
-   qa.classList.toggle('hidden', !v.trim());
-   qa.classList.toggle('flex', !!v.trim());
+   const isSingle = !!v.trim() && !v.includes('+');
+   qa.classList.toggle('hidden', !isSingle);
+   qa.classList.toggle('flex', !!isSingle);
    updateView(); 
 }
 function selectMaterial(name) {
@@ -2221,16 +2223,52 @@ function selectMaterial(name) {
     // Forzamos el repintado de la tabla para aplicar las clases de color 'isSelected'
     renderTable();
 }
+        function _checkDuplicateColumns(data) {
+            _dupPosicions.clear(); _dupOrdenes.clear();
+            const getDuplicates = field => {
+                const counts = {};
+                data.forEach(r => { const v = (r[field]||'').toString().trim(); if (v) counts[v] = (counts[v]||0)+1; });
+                return Object.keys(counts).filter(v => counts[v] > 1);
+            };
+            const dupA = getDuplicates('posicion'), dupB = getDuplicates('orden');
+            dupA.forEach(v => _dupPosicions.add(v));
+            dupB.forEach(v => _dupOrdenes.add(v));
+            if (!dupA.length && !dupB.length) return;
+            let msg = '\u26a0 Se han detectado valores duplicados en el fichero Excel:\n';
+            if (dupA.length) msg += `\nColumna A (POSICI\u00d3N): ${dupA.join(', ')}`;
+            if (dupB.length) msg += `\nColumna B (ORDEN): ${dupB.join(', ')}`;
+            msg += '\n\nRevisa el fichero antes de continuar.';
+            setTimeout(() => window.alert(msg), 200);
+        }
+
          function handleFileUpload(event) {
            const f = event.target.files[0]; if (!f) return;
            const reader = new FileReader();
            reader.onload = (e) => {
                const d = new Uint8Array(e.target.result), wb = XLSX.read(d, { type: 'array' }), sh = wb.Sheets[wb.SheetNames[0]], json = XLSX.utils.sheet_to_json(sh, { header: "A" });
                const parseDate = (val) => { if (!val) return ''; let date = (typeof val === 'number') ? new Date((val - 25569) * 86400 * 1000) : new Date(val); return isNaN(date.getTime()) ? val.toString() : `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`; };
-               const reportRow = json[1]; if (reportRow) { reportMetadata = { equipo: reportRow['Q']||'', desc: reportRow['R']||'', plano: reportRow['S']||'', lista: reportRow['T']||'', edicion: reportRow['U']||'', fecha: parseDate(reportRow['V']) }; }
-               rawData = json.slice(1).map(row => ({ posicion: row['A']||'', orden: row['B']||'', cod_cable: row['C']||'', seccion: row['D']||'', longitud: row['E']||'', marcado: row['F']||'', cable_marca: row['G']||'', de_elemento: row['H']||'', de_punto: row['I']||'', de_terminal: row['J']||'', de_manguito: row['K']||'', para_elemento: row['M']||'', para_punto: row['N']||'', para_terminal: row['O']||'', para_manguito: row['L']||'', observaciones: row['P']||'', desc_cable: row['X']||'', desc_manguito: row['Y']||'', desc_terminal_de: row['Z']||'', desc_terminal_para: row['AA']||'' })).filter(r => r.posicion);
+               // Detectar inicio de datos: primera fila cuya col. A sea un número puro (001, 002...)
+               const _isNumPos = v => !!v && /^\d+$/.test(String(v).trim());
+               const _firstDataIdx = json.findIndex(row => _isNumPos(row['A']));
+               const _multiHdr = _firstDataIdx >= 3; // encabezado de más de una fila
+               if (_multiHdr) {
+                   // Mapeo alternativo para encabezado multi-fila:
+                   // EQUIPO=D3, DESCRIPCIÓN=D2, PLANO=D5, LISTA=J4, EDICIÓN=J2, FECHA=P2
+                   reportMetadata = {
+                       equipo:  String(json[2]?.['D'] ?? ''),
+                       desc:    String(json[1]?.['D'] ?? ''),
+                       plano:   String(json[4]?.['D'] ?? ''),
+                       lista:   String(json[3]?.['J'] ?? ''),
+                       edicion: String(json[1]?.['J'] ?? ''),
+                       fecha:   parseDate(json[1]?.['P'])
+                   };
+               } else {
+                   const reportRow = json[1]; if (reportRow) { reportMetadata = { equipo: reportRow['Q']||'', desc: reportRow['R']||'', plano: reportRow['S']||'', lista: reportRow['T']||'', edicion: reportRow['U']||'', fecha: parseDate(reportRow['V']) }; }
+               }
+               // Solo filas con posición numérica — excluye todas las filas de encabezado
+               rawData = json.map(row => ({ posicion: row['A']||'', orden: row['B']||'', cod_cable: row['C']||'', seccion: row['D']||'', longitud: row['E']||'', marcado: row['F']||'', cable_marca: row['G']||'', de_elemento: row['H']||'', de_punto: row['I']||'', de_terminal: row['J']||'', de_manguito: row['K']||'', para_elemento: row['M']||'', para_punto: row['N']||'', para_terminal: row['O']||'', para_manguito: row['L']||'', observaciones: row['P']||'', desc_cable: row['X']||'', desc_manguito: row['Y']||'', desc_terminal_de: row['Z']||'', desc_terminal_para: row['AA']||'' })).filter(r => _isNumPos(r.posicion));
                rawData.forEach(r => { if (r.cod_cable && r.desc_cable) masterMap.cables[r.cod_cable.toString().trim()] = r.desc_cable; if (r.de_terminal && r.desc_terminal_de) masterMap.terminals[r.de_terminal.toString().trim()] = r.desc_terminal_de; if (r.para_terminal && r.desc_terminal_para) masterMap.terminals[r.para_terminal.toString().trim()] = r.desc_terminal_para; if (r.de_manguito && r.desc_manguito) masterMap.sleeves[r.de_manguito.toString().trim()] = r.desc_manguito; if (r.para_manguito && r.desc_manguito) masterMap.sleeves[r.para_manguito.toString().trim()] = r.desc_manguito; });
-loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); clearAllFilters();
+loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); _checkDuplicateColumns(rawData); clearAllFilters();
            }; reader.readAsArrayBuffer(f);
        }
        function handleBreakerClick(event) { if (event) event.stopPropagation(); const b = document.getElementById('landingBreaker'), e = document.getElementById('landingEye'); b.classList.add('is-on'); if (e) e.classList.add('eye-on'); setTimeout(() => { const input = document.getElementById('csvInputLanding'); if (input) input.click(); }, 400); }
@@ -3079,12 +3117,12 @@ function handleHelpEasterEgg() {
            // Pre-filtrado (elemento + marca) para poder detectar errores de terminal antes de generar la cabecera
            let d = [...rawData];
            if (filterText.trim()) {
-               const s = filterText.trim().toLowerCase();
-               d = d.filter(r => (r.de_elemento||'').toLowerCase()===s || (r.para_elemento||'').toLowerCase()===s);
+               const terms = filterText.split('+').map(t => t.trim().toLowerCase()).filter(t => t);
+               d = d.filter(r => { const de = (r.de_elemento||'').toLowerCase(), para = (r.para_elemento||'').toLowerCase(); return terms.some(s => de===s || para===s); });
            }
            if (filterMarcaText.trim()) {
-               const s = filterMarcaText.trim().toLowerCase();
-               d = d.filter(r => (r.cable_marca||'').toLowerCase().includes(s));
+               const terms = filterMarcaText.split('+').map(t => t.trim().toLowerCase()).filter(t => t);
+               d = d.filter(r => { const marca = (r.cable_marca||'').toLowerCase(); return terms.some(s => marca.includes(s)); });
            }
 
            // Pre-scan: detectar si hay filas con incompatibilidad de sección en cada columna de terminal
@@ -3167,7 +3205,8 @@ function handleHelpEasterEgg() {
                        const isTerminalCol = c.key === 'de_terminal' || c.key === 'para_terminal';
                        const termSC = isTerminalCol && v && v !== 'S/T' && !isKN(v) && r.seccion ? checkSectionCompatibility(v, r.seccion) : null;
                        const hasIncompat = termSC && !termSC.ok;
-                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'bg-red-50 dark:bg-red-900/10':''}"
+                       const isDupCell = (c.key === 'posicion' && _dupPosicions.has((r.posicion||'').toString().trim())) || (c.key === 'orden' && _dupOrdenes.has((r.orden||'').toString().trim()));
+                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'bg-red-50 dark:bg-red-900/10':''} ${isDupCell?'cell-dup-blink':''}"
                                    style="width: ${c.width}px;" 
                                    ${isElementCol ? `onclick="applyTableFilter('${v}')"` : ''}>
                                    <div class="flex items-center gap-1 min-w-0 ${hasIncompat?'text-red-600 dark:text-red-400':''}">
@@ -3192,14 +3231,14 @@ function handleHelpEasterEgg() {
            }).join('');
  
            // 5. Sidebar Materiales
-           const sFilter = filterText.trim().toLowerCase(), matC = document.getElementById('elementMaterialsContainer');
-           if (sFilter && rawData.length > 0) {
+           const sFilterTerms = filterText.trim() ? filterText.split('+').map(t => t.trim().toLowerCase()).filter(t => t) : [], matC = document.getElementById('elementMaterialsContainer');
+           if (sFilterTerms.length > 0 && rawData.length > 0) {
                matC.classList.remove('hidden'); 
                const mats = {};
                rawData.forEach(r => { 
-                   if ((r.de_elemento||'').toLowerCase() === sFilter && r.de_terminal && r.de_terminal !== 'S/T' && !isKN(r.de_terminal)) mats[r.de_terminal] = (mats[r.de_terminal]||0)+1; 
-                   if ((r.para_elemento||'').toLowerCase() === sFilter && r.para_terminal && r.para_terminal !== 'S/T' && !isKN(r.para_terminal)) mats[r.para_terminal] = (mats[r.para_terminal]||0)+1; 
-                   if (((r.de_elemento || '').toLowerCase() === sFilter || (r.para_elemento || '').toLowerCase() === sFilter) && r.de_manguito && r.de_manguito !== 'S/M') mats[r.de_manguito] = (mats[r.de_manguito] || 0) + 1; 
+                   if (sFilterTerms.some(s => (r.de_elemento||'').toLowerCase() === s) && r.de_terminal && r.de_terminal !== 'S/T' && !isKN(r.de_terminal)) mats[r.de_terminal] = (mats[r.de_terminal]||0)+1; 
+                   if (sFilterTerms.some(s => (r.para_elemento||'').toLowerCase() === s) && r.para_terminal && r.para_terminal !== 'S/T' && !isKN(r.para_terminal)) mats[r.para_terminal] = (mats[r.para_terminal]||0)+1; 
+                   if (sFilterTerms.some(s => (r.de_elemento||'').toLowerCase() === s || (r.para_elemento||'').toLowerCase() === s) && r.de_manguito && r.de_manguito !== 'S/M') mats[r.de_manguito] = (mats[r.de_manguito] || 0) + 1; 
                });
               document.getElementById('terminalsBody').innerHTML = Object.entries(mats).map(([name, qty]) => `
     <div onclick="selectMaterial('${name}')" 
@@ -3244,7 +3283,8 @@ function handleHelpEasterEgg() {
            
            document.getElementById('filterInput').addEventListener('input', (e) => { 
                filterText = e.target.value; 
-               document.getElementById('elementQuickActions').classList.toggle('hidden', !filterText.trim()); 
+               const isSingle = !!filterText.trim() && !filterText.includes('+');
+               document.getElementById('elementQuickActions').classList.toggle('hidden', !isSingle); 
                updateView(); 
            });
            
