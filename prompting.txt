@@ -1,6 +1,76 @@
 ================================================================================
 2026-07-08
 PROMPT:
+Implementar gestión de versión semántica (MAYOR.MEJORA.CORRECCIÓN) en el
+título de la aplicación. Versión actual: 0.4.0.
+
+SOLUCIÓN:
+- js/app.js: constante APP_VERSION = '0.4.0' al inicio del fichero, con
+  comentario explicativo del formato de versión. En window.onload, primera
+  instrucción: document.title = `ICG Vision – V.${APP_VERSION}`.
+- index.html: <title> actualizado a "ICG Vision – V.0.4.0" como fallback
+  estático (antes del JS).
+Flujo: para cada nueva versión solo hay que cambiar APP_VERSION en app.js.
+================================================================================
+2026-07-08
+PROMPT:
+Cambiar el color del icono de exportación TXT a #0424da.
+
+SOLUCIÓN:
+- index.html: se reemplaza la clase text-emerald-500/hover:bg-emerald-500/10
+  por style="color:#0424da" y onmouseover/onmouseout equivalentes con el
+  mismo color en el fondo hover (#0424da1a).
+================================================================================
+2026-07-08
+PROMPT:
+Revisar la exportación TXT porque la columna L (marca / para_manguito)
+no se estaba exportando.
+
+SOLUCIÓN:
+- js/app.js, exportConnectionListToTxt(): se inserta 'para_manguito' entre
+  'de_manguito' y 'para_elemento' en TXT_KEYS, completando las 16 columnas
+  A–P correctamente y evitando el desplazamiento incorrecto de M–P.
+================================================================================
+2026-07-08
+PROMPT:
+Ampliar la exportación TXT hasta la columna P (observaciones).
+
+SOLUCIÓN:
+- js/app.js, exportConnectionListToTxt(): se añade 'observaciones' al final
+  del array TXT_KEYS, pasando de 14 a 15 columnas (A-P).
+================================================================================
+2026-07-08
+PROMPT:
+En la exportación TXT, dejar en blanco las celdas de de_terminal, de_manguito
+y para_terminal cuando su valor sea S/T o S/M.
+
+SOLUCIÓN:
+- js/app.js, función exportConnectionListToTxt(): se añade el objeto
+  TXT_BLANK_IF que mapea las tres columnas a los valores ['S/T','S/M'].
+  Durante el mapeo de cada celda, si la clave está en TXT_BLANK_IF y el valor
+  coincide, se exporta cadena vacía en lugar del valor original.
+================================================================================
+2026-07-08
+PROMPT:
+Añade un icono al encabezado que exporte la vista listado como TXT delimitado
+por tabulaciones, sin encabezados, columnas A-O, nombre EQUIPO-LISTA.txt,
+guardado como descarga del navegador igual que el Excel.
+
+SOLUCIÓN:
+- js/app.js: nueva función exportConnectionListToTxt().
+    · Columnas exportadas (A-O): posicion, orden, cod_cable, seccion, longitud,
+      marcado, cable_marca, de_elemento, de_punto, de_terminal, de_manguito,
+      para_elemento, para_punto, para_terminal.
+    · Aplica correcciones de errorsMap igual que la vista de tabla.
+    · Sin encabezados, filas separadas por \r\n, campos por \t.
+    · Nombre de fichero: EQUIPO-LISTA.txt (caracteres inválidos → '_').
+    · Descarga con Blob + <a download> (mismo mecanismo que XLSX.writeFile).
+    · Notificación 'success' al completar.
+- index.html: botón <file-down> color esmeralda junto al botón Guardar,
+  title="EXPORTAR LISTA CONEXIONES (.TXT)", onclick=exportConnectionListToTxt().
+================================================================================
+2026-07-08
+PROMPT:
 Quiero que el icono que has añadido parpadee para que llame la atención.
 
 SOLUCIÓN:

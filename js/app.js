@@ -1,3 +1,10 @@
+    // ── VERSIÓN DE LA APLICACIÓN ───────────────────────────────────────────
+    // Formato MAYOR.MEJORA.CORRECCIÓN
+    // · MAYOR      : cambio de versión principal
+    // · MEJORA     : nueva funcionalidad
+    // · CORRECCIÓN : fix de errores
+    const APP_VERSION = '0.4.0';
+
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
     // Handle de fichero reemplazado por _saveDirHandle gestionado por IndexedDB (ver bloque Administrador)
@@ -1286,7 +1293,39 @@ function markConnectionDone(posicion) {
            showNotification('Registro de error eliminado', 'success');
        }
        // ── FIN GESTIÓN DE ERRORES ─────────────────────────────────────────────
- 
+
+       function exportConnectionListToTxt() {
+           if (!rawData || rawData.length === 0) { showNotification('No hay datos cargados', 'error'); return; }
+           const TXT_KEYS = [
+               'posicion', 'orden', 'cod_cable', 'seccion', 'longitud',
+               'marcado', 'cable_marca', 'de_elemento', 'de_punto', 'de_terminal',
+               'de_manguito', 'para_manguito', 'para_elemento', 'para_punto', 'para_terminal', 'observaciones'
+           ];
+           const TXT_BLANK_IF = { de_terminal: ['S/T','S/M'], de_manguito: ['S/T','S/M'], para_terminal: ['S/T','S/M'] };
+           const lines = rawData.map(r => {
+               const changes = errorsMap[r.posicion] || {};
+               return TXT_KEYS.map(k => {
+                   const v = changes[k] !== undefined ? changes[k] : (r[k] || '');
+                   if (TXT_BLANK_IF[k] && TXT_BLANK_IF[k].includes(v)) return '';
+                   return v;
+               }).join('\t');
+           });
+           const content = lines.join('\r\n');
+           const equipo = (reportMetadata.equipo || 'EQUIPO').replace(/[\\/:*?"<>|]/g, '_');
+           const lista  = (reportMetadata.lista  || 'LISTA' ).replace(/[\\/:*?"<>|]/g, '_');
+           const fileName = `${equipo}-${lista}.txt`;
+           const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+           const url  = URL.createObjectURL(blob);
+           const a    = document.createElement('a');
+           a.href     = url;
+           a.download = fileName;
+           document.body.appendChild(a);
+           a.click();
+           document.body.removeChild(a);
+           URL.revokeObjectURL(url);
+           showNotification(`Exportado: ${fileName}`, 'success');
+       }
+
        function exportSummaryToExcel() {
            if (!currentSummaryStats || Object.keys(currentSummaryStats).length === 0) return;
            const dataToExport = Object.entries(currentSummaryStats).map(([ref, val]) => ({ 'Código': ref, 'Descripción': val.desc || '---', 'Cantidad': val.count }));
@@ -3173,6 +3212,9 @@ function handleHelpEasterEgg() {
            lucide.createIcons();
        }
        window.onload = () => {
+           // Título dinámico con versión
+           document.title = `ICG Vision – V.${APP_VERSION}`;
+
            // 0. Cargar carpeta de autoguardado del Administrador (IndexedDB)
            _initAdminDirHandle();
            // 0b. Iniciar temporizador de autoguardado (cada 10 minutos si hay cambios)

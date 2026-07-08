@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>ICG Vision - V.0.2.0</title>
+   <title>ICG Vision – V.0.4.0</title>
    <!-- Librerías locales (vendor/) — sin dependencia de internet -->
    <script src="vendor/tailwind.min.js"></script>
    <script src="vendor/lucide.min.js"></script>
@@ -155,6 +155,7 @@
            </div>
  
            <div class="flex items-center gap-1 ml-auto shrink-0">
+               <button onclick="exportConnectionListToTxt()" class="p-1.5 rounded transition-all" style="color:#a304ed" onmouseover="this.style.background='#a304ed1a'" onmouseout="this.style.background=''" title="EXPORTAR LISTA CONEXIONES (.TXT)"><i data-lucide="file-down" class="w-6 h-6"></i></button>
                <button id="btnSave" onclick="saveDataToFile()" class="p-1.5 rounded transition-all cursor-not-allowed opacity-40" title="GUARDAR CAMBIOS" disabled><i data-lucide="save" class="w-6 h-6 text-slate-400"></i></button>
                <button onclick="loadDataFromFile()" class="p-1.5 rounded transition-all" title="CARGAR CAMBIOS GUARDADOS"><i data-lucide="folder-open" class="w-6 h-6 text-amber-300"></i></button>
            </div>

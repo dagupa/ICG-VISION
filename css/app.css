@@ -190,7 +190,7 @@ th { position: relative; }
 }
 .pulse-vision { animation: pulse-vision-glow 2s infinite; }
 @keyframes pulse-vision-glow {
-  0%, 100% { opacity: 1; filter: drop-shadow(0 0 2px #fff); }
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 2px #ffffff); }
   50% { opacity: 0.5; filter: drop-shadow(0 0 8px var(--color-vision-accent)); }
 }
 
