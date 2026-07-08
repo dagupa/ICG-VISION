@@ -217,3 +217,21 @@ SOLUCIÓN:
   3. touchend: si queda 1 dedo al levantar el segundo, se reactiva el pan
      desde la posición actual de ese dedo (evita salto brusco).
 ================================================================================
+================================================================================
+2026-07-08 13:06
+PROMPT:
+En el modo esquema grafico dejo de funcionar toda la parte interactiva: no
+ocurre nada al pulsar pines ni al navegar pulsando un elemento.
+
+CAUSA:
+El e.preventDefault() añadido en touchstart para todos los toques suprimia
+la generacion de eventos click sinteticos del navegador. Los pines y elementos
+del diagrama usan onclick, que depende de ese click sintetico.
+
+SOLUCION:
+- js/app.js, touchstart del SVG: e.preventDefault() solo cuando
+  e.touches.length >= 2 (gesto de pinch). Para 1 dedo NO se llama
+  preventDefault(), de modo que los taps siguen disparando onclick
+  normalmente. El pan de 1 dedo sigue funcionando via touchmove
+  (que si llama preventDefault para evitar el scroll del navegador).
+================================================================================

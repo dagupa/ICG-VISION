@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.5.3';
+    const VERSION = '0.5.4';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -3288,13 +3288,10 @@ function handleHelpEasterEgg() {
                    adjustZoom(e.deltaY < 0 ? 1.1 : 0.9);
                }, { passive: false });
                s.addEventListener('touchstart', (e) => {
-                   e.preventDefault();
-                   hidePinPopover();
-                   if (e.touches.length === 1) {
-                       isPanning = true;
-                       lastTouchX = e.touches[0].clientX;
-                       lastTouchY = e.touches[0].clientY;
-                   } else if (e.touches.length >= 2) {
+                   if (e.touches.length >= 2) {
+                       // Pinch: prevenir que el navegador intercepte el gesto ANTES que el JS.
+                       // Solo para 2+ dedos: no suprimir el click sintético de un tap.
+                       e.preventDefault();
                        isPanning = false;
                        lastTouchDist = Math.hypot(
                            e.touches[0].clientX - e.touches[1].clientX,
@@ -3302,6 +3299,12 @@ function handleHelpEasterEgg() {
                        );
                        lastTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                        lastTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                   } else {
+                       // 1 dedo: iniciar pan pero NO prevenir default para que los
+                       // taps sigan generando eventos click (onclick de pines/elementos).
+                       isPanning = true;
+                       lastTouchX = e.touches[0].clientX;
+                       lastTouchY = e.touches[0].clientY;
                    }
                }, { passive: false });
                s.addEventListener('touchmove', (e) => {
