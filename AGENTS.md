@@ -225,3 +225,12 @@ Nunca almacenar:
 4. Implementar únicamente lo solicitado.
 
 La estabilidad del sistema tiene prioridad sobre la elegancia del código.
+
+# Histórico de cambios
+
+Cada prompt lo guardarás en el archivo prompting.txt y quedará registrado con el día y la hora en la que se ha lanzado.
+A continuación del prompt añadirás la solución dada al respecto.
+Si el archivo no exite lo crearás.
+
+# Contexto
+Añadirás al contexto de cada sesión lo registrado en el archivo prompting.txt
