@@ -1,4 +1,19 @@
 ================================================================================
+2026-07-09 (eliminar filas con solo datos en A/B antes de cargar)
+PROMPT:
+Si las filas del Excel tienen datos en la columna A (posición) o B (orden)
+pero ningún dato en el resto de columnas (C–P), esas filas deben eliminarse
+antes de cargar el archivo.
+
+SOLUCIÓN:
+- js/app.js, handleFileUpload():
+  · El .filter() al construir rawData se amplía: además de exigir posición
+    numérica, se comprueba que al menos una de las columnas C–P tenga valor.
+  · DATA_KEYS = [cod_cable, seccion, longitud, marcado, cable_marca,
+    de_elemento, de_punto, de_terminal, de_manguito, para_manguito,
+    para_elemento, para_punto, para_terminal, observaciones].
+  · Si todas están vacías → fila descartada silenciosamente.
+================================================================================
 2026-07-09 (mensaje de carga ampliado con errores de sección y terminal incompatible)
 PROMPT:
 Al mensaje de alerta que aparece al cargar el fichero cuando se detectan

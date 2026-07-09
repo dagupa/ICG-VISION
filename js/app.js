@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.7.0';
+    const VERSION = '0.7.1';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -2297,7 +2297,14 @@ function selectMaterial(name) {
                    para_terminal:  _sv(row['O']), observaciones:  _sv(row['P']),
                    desc_cable:         _sv(row['X']), desc_manguito:      _sv(row['Y']),
                    desc_terminal_de:   _sv(row['Z']), desc_terminal_para: _sv(row['AA'])
-               })).filter(r => _isNumPos(r.posicion));
+               })).filter(r => {
+                   if (!_isNumPos(r.posicion)) return false;
+                   // Descartar filas donde solo A y/o B tienen dato y el resto (C-P) están vacías
+                   const DATA_KEYS = ['cod_cable','seccion','longitud','marcado','cable_marca',
+                       'de_elemento','de_punto','de_terminal','de_manguito','para_manguito',
+                       'para_elemento','para_punto','para_terminal','observaciones'];
+                   return DATA_KEYS.some(k => (r[k]||'').trim() !== '');
+               });
                rawData.forEach(r => { if (r.cod_cable && r.desc_cable) masterMap.cables[r.cod_cable.toString().trim()] = r.desc_cable; if (r.de_terminal && r.desc_terminal_de) masterMap.terminals[r.de_terminal.toString().trim()] = r.desc_terminal_de; if (r.para_terminal && r.desc_terminal_para) masterMap.terminals[r.para_terminal.toString().trim()] = r.desc_terminal_para; if (r.de_manguito && r.desc_manguito) masterMap.sleeves[r.de_manguito.toString().trim()] = r.desc_manguito; if (r.para_manguito && r.desc_manguito) masterMap.sleeves[r.para_manguito.toString().trim()] = r.desc_manguito; });
 loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); _checkDuplicateColumns(rawData); clearAllFilters();
            }; reader.readAsArrayBuffer(f);
