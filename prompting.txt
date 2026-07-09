@@ -1,4 +1,85 @@
 ================================================================================
+2026-07-09 (mensaje de carga ampliado con errores de sección y terminal incompatible)
+PROMPT:
+Al mensaje de alerta que aparece al cargar el fichero cuando se detectan
+posiciones duplicadas, añadir también información sobre filas con sección
+faltante (cuando hay terminal asignado) y filas con terminal incompatible
+con la sección indicada.
+
+SOLUCIÓN:
+- js/app.js, _checkDuplicateColumns(data):
+  · _tv(t): helper igual a _tvh — terminal con valor real (no vacío, no S/T,
+    no S/M, no KN).
+  · secMissingPos: posiciones de filas con sección vacía y terminal asignado.
+  · termIncompatPos: posiciones de filas donde de_terminal o para_terminal
+    no es compatible con la sección (via checkSectionCompatibility).
+  · La condición de salida temprana incluye los 4 arrays.
+  · _listPos(arr, max=10): muestra hasta 10 posiciones; si hay más, añade
+    "y N más..." para no saturar el alert.
+  · El mensaje muestra cada tipo de error como una línea con ●, incluyendo
+    conteo y posiciones afectadas.
+  · El alert se dispara si hay CUALQUIER tipo de incidencia, no solo duplicados.
+================================================================================
+2026-07-09 (warning clickable en cabeceras A, B y D; filtrado unificado para duplicados y sección faltante)
+PROMPT:
+Añadir icono de warning parpadeante en las cabeceras de las columnas A
+(Posición) y B (Orden) cuando hay valores duplicados. Todos los iconos de
+warning (A, B, D, J, O) deben funcionar igual: clic filtra la tabla por ese
+tipo de error; segundo clic quita el filtro.
+
+SOLUCIÓN:
+- js/app.js, renderTable() — Pre-scan:
+  · hasDupPosicion = _dupPosicions.size > 0
+  · hasDupOrden    = _dupOrdenes.size > 0
+  (los sets ya se calculan en _checkDuplicateColumns al cargar el fichero)
+- js/app.js, renderTable() — Generación de cabecera:
+  · Unificado: colHasTermErrors, colHasDupErrors, colHasSecErrors →
+    colHasAnyError. Un único bloque genera el warnIcon con onclick
+    toggleTerminalErrorFilter para todos los tipos.
+  · isFiltered (antes isTermFiltered) aplica a cualquier columna.
+  · Títulos diferenciados por tipo de error (term / dup / sección).
+- js/app.js, renderTable() — Filtrado paso 2:
+  · 'posicion' → filtra filas cuya posición está en _dupPosicions.
+  · 'orden'    → filtra filas cuyo orden está en _dupOrdenes.
+  · 'seccion'  → filtra filas con sección vacía y terminal asignado.
+  · resto      → lógica original de incompatibilidad de sección.
+================================================================================
+2026-07-09 (warning en cabecera de columna Sección cuando falta sección con terminal asignado)
+PROMPT:
+Cuando exista el error de sección faltante con terminal asignado, mostrar
+también el icono de warning parpadeante en el encabezado de la columna
+"Sección" (igual que el que aparece en las columnas De Terminal / Para Terminal
+cuando hay incompatibilidad de sección).
+
+SOLUCIÓN:
+- js/app.js, renderTable() — bloque Pre-scan:
+  · Helper _tvh(t): reutiliza la misma lógica que _termHasVal en celdas.
+  · hasSeccionMissingErrors: true si alguna fila del conjunto filtrado tiene
+    seccion vacía y al menos uno de sus terminales tiene valor real.
+  · En la generación del encabezado (warnIcon): si c.key === 'seccion' y
+    hasSeccionMissingErrors, se añade el icono triangle-alert con la clase
+    term-warn-blink y el tooltip "Hay filas con terminal asignado pero sin
+    sección indicada" (sin clic — no hay filtro asociado a esta columna).
+================================================================================
+2026-07-09 (validación: sección obligatoria cuando hay terminal asignado)
+PROMPT:
+Añadir un nuevo control: si la columna J "De terminal" o la columna O
+"Para terminal" tienen datos, es obligatorio que exista el dato de sección
+en la columna D "Sección". Si falta, la celda de sección se marca en rojo
+parpadeante.
+
+SOLUCIÓN:
+- css/app.css: nueva animación @keyframes sectionMissingBlink y clase
+  .cell-seccion-missing (fondo rojo parpadeante, igual que .cell-dup-blink).
+- js/app.js, renderTable() — bucle de celdas:
+  · Helper local _termHasVal(t): devuelve true si el terminal tiene valor
+    real (no vacío, no 'S/T', no 'S/M', no isKN).
+  · hasMissingSeccion = c.key === 'seccion' && !v &&
+    (_termHasVal(r.de_terminal) || _termHasVal(r.para_terminal)).
+  · Si hasMissingSeccion: se aplica la clase 'cell-seccion-missing' al <td>
+    y se muestra un icono data-lucide="alert-circle" rojo con tooltip
+    "Sección obligatoria — hay terminal asignado".
+================================================================================
 2026-07-08 (vuelta a header:'A' + defval:'' para acceso robusto por columna)
 PROMPT:
 Con { header: 1 } las filas con celdas vacías podían devolver arrays

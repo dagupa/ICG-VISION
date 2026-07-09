@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.6.1';
+    const VERSION = '0.7.0';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -2233,10 +2233,30 @@ function selectMaterial(name) {
             const dupA = getDuplicates('posicion'), dupB = getDuplicates('orden');
             dupA.forEach(v => _dupPosicions.add(v));
             dupB.forEach(v => _dupOrdenes.add(v));
-            if (!dupA.length && !dupB.length) return;
-            let msg = '\u26a0 Se han detectado valores duplicados en el fichero Excel:\n';
-            if (dupA.length) msg += `\nColumna A (POSICI\u00d3N): ${dupA.join(', ')}`;
-            if (dupB.length) msg += `\nColumna B (ORDEN): ${dupB.join(', ')}`;
+
+            // Sección faltante con terminal asignado
+            const _tv = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t));
+            const secMissingPos = data
+                .filter(r => !r.seccion && (_tv(r.de_terminal) || _tv(r.para_terminal)))
+                .map(r => r.posicion).filter(Boolean);
+
+            // Terminal incompatible con la sección
+            const termIncompatPos = data
+                .filter(r => {
+                    const chk = key => { const v = r[key]||''; if (!v || v==='S/T' || isKN(v) || !r.seccion) return false; const sc = checkSectionCompatibility(v, r.seccion); return sc && !sc.ok; };
+                    return chk('de_terminal') || chk('para_terminal');
+                })
+                .map(r => r.posicion).filter(Boolean);
+
+            if (!dupA.length && !dupB.length && !secMissingPos.length && !termIncompatPos.length) return;
+
+            const _listPos = (arr, max = 10) => arr.length <= max ? arr.join(', ') : arr.slice(0, max).join(', ') + ` y ${arr.length - max} más...`;
+
+            let msg = '⚠ Se han detectado incidencias en el fichero Excel:\n';
+            if (dupA.length)          msg += `\n● Posiciones duplicadas (col. A): ${dupA.join(', ')}`;
+            if (dupB.length)          msg += `\n● Órdenes duplicadas (col. B): ${dupB.join(', ')}`;
+            if (secMissingPos.length) msg += `\n● Sección sin definir con terminal asignado (${secMissingPos.length}): pos. ${_listPos(secMissingPos)}`;
+            if (termIncompatPos.length) msg += `\n● Terminal incompatible con la sección (${termIncompatPos.length}): pos. ${_listPos(termIncompatPos)}`;
             msg += '\n\nRevisa el fichero antes de continuar.';
             setTimeout(() => window.alert(msg), 200);
         }
@@ -3146,14 +3166,28 @@ function handleHelpEasterEgg() {
            const hasDeTerminalErrors   = _hasTermError('de_terminal');
            const hasParaTerminalErrors = _hasTermError('para_terminal');
 
+           // Pre-scan: detectar si hay filas con sección vacía pero con terminal asignado
+           const _tvh = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t));
+           const hasSeccionMissingErrors = d.some(r => !r.seccion && (_tvh(r.de_terminal) || _tvh(r.para_terminal)));
+           const hasDupPosicion = _dupPosicions.size > 0;
+           const hasDupOrden    = _dupOrdenes.size > 0;
+
            // 1. Generar Cabecera
            h.innerHTML = `<tr class="bg-sap-shell text-white">${a.map((c, i) => {
                const isSorted = currentSortCol === c.key;
                const sortIcon = isSorted ? (sortAsc ? ' <i data-lucide="chevron-up" class="inline w-3 h-3"></i>' : ' <i data-lucide="chevron-down" class="inline w-3 h-3"></i>') : '';
+               const isFiltered       = filterTerminalError === c.key;
                const colHasTermErrors = (c.key === 'de_terminal' && hasDeTerminalErrors) || (c.key === 'para_terminal' && hasParaTerminalErrors);
-               const isTermFiltered   = filterTerminalError === c.key;
-               const warnIcon = colHasTermErrors
-                   ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 ${isTermFiltered ? 'text-yellow-300' : 'text-red-300 term-warn-blink'} cursor-pointer" title="${isTermFiltered ? 'Mostrando solo errores — clic para quitar filtro' : 'Hay terminales con sección incompatible — clic para filtrar'}" onclick="event.stopPropagation(); toggleTerminalErrorFilter('${c.key}')"></i>`
+               const colHasDupErrors  = (c.key === 'posicion' && hasDupPosicion) || (c.key === 'orden' && hasDupOrden);
+               const colHasSecErrors  = c.key === 'seccion' && hasSeccionMissingErrors;
+               const colHasAnyError   = colHasTermErrors || colHasDupErrors || colHasSecErrors;
+               const warnTitle = colHasTermErrors
+                   ? (isFiltered ? 'Mostrando solo errores — clic para quitar filtro' : 'Hay terminales con sección incompatible — clic para filtrar')
+                   : colHasDupErrors
+                       ? (isFiltered ? 'Mostrando solo duplicados — clic para quitar filtro' : 'Hay valores duplicados en esta columna — clic para filtrar')
+                       : (isFiltered ? 'Mostrando solo errores de sección — clic para quitar filtro' : 'Hay filas con terminal asignado pero sin sección — clic para filtrar');
+               const warnIcon = colHasAnyError
+                   ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 ${isFiltered ? 'text-yellow-300' : 'text-red-300 term-warn-blink'} cursor-pointer" title="${warnTitle}" onclick="event.stopPropagation(); toggleTerminalErrorFilter('${c.key}')"></i>`
                    : '';
                return `<th class="p-3 text-[10px] font-black uppercase border-r border-white/10 text-left relative cursor-pointer hover:bg-white/10 active:bg-sap-darkBlue transition-all select-none bg-sap-shell" 
                            style="width: ${c.width}px; min-width: ${c.width}px;" 
@@ -3172,14 +3206,22 @@ function handleHelpEasterEgg() {
     </div>
 </th></tr>`;
 
-           // 2. Filtrado por incompatibilidad de terminal (sobre los ya pre-filtrados)
+           // 2. Filtrado por error de columna (sobre los ya pre-filtrados)
            if (filterTerminalError) {
-               d = d.filter(r => {
-                   const v = r[filterTerminalError] || '';
-                   if (!v || v === 'S/T' || isKN(v) || !r.seccion) return false;
-                   const sc = checkSectionCompatibility(v, r.seccion);
-                   return sc && !sc.ok;
-               });
+               if (filterTerminalError === 'posicion') {
+                   d = d.filter(r => _dupPosicions.has((r.posicion||'').toString().trim()));
+               } else if (filterTerminalError === 'orden') {
+                   d = d.filter(r => _dupOrdenes.has((r.orden||'').toString().trim()));
+               } else if (filterTerminalError === 'seccion') {
+                   d = d.filter(r => !r.seccion && (_tvh(r.de_terminal) || _tvh(r.para_terminal)));
+               } else {
+                   d = d.filter(r => {
+                       const v = r[filterTerminalError] || '';
+                       if (!v || v === 'S/T' || isKN(v) || !r.seccion) return false;
+                       const sc = checkSectionCompatibility(v, r.seccion);
+                       return sc && !sc.ok;
+                   });
+               }
            }
  
            // 3. Ordenación
@@ -3217,12 +3259,15 @@ function handleHelpEasterEgg() {
                        const termSC = isTerminalCol && v && v !== 'S/T' && !isKN(v) && r.seccion ? checkSectionCompatibility(v, r.seccion) : null;
                        const hasIncompat = termSC && !termSC.ok;
                        const isDupCell = (c.key === 'posicion' && _dupPosicions.has((r.posicion||'').toString().trim())) || (c.key === 'orden' && _dupOrdenes.has((r.orden||'').toString().trim()));
-                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'bg-red-50 dark:bg-red-900/10':''} ${isDupCell?'cell-dup-blink':''}"
+                       const _termHasVal = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t));
+                       const hasMissingSeccion = c.key === 'seccion' && !v && (_termHasVal(r.de_terminal) || _termHasVal(r.para_terminal));
+                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'bg-red-50 dark:bg-red-900/10':''} ${isDupCell?'cell-dup-blink':''} ${hasMissingSeccion?'cell-seccion-missing':''}"
                                    style="width: ${c.width}px;" 
                                    ${isElementCol ? `onclick="applyTableFilter('${v}')"` : ''}>
                                    <div class="flex items-center gap-1 min-w-0 ${hasIncompat?'text-red-600 dark:text-red-400':''}">
                                        <span class="truncate">${v}</span>
                                        ${hasIncompat ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-red-500 cursor-help" onmouseenter="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}')" onmouseleave="hideTermCompatTip()" ontouchstart="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}'); event.stopPropagation()"></i>` : ''}
+                                       ${hasMissingSeccion ? `<i data-lucide="alert-circle" class="w-3 h-3 shrink-0 text-red-600" title="Sección obligatoria — hay terminal asignado"></i>` : ''}
                                    </div>
                                </td>`;
                    }).join('')}
