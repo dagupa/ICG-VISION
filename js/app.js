@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.7.1';
+    const VERSION = '0.7.2';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -711,7 +711,7 @@
        let lastTouchX = 0, lastTouchY = 0, lastTouchDist = 0; 
        let detailPinSequence = [], detailPinDataMap = new Map(), currentDetailIndex = 0;
        let progressMap = {};
-       let _dupPosicions = new Set(), _dupOrdenes = new Set();
+       let _dupPosicions = new Set(), _dupOrdenes = new Set(), _nonNumericLongitud = new Set();
        let _lastPinPopoverArgs = null;
        let _schemaSortedPins = [], _schemaPinDataCache = {};
        let _termTipTimeout = null;
@@ -2224,7 +2224,7 @@ function selectMaterial(name) {
     renderTable();
 }
         function _checkDuplicateColumns(data) {
-            _dupPosicions.clear(); _dupOrdenes.clear();
+            _dupPosicions.clear(); _dupOrdenes.clear(); _nonNumericLongitud.clear();
             const getDuplicates = field => {
                 const counts = {};
                 data.forEach(r => { const v = (r[field]||'').toString().trim(); if (v) counts[v] = (counts[v]||0)+1; });
@@ -2240,6 +2240,10 @@ function selectMaterial(name) {
                 .filter(r => !r.seccion && (_tv(r.de_terminal) || _tv(r.para_terminal)))
                 .map(r => r.posicion).filter(Boolean);
 
+            // Longitud con caracteres no numéricos en col. E
+            data.filter(r => { const v = (r.longitud||'').toString().trim(); return v !== '' && !/^[\d.,]+$/.test(v); })
+                .forEach(r => { if (r.posicion) _nonNumericLongitud.add((r.posicion).toString().trim()); });
+
             // Terminal incompatible con la sección
             const termIncompatPos = data
                 .filter(r => {
@@ -2248,7 +2252,7 @@ function selectMaterial(name) {
                 })
                 .map(r => r.posicion).filter(Boolean);
 
-            if (!dupA.length && !dupB.length && !secMissingPos.length && !termIncompatPos.length) return;
+            if (!dupA.length && !dupB.length && !secMissingPos.length && !termIncompatPos.length && !_nonNumericLongitud.size) return;
 
             const _listPos = (arr, max = 10) => arr.length <= max ? arr.join(', ') : arr.slice(0, max).join(', ') + ` y ${arr.length - max} más...`;
 
@@ -2257,6 +2261,7 @@ function selectMaterial(name) {
             if (dupB.length)          msg += `\n● Órdenes duplicadas (col. B): ${dupB.join(', ')}`;
             if (secMissingPos.length) msg += `\n● Sección sin definir con terminal asignado (${secMissingPos.length}): pos. ${_listPos(secMissingPos)}`;
             if (termIncompatPos.length) msg += `\n● Terminal incompatible con la sección (${termIncompatPos.length}): pos. ${_listPos(termIncompatPos)}`;
+            if (_nonNumericLongitud.size) msg += `\n● Longitud con valor no numérico (col. E) (${_nonNumericLongitud.size}): pos. ${_listPos([..._nonNumericLongitud])}`;
             msg += '\n\nRevisa el fichero antes de continuar.';
             setTimeout(() => window.alert(msg), 200);
         }
@@ -3178,6 +3183,7 @@ function handleHelpEasterEgg() {
            const hasSeccionMissingErrors = d.some(r => !r.seccion && (_tvh(r.de_terminal) || _tvh(r.para_terminal)));
            const hasDupPosicion = _dupPosicions.size > 0;
            const hasDupOrden    = _dupOrdenes.size > 0;
+           const hasNonNumericLongitud = _nonNumericLongitud.size > 0;
 
            // 1. Generar Cabecera
            h.innerHTML = `<tr class="bg-sap-shell text-white">${a.map((c, i) => {
@@ -3187,12 +3193,15 @@ function handleHelpEasterEgg() {
                const colHasTermErrors = (c.key === 'de_terminal' && hasDeTerminalErrors) || (c.key === 'para_terminal' && hasParaTerminalErrors);
                const colHasDupErrors  = (c.key === 'posicion' && hasDupPosicion) || (c.key === 'orden' && hasDupOrden);
                const colHasSecErrors  = c.key === 'seccion' && hasSeccionMissingErrors;
-               const colHasAnyError   = colHasTermErrors || colHasDupErrors || colHasSecErrors;
+               const colHasNonNumLong = c.key === 'longitud' && hasNonNumericLongitud;
+               const colHasAnyError   = colHasTermErrors || colHasDupErrors || colHasSecErrors || colHasNonNumLong;
                const warnTitle = colHasTermErrors
                    ? (isFiltered ? 'Mostrando solo errores — clic para quitar filtro' : 'Hay terminales con sección incompatible — clic para filtrar')
                    : colHasDupErrors
                        ? (isFiltered ? 'Mostrando solo duplicados — clic para quitar filtro' : 'Hay valores duplicados en esta columna — clic para filtrar')
-                       : (isFiltered ? 'Mostrando solo errores de sección — clic para quitar filtro' : 'Hay filas con terminal asignado pero sin sección — clic para filtrar');
+                       : colHasNonNumLong
+                           ? (isFiltered ? 'Mostrando solo longitudes no numéricas — clic para quitar filtro' : 'Hay longitudes con caracteres no numéricos — clic para filtrar')
+                           : (isFiltered ? 'Mostrando solo errores de sección — clic para quitar filtro' : 'Hay filas con terminal asignado pero sin sección — clic para filtrar');
                const warnIcon = colHasAnyError
                    ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 ${isFiltered ? 'text-yellow-300' : 'text-red-300 term-warn-blink'} cursor-pointer" title="${warnTitle}" onclick="event.stopPropagation(); toggleTerminalErrorFilter('${c.key}')"></i>`
                    : '';
@@ -3221,6 +3230,8 @@ function handleHelpEasterEgg() {
                    d = d.filter(r => _dupOrdenes.has((r.orden||'').toString().trim()));
                } else if (filterTerminalError === 'seccion') {
                    d = d.filter(r => !r.seccion && (_tvh(r.de_terminal) || _tvh(r.para_terminal)));
+               } else if (filterTerminalError === 'longitud') {
+                   d = d.filter(r => _nonNumericLongitud.has((r.posicion||'').toString().trim()));
                } else {
                    d = d.filter(r => {
                        const v = r[filterTerminalError] || '';
@@ -3268,13 +3279,15 @@ function handleHelpEasterEgg() {
                        const isDupCell = (c.key === 'posicion' && _dupPosicions.has((r.posicion||'').toString().trim())) || (c.key === 'orden' && _dupOrdenes.has((r.orden||'').toString().trim()));
                        const _termHasVal = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t));
                        const hasMissingSeccion = c.key === 'seccion' && !v && (_termHasVal(r.de_terminal) || _termHasVal(r.para_terminal));
-                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'bg-red-50 dark:bg-red-900/10':''} ${isDupCell?'cell-dup-blink':''} ${hasMissingSeccion?'cell-seccion-missing':''}"
+                       const hasNonNumLong = c.key === 'longitud' && _nonNumericLongitud.has((r.posicion||'').toString().trim());
+                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'bg-red-50 dark:bg-red-900/10':''} ${isDupCell?'cell-dup-blink':''} ${hasMissingSeccion?'cell-seccion-missing':''} ${hasNonNumLong?'bg-red-50 dark:bg-red-900/10':''}"
                                    style="width: ${c.width}px;" 
                                    ${isElementCol ? `onclick="applyTableFilter('${v}')"` : ''}>
-                                   <div class="flex items-center gap-1 min-w-0 ${hasIncompat?'text-red-600 dark:text-red-400':''}">
+                                   <div class="flex items-center gap-1 min-w-0 ${hasIncompat?'text-red-600 dark:text-red-400':''} ${hasNonNumLong?'text-red-600 dark:text-red-400':''}">
                                        <span class="truncate">${v}</span>
                                        ${hasIncompat ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-red-500 cursor-help" onmouseenter="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}')" onmouseleave="hideTermCompatTip()" ontouchstart="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}'); event.stopPropagation()"></i>` : ''}
                                        ${hasMissingSeccion ? `<i data-lucide="alert-circle" class="w-3 h-3 shrink-0 text-red-600" title="Sección obligatoria — hay terminal asignado"></i>` : ''}
+                                       ${hasNonNumLong ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-red-500" title="Valor no numérico en longitud (col. E)"></i>` : ''}
                                    </div>
                                </td>`;
                    }).join('')}

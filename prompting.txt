@@ -424,6 +424,34 @@ SOLUCIÓN:
      desde la posición actual de ese dedo (evita salto brusco).
 ================================================================================
 ================================================================================
+2026-07-10
+PROMPT:
+Añadir un control para que si en algún fichero Excel llega en alguna celda de
+la columna E algún carácter que no sea numérico, muestre una advertencia y lo
+marque como error tal y como se hace para las posiciones duplicadas o los
+terminales no compatibles con la sección.
+
+SOLUCIÓN:
+- js/app.js: nuevo Set global _nonNumericLongitud (junto a _dupPosicions y
+  _dupOrdenes) que almacena las posiciones con valor no numérico en longitud.
+- js/app.js, _checkDuplicateColumns(data):
+  · Se limpia _nonNumericLongitud.clear() al inicio junto a los otros Sets.
+  · Se detectan filas con r.longitud no vacío y cuyo valor no coincide con
+    /^[\d.,]+$/ (números, coma decimal y punto). Las posiciones afectadas
+    se añaden al Set.
+  · La condición de salida temprana incluye _nonNumericLongitud.size.
+  · El mensaje de alerta añade una línea "● Longitud con valor no numérico
+    (col. E) (N): pos. X, Y, Z..." con conteo y lista de posiciones.
+- js/app.js, renderTable():
+  · Pre-scan: hasNonNumericLongitud = _nonNumericLongitud.size > 0.
+  · Cabecera: colHasNonNumLong = c.key === 'longitud' && hasNonNumericLongitud
+    → se incluye en colHasAnyError y genera icono triangle-alert parpadeante
+    con tooltip "Hay longitudes con caracteres no numéricos — clic para filtrar".
+  · Filtrado (paso 2): nuevo caso filterTerminalError === 'longitud' filtra
+    filas cuya posición está en _nonNumericLongitud.
+  · Celda: hasNonNumLong marca la celda con fondo rojo (bg-red-50), texto rojo
+    y un icono triangle-alert con tooltip "Valor no numérico en longitud (col. E)".
+================================================================================
 2026-07-08 13:06
 PROMPT:
 En el modo esquema grafico dejo de funcionar toda la parte interactiva: no
