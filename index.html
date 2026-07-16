@@ -205,6 +205,12 @@
                        <div class="flex flex-col"><span class="text-[9px] font-bold text-sap-secondaryText uppercase tracking-tighter">Fecha</span><span id="meta-fecha" class="text-xs font-semibold">---</span></div>
                        <div class="flex flex-col"><span class="text-[9px] font-bold text-sap-secondaryText uppercase tracking-tighter">Plano</span><span id="meta-plano" onclick="copyAndOpenWindchill(this.innerText)" class="text-xs font-semibold text-sap-blue truncate cursor-pointer hover:underline">---</span></div>
                    </div>
+                   <div class="flex flex-col pt-1 border-t border-sap-border/40">
+                       <span class="text-[9px] font-bold text-sap-secondaryText uppercase tracking-tighter mb-1">Estado</span>
+                       <div id="estado-circles" class="flex items-center gap-1.5">
+                           <span class="w-3 h-3 rounded-full bg-slate-400 dark:bg-slate-600 inline-block" title="Sin datos cargados"></span>
+                       </div>
+                   </div>
                </div>
            </div>
            <!-- Materials card -->
@@ -436,8 +442,8 @@
                    <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">2. Barra de herramientas</h4>
                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="layout-list" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Selector de vista</p><p class="text-[11px] leading-tight opacity-80">Cambia entre <em>Lista de conexiones</em>, <em>Lista de cables</em>, <em>Lista de terminales</em> y <em>Lista de manguitos</em>.</p></div></div>
-                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="filter" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Filtro por elemento</p><p class="text-[11px] leading-tight opacity-80">Filtra el informe mostrando únicamente las conexiones del elemento indicado. Al activarse aparecen los iconos de acción rápida.</p></div></div>
-                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="filter" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Filtro por cable nº</p><p class="text-[11px] leading-tight opacity-80">Filtra las filas que contienen la referencia de cable indicada.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="filter" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Filtro por elemento</p><p class="text-[11px] leading-tight opacity-80">Filtra el informe mostrando únicamente las conexiones del elemento indicado. Al activarse aparecen los iconos de acción rápida. Puedes combinar varios elementos con el signo <strong>+</strong> (ej.: <em>X10+X11</em>).</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="filter" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Filtro por cable nº</p><p class="text-[11px] leading-tight opacity-80">Filtra las filas que contienen la referencia de cable indicada. También admite múltiples valores con <strong>+</strong>.</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="search" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Búsqueda global</p><p class="text-[11px] leading-tight opacity-80">Localiza cualquier texto en toda la tabla y resalta las coincidencias. Pulsa el botón repetidamente para navegar entre resultados.</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="trash-2" class="w-5 h-5 text-red-400"></i></div><div><p class="text-xs font-bold">Limpiar filtros</p><p class="text-[11px] leading-tight opacity-80">Elimina todos los filtros activos y restaura la vista completa.</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="save" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Guardar cambios</p><p class="text-[11px] leading-tight opacity-80">Guarda el progreso e incidencias registradas en un fichero JSON. Se activa (azul) cuando hay cambios pendientes.</p></div></div>
@@ -463,9 +469,12 @@
                    <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">4. Tabla de conexiones</h4>
                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="check-square" class="w-5 h-5 text-emerald-500"></i></div><div><p class="text-xs font-bold">Checkbox de estado</p><p class="text-[11px] leading-tight opacity-80">Indica si la conexión ha sido marcada como completada. Se activa desde el Modo Visión o el Esquema Gráfico.</p></div></div>
-                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-400"></i></div><div><p class="text-xs font-bold">Icono de incompatibilidad</p><p class="text-[11px] leading-tight opacity-80">Aparece en las columnas <em>De Terminal</em> y <em>Para Terminal</em> cuando el código de terminal no es compatible con la sección del cable. Al pasar el ratón muestra las secciones válidas.</p></div></div>
-                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-300 term-warn-blink"></i></div><div><p class="text-xs font-bold">Aviso en encabezado de columna</p><p class="text-[11px] leading-tight opacity-80">El icono parpadeante en la cabecera de <em>De Terminal</em> o <em>Para Terminal</em> indica que existen incompatibilidades en esa columna. Pulsar sobre él filtra el informe mostrando solo las filas con error.</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="settings" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Personalizar columnas</p><p class="text-[11px] leading-tight opacity-80">El botón de engranaje en la última columna del encabezado abre un panel para mostrar u ocultar columnas y reordenarlas arrastrando.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-orange-50 dark:bg-orange-900/20 rounded h-fit shrink-0"><i data-lucide="copy" class="w-5 h-5 text-orange-500"></i></div><div><p class="text-xs font-bold">Posición u orden duplicada <span class="inline-block w-2 h-2 rounded-full bg-orange-500 align-middle ml-1"></span></p><p class="text-[11px] leading-tight opacity-80">Las celdas de <em>Posición</em> y <em>Orden</em> parpadean en <strong class="text-orange-500">naranja</strong> cuando su valor aparece duplicado en el informe. Un icono de copia con tooltip confirma el motivo.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-amber-50 dark:bg-amber-900/20 rounded h-fit shrink-0"><i data-lucide="alert-circle" class="w-5 h-5 text-amber-600"></i></div><div><p class="text-xs font-bold">Sección sin definir <span class="inline-block w-2 h-2 rounded-full bg-amber-600 align-middle ml-1"></span></p><p class="text-[11px] leading-tight opacity-80">La celda de <em>Sección</em> parpadea en <strong class="text-amber-600">ámbar</strong> cuando la fila tiene un terminal asignado pero no tiene sección de cable definida. El icono centrado en la celda muestra el tooltip explicativo al pasar el ratón.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-red-50 dark:bg-red-900/20 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-500"></i></div><div><p class="text-xs font-bold">Terminal incompatible con la sección <span class="inline-block w-2 h-2 rounded-full bg-red-500 align-middle ml-1"></span></p><p class="text-[11px] leading-tight opacity-80">Las celdas de <em>De Terminal</em> y <em>Para Terminal</em> parpadean en <strong class="text-red-500">rojo</strong> cuando el código de terminal no admite la sección del cable. Al pasar el ratón se muestra la tarjeta flotante con el terminal, la sección actual y las secciones válidas.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-purple-50 dark:bg-purple-900/20 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-purple-500"></i></div><div><p class="text-xs font-bold">Longitud con valor no numérico <span class="inline-block w-2 h-2 rounded-full bg-purple-500 align-middle ml-1"></span></p><p class="text-[11px] leading-tight opacity-80">La celda de <em>Longitud</em> parpadea en <strong class="text-purple-500">morado</strong> cuando contiene caracteres no numéricos (valor inválido en la columna E del Excel). El tooltip indica el error al pasar el ratón.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-300 term-warn-blink"></i></div><div><p class="text-xs font-bold">Aviso en encabezado de columna</p><p class="text-[11px] leading-tight opacity-80">Cuando existe algún error en una columna, su encabezado muestra un icono parpadeante con el color del tipo de error (naranja, ámbar, rojo o morado). Al pulsar sobre él se filtra la tabla mostrando solo las filas afectadas; al volver a pulsar se elimina el filtro.</p></div></div>
                    </div>
                </section>
 
@@ -473,7 +482,7 @@
                <section>
                    <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">5. Panel lateral</h4>
                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="info" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Tarjeta DATOS</p><p class="text-[11px] leading-tight opacity-80">Muestra los metadatos del informe cargado: equipo, lista, edición, descripción, fecha y número de plano. El plano es clicable para copiarlo al portapapeles.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="info" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Tarjeta DATOS</p><p class="text-[11px] leading-tight opacity-80">Muestra los metadatos del informe cargado: equipo, lista, edición, descripción, fecha y número de plano. El plano es clicable para copiarlo al portapapeles. Incluye el apartado <strong>ESTADO</strong> (ver sección 10).</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="plug" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Tarjeta Materiales</p><p class="text-[11px] leading-tight opacity-80">Visible al filtrar por un elemento. Lista los terminales y manguitos necesarios con su cantidad. Al pulsar uno, resalta sus filas en la tabla.</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="bar-chart-2" class="w-5 h-5 text-emerald-500"></i></div><div><p class="text-xs font-bold">Barra de progreso global</p><p class="text-[11px] leading-tight opacity-80">Muestra el porcentaje de conexiones completadas sobre el total del informe.</p></div></div>
                    </div>
@@ -518,6 +527,40 @@
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="moon" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Modo oscuro / claro</p><p class="text-[11px] leading-tight opacity-80">Alterna el tema visual de la aplicación entre modo claro y oscuro.</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="rotate-ccw" class="w-5 h-5 text-red-500"></i></div><div><p class="text-xs font-bold">Reiniciar progreso</p><p class="text-[11px] leading-tight opacity-80">Borra el progreso de conexionado del equipo actualmente cargado. No afecta a otros equipos ni a las incidencias.</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="shield" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Panel de Administrador</p><p class="text-[11px] leading-tight opacity-80">Acceso protegido por contraseña. Permite configurar la carpeta de destino para el guardado automático de los ficheros JSON de progreso.</p></div></div>
+                   </div>
+               </section>
+
+               <!-- 10. Control de calidad del fichero -->
+               <section>
+                   <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">10. Control de calidad del fichero Excel</h4>
+                   <p class="text-[11px] opacity-70 mb-3">Al cargar el fichero, ICG Visión analiza automáticamente su contenido y detecta cuatro tipos de incidencias. Los errores se señalizan con colores coherentes en la tabla, en los encabezados de columna y en el indicador ESTADO de la tarjeta Datos.</p>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2">
+                           <div class="flex flex-col gap-1.5 shrink-0 pt-1">
+                               <span class="w-3 h-3 rounded-full estado-dot-orange"></span>
+                               <span class="w-3 h-3 rounded-full estado-dot-orange"></span>
+                           </div>
+                           <div><p class="text-xs font-bold text-orange-600">Valores duplicados (Naranja)</p><p class="text-[11px] leading-tight opacity-80">Se detecta cuando la columna <em>Posición</em> (A) o <em>Orden</em> (B) contiene el mismo valor en más de una fila. Las celdas afectadas parpadean en naranja y muestran un icono con tooltip al pasar el ratón.</p></div>
+                       </div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2">
+                           <div class="flex flex-col gap-1.5 shrink-0 pt-1">
+                               <span class="w-3 h-3 rounded-full estado-dot-yellow"></span>
+                           </div>
+                           <div><p class="text-xs font-bold text-amber-700">Sección sin definir con terminal asignado (Ámbar)</p><p class="text-[11px] leading-tight opacity-80">Ocurre cuando la columna <em>Sección</em> (D) está vacía pero <em>De Terminal</em> o <em>Para Terminal</em> tienen valor. La celda de sección parpadea en ámbar con el icono centrado. Es obligatorio definir la sección para poder validar el terminal.</p></div>
+                       </div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2">
+                           <div class="flex flex-col gap-1.5 shrink-0 pt-1">
+                               <span class="w-3 h-3 rounded-full estado-dot-red"></span>
+                           </div>
+                           <div><p class="text-xs font-bold text-red-600">Terminal incompatible con la sección (Rojo)</p><p class="text-[11px] leading-tight opacity-80">El código de terminal en <em>De Terminal</em> o <em>Para Terminal</em> no es apto para la sección del cable indicada. La celda parpadea en rojo. Al pasar el ratón aparece una tarjeta flotante con el terminal, la sección actual y las secciones válidas para ese terminal.</p></div>
+                       </div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2">
+                           <div class="flex flex-col gap-1.5 shrink-0 pt-1">
+                               <span class="w-3 h-3 rounded-full estado-dot-purple"></span>
+                           </div>
+                           <div><p class="text-xs font-bold text-purple-600">Longitud con valor no numérico (Morado)</p><p class="text-[11px] leading-tight opacity-80">La columna <em>Longitud</em> (E) contiene caracteres no numéricos. La celda parpadea en morado. El icono de aviso muestra un tooltip indicando que debe revisarse la columna E del Excel.</p></div>
+                       </div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="activity" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Indicador ESTADO en tarjeta Datos</p><p class="text-[11px] leading-tight opacity-80">El apartado ESTADO de la tarjeta lateral resume el estado del fichero con círculos de colores: <span class="inline-block w-2 h-2 rounded-full bg-slate-400 align-middle"></span> gris = sin datos cargados · <span class="inline-block w-2 h-2 rounded-full bg-green-500 align-middle"></span> verde = sin errores · círculos de colores parpadeantes = errores detectados (uno por tipo). Al pasar el ratón sobre cada círculo se muestra el tipo y número de filas afectadas.</p></div></div>
                    </div>
                </section>
            </div>
@@ -700,14 +743,14 @@
    </div>
 
    <!-- Tooltip global para incompatibilidad de sección/terminal -->
-   <div id="termCompatTip" class="fixed z-[9999] hidden" style="width:260px;" ontouchstart="hideTermCompatTip()">
-       <div class="bg-white dark:bg-slate-800 border border-red-300 dark:border-red-700 rounded-xl shadow-2xl p-3 text-left">
+   <div id="cellErrorTip" class="fixed z-[9999] hidden" style="width:260px;" ontouchstart="hideCellErrorTip()">
+       <div id="cellErrorTipCard" class="bg-white dark:bg-slate-800 border border-red-300 dark:border-red-700 rounded-xl shadow-2xl p-3 text-left">
            <div class="flex items-center gap-2 mb-2">
-               <i data-lucide="triangle-alert" class="w-4 h-4 text-red-500 shrink-0"></i>
-               <span class="text-[11px] font-black text-red-600 dark:text-red-400 uppercase tracking-wide">Sección incompatible</span>
+               <i id="cellErrorTipIcon" data-lucide="triangle-alert" class="w-4 h-4 text-red-500 shrink-0"></i>
+               <span id="cellErrorTipTitle" class="text-[11px] font-black text-red-600 dark:text-red-400 uppercase tracking-wide"></span>
            </div>
-           <div id="termCompatTipBody" class="text-[10px] text-red-500 dark:text-red-400 leading-snug space-y-0.5"></div>
-           <p class="text-[9px] text-red-300 dark:text-red-600 mt-2 italic">Toca para cerrar</p>
+           <div id="cellErrorTipBody" class="text-[10px] text-red-500 dark:text-red-400 leading-snug space-y-0.5"></div>
+           <p id="cellErrorTipHint" class="text-[9px] text-red-300 dark:text-red-600 mt-2 italic">Toca para cerrar</p>
        </div>
    </div>
 

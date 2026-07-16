@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.7.2';
+    const VERSION = '0.8.0';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -712,6 +712,7 @@
        let detailPinSequence = [], detailPinDataMap = new Map(), currentDetailIndex = 0;
        let progressMap = {};
        let _dupPosicions = new Set(), _dupOrdenes = new Set(), _nonNumericLongitud = new Set();
+       let _seccionMissingSet = new Set(), _termIncompatSet = new Set();
        let _lastPinPopoverArgs = null;
        let _schemaSortedPins = [], _schemaPinDataCache = {};
        let _termTipTimeout = null;
@@ -2225,6 +2226,7 @@ function selectMaterial(name) {
 }
         function _checkDuplicateColumns(data) {
             _dupPosicions.clear(); _dupOrdenes.clear(); _nonNumericLongitud.clear();
+            _seccionMissingSet.clear(); _termIncompatSet.clear();
             const getDuplicates = field => {
                 const counts = {};
                 data.forEach(r => { const v = (r[field]||'').toString().trim(); if (v) counts[v] = (counts[v]||0)+1; });
@@ -2252,6 +2254,10 @@ function selectMaterial(name) {
                 })
                 .map(r => r.posicion).filter(Boolean);
 
+            secMissingPos.forEach(v => _seccionMissingSet.add(v.toString().trim()));
+            termIncompatPos.forEach(v => _termIncompatSet.add(v.toString().trim()));
+            updateEstadoUI();
+
             if (!dupA.length && !dupB.length && !secMissingPos.length && !termIncompatPos.length && !_nonNumericLongitud.size) return;
 
             const _listPos = (arr, max = 10) => arr.length <= max ? arr.join(', ') : arr.slice(0, max).join(', ') + ` y ${arr.length - max} más...`;
@@ -2264,6 +2270,30 @@ function selectMaterial(name) {
             if (_nonNumericLongitud.size) msg += `\n● Longitud con valor no numérico (col. E) (${_nonNumericLongitud.size}): pos. ${_listPos([..._nonNumericLongitud])}`;
             msg += '\n\nRevisa el fichero antes de continuar.';
             setTimeout(() => window.alert(msg), 200);
+        }
+
+        function updateEstadoUI() {
+            const container = document.getElementById('estado-circles');
+            if (!container) return;
+            const hasData = rawData && rawData.length > 0;
+            if (!hasData) {
+                container.innerHTML = `<span class="w-3 h-3 rounded-full bg-slate-400 dark:bg-slate-600 inline-block" title="Sin datos cargados"></span>`;
+                return;
+            }
+            const errores = [];
+            if (_dupPosicions.size > 0)      errores.push({ css: 'estado-dot-orange', txt: `Posiciones duplicadas: ${_dupPosicions.size} afectadas` });
+            if (_dupOrdenes.size > 0)         errores.push({ css: 'estado-dot-orange', txt: `Órdenes duplicadas: ${_dupOrdenes.size} afectadas` });
+            if (_seccionMissingSet.size > 0)  errores.push({ css: 'estado-dot-yellow', txt: `Sección sin definir con terminal asignado: ${_seccionMissingSet.size} líneas` });
+            if (_termIncompatSet.size > 0)    errores.push({ css: 'estado-dot-red',    txt: `Terminal incompatible con la sección: ${_termIncompatSet.size} líneas` });
+            if (_nonNumericLongitud.size > 0) errores.push({ css: 'estado-dot-purple', txt: `Longitud con valor no numérico: ${_nonNumericLongitud.size} líneas` });
+            if (errores.length === 0) {
+                container.innerHTML = `<span class="w-3 h-3 rounded-full bg-green-500 inline-block flex-shrink-0" title="Sin errores detectados"></span>
+                    <span class="text-[9px] text-green-600 dark:text-green-400 font-semibold">Correcto</span>`;
+            } else {
+                container.innerHTML = errores.map(e =>
+                    `<span class="w-3 h-3 rounded-full inline-block flex-shrink-0 ${e.css} cursor-help" title="${e.txt}"></span>`
+                ).join('');
+            }
         }
 
          function handleFileUpload(event) {
@@ -2959,31 +2989,49 @@ internalBridges.forEach((b, idx) => {
            return { ok: false, validSections: termEntries.map(item => item.seccion) };
        }
 
-       function showTermCompatTip(el, termId, seccion, validSections) {
-           const tip = document.getElementById('termCompatTip');
-           const body = document.getElementById('termCompatTipBody');
-           if (!tip || !body) return;
+       function showCellErrorTip(el, scheme, titleText, bodyHtml) {
+           const schemes = {
+               red:    { border:'border-red-300 dark:border-red-700',      icon:'w-4 h-4 shrink-0 text-red-500',    title:'text-[11px] font-black uppercase tracking-wide text-red-600 dark:text-red-400',    body:'text-[10px] leading-snug space-y-0.5 text-red-500 dark:text-red-400',    hint:'text-[9px] mt-2 italic text-red-300 dark:text-red-600' },
+               orange: { border:'border-orange-300 dark:border-orange-700', icon:'w-4 h-4 shrink-0 text-orange-500', title:'text-[11px] font-black uppercase tracking-wide text-orange-600 dark:text-orange-400', body:'text-[10px] leading-snug space-y-0.5 text-orange-600 dark:text-orange-400', hint:'text-[9px] mt-2 italic text-orange-300 dark:text-orange-600' },
+               amber:  { border:'border-amber-300 dark:border-amber-700',   icon:'w-4 h-4 shrink-0 text-amber-600',  title:'text-[11px] font-black uppercase tracking-wide text-amber-700 dark:text-amber-400',  body:'text-[10px] leading-snug space-y-0.5 text-amber-600 dark:text-amber-400',  hint:'text-[9px] mt-2 italic text-amber-300 dark:text-amber-600' },
+               purple: { border:'border-purple-300 dark:border-purple-700', icon:'w-4 h-4 shrink-0 text-purple-500', title:'text-[11px] font-black uppercase tracking-wide text-purple-600 dark:text-purple-400', body:'text-[10px] leading-snug space-y-0.5 text-purple-500 dark:text-purple-400', hint:'text-[9px] mt-2 italic text-purple-300 dark:text-purple-600' },
+           };
+           const tip     = document.getElementById('cellErrorTip');
+           const card    = document.getElementById('cellErrorTipCard');
+           const icon    = document.getElementById('cellErrorTipIcon');
+           const titleEl = document.getElementById('cellErrorTipTitle');
+           const bodyEl  = document.getElementById('cellErrorTipBody');
+           const hintEl  = document.getElementById('cellErrorTipHint');
+           if (!tip || !card) return;
            clearTimeout(_termTipTimeout);
-           body.innerHTML = `<p>El terminal <strong>${termId}</strong> no admite <strong>${seccion} mm\u00b2</strong>.</p><p>V\u00e1lidas: <strong>${validSections} mm\u00b2</strong></p>`;
+           const s = schemes[scheme] || schemes.red;
+           card.className    = `bg-white dark:bg-slate-800 border ${s.border} rounded-xl shadow-2xl p-3 text-left`;
+           icon.setAttribute('class', s.icon);
+           titleEl.className = s.title;
+           titleEl.textContent = titleText;
+           bodyEl.className  = s.body;
+           bodyEl.innerHTML  = bodyHtml;
+           hintEl.className  = s.hint;
            tip.classList.remove('hidden');
            const rect = el.getBoundingClientRect();
            const tipH = tip.offsetHeight || 90;
-           const top = rect.top > tipH + 10 ? rect.top - tipH - 6 : rect.bottom + 6;
-           tip.style.top = top + 'px';
+           const top  = rect.top > tipH + 10 ? rect.top - tipH - 6 : rect.bottom + 6;
+           tip.style.top  = top + 'px';
            tip.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 272)) + 'px';
-           // Auto-cierre a los 4 segundos (pantallas táctiles)
-           _termTipTimeout = setTimeout(hideTermCompatTip, 4000);
-           // Cualquier toque fuera lo cierra de inmediato
-           setTimeout(() => {
-               document.addEventListener('touchstart', hideTermCompatTip, { once: true, capture: true });
-           }, 150);
+           _termTipTimeout = setTimeout(hideCellErrorTip, 4000);
+           setTimeout(() => { document.addEventListener('touchstart', hideCellErrorTip, { once: true, capture: true }); }, 150);
        }
-       function hideTermCompatTip() {
+       function hideCellErrorTip() {
            clearTimeout(_termTipTimeout);
            _termTipTimeout = null;
-           const tip = document.getElementById('termCompatTip');
+           const tip = document.getElementById('cellErrorTip');
            if (tip) tip.classList.add('hidden');
        }
+       function showTermCompatTip(el, termId, seccion, validSections) {
+           showCellErrorTip(el, 'red', 'SECCI\u00d3N INCOMPATIBLE',
+               `<p>El terminal <strong>${termId}</strong> no admite <strong>${seccion} mm\u00b2</strong>.</p><p>V\u00e1lidas: <strong>${validSections} mm\u00b2</strong></p>`);
+       }
+       function hideTermCompatTip() { hideCellErrorTip(); }
  
  function openCrimpingModal(terminalId, seccion) {
            const data = getCrimpingInfo(terminalId, seccion);
@@ -3202,8 +3250,13 @@ function handleHelpEasterEgg() {
                        : colHasNonNumLong
                            ? (isFiltered ? 'Mostrando solo longitudes no numéricas — clic para quitar filtro' : 'Hay longitudes con caracteres no numéricos — clic para filtrar')
                            : (isFiltered ? 'Mostrando solo errores de sección — clic para quitar filtro' : 'Hay filas con terminal asignado pero sin sección — clic para filtrar');
+               const warnColorClass = isFiltered ? 'text-yellow-300'
+                   : colHasTermErrors  ? 'text-red-300 term-warn-blink'
+                   : colHasDupErrors   ? 'text-orange-300 term-warn-blink'
+                   : colHasNonNumLong  ? 'text-purple-300 term-warn-blink'
+                   : 'text-amber-300 term-warn-blink';
                const warnIcon = colHasAnyError
-                   ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 ${isFiltered ? 'text-yellow-300' : 'text-red-300 term-warn-blink'} cursor-pointer" title="${warnTitle}" onclick="event.stopPropagation(); toggleTerminalErrorFilter('${c.key}')"></i>`
+                   ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 ${warnColorClass} cursor-pointer" title="${warnTitle}" onclick="event.stopPropagation(); toggleTerminalErrorFilter('${c.key}')"></i>`
                    : '';
                return `<th class="p-3 text-[10px] font-black uppercase border-r border-white/10 text-left relative cursor-pointer hover:bg-white/10 active:bg-sap-darkBlue transition-all select-none bg-sap-shell" 
                            style="width: ${c.width}px; min-width: ${c.width}px;" 
@@ -3277,17 +3330,19 @@ function handleHelpEasterEgg() {
                        const termSC = isTerminalCol && v && v !== 'S/T' && !isKN(v) && r.seccion ? checkSectionCompatibility(v, r.seccion) : null;
                        const hasIncompat = termSC && !termSC.ok;
                        const isDupCell = (c.key === 'posicion' && _dupPosicions.has((r.posicion||'').toString().trim())) || (c.key === 'orden' && _dupOrdenes.has((r.orden||'').toString().trim()));
+                       const dupTooltip = c.key === 'posicion' ? 'Posición duplicada — existe otra fila con el mismo valor' : 'Orden duplicada — existe otra fila con el mismo valor';
                        const _termHasVal = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t));
                        const hasMissingSeccion = c.key === 'seccion' && !v && (_termHasVal(r.de_terminal) || _termHasVal(r.para_terminal));
                        const hasNonNumLong = c.key === 'longitud' && _nonNumericLongitud.has((r.posicion||'').toString().trim());
-                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'bg-red-50 dark:bg-red-900/10':''} ${isDupCell?'cell-dup-blink':''} ${hasMissingSeccion?'cell-seccion-missing':''} ${hasNonNumLong?'bg-red-50 dark:bg-red-900/10':''}"
+                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'cell-incompat-blink':''} ${isDupCell?'cell-dup-blink':''} ${hasMissingSeccion?'cell-seccion-missing':''} ${hasNonNumLong?'cell-nonnum-blink':''}"
                                    style="width: ${c.width}px;" 
                                    ${isElementCol ? `onclick="applyTableFilter('${v}')"` : ''}>
-                                   <div class="flex items-center gap-1 min-w-0 ${hasIncompat?'text-red-600 dark:text-red-400':''} ${hasNonNumLong?'text-red-600 dark:text-red-400':''}">
+                                   <div class="flex items-center gap-1 min-w-0 ${hasIncompat?'text-red-600 dark:text-red-400':''} ${hasNonNumLong?'text-purple-600 dark:text-purple-400':''} ${isDupCell?'text-orange-600 dark:text-orange-400':''} ${hasMissingSeccion?'justify-center':''}">
                                        <span class="truncate">${v}</span>
-                                       ${hasIncompat ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-red-500 cursor-help" onmouseenter="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}')" onmouseleave="hideTermCompatTip()" ontouchstart="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}'); event.stopPropagation()"></i>` : ''}
-                                       ${hasMissingSeccion ? `<i data-lucide="alert-circle" class="w-3 h-3 shrink-0 text-red-600" title="Sección obligatoria — hay terminal asignado"></i>` : ''}
-                                       ${hasNonNumLong ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-red-500" title="Valor no numérico en longitud (col. E)"></i>` : ''}
+                                       ${hasIncompat ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-red-500 cursor-help" onmouseenter="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}')" onmouseleave="hideCellErrorTip()" ontouchstart="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}'); event.stopPropagation()"></i>` : ''}
+                                       ${hasMissingSeccion ? `<i data-lucide="alert-circle" class="w-3 h-3 shrink-0 text-amber-600 dark:text-amber-400 cursor-help" onmouseenter="showCellErrorTip(this,'amber','SECCI\u00d3N OBLIGATORIA','La fila tiene terminal asignado pero la secci\u00f3n del cable no est\u00e1 definida.')" onmouseleave="hideCellErrorTip()" ontouchstart="showCellErrorTip(this,&quot;amber&quot;,&quot;SECCI\u00d3N OBLIGATORIA&quot;,&quot;La fila tiene terminal asignado pero la secci\u00f3n del cable no est\u00e1 definida.&quot;); event.stopPropagation()"></i>` : ''}
+                                       ${hasNonNumLong ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-purple-500 cursor-help" onmouseenter="showCellErrorTip(this,'purple','LONGITUD NO V\u00c1LIDA','El valor contiene caracteres no num\u00e9ricos. Revisa la columna E del Excel.')" onmouseleave="hideCellErrorTip()" ontouchstart="showCellErrorTip(this,&quot;purple&quot;,&quot;LONGITUD NO V\u00c1LIDA&quot;,&quot;El valor contiene caracteres no num\u00e9ricos. Revisa la columna E del Excel.&quot;); event.stopPropagation()"></i>` : ''}
+                                       ${isDupCell ? `<i data-lucide="copy" class="w-3 h-3 shrink-0 text-orange-500 cursor-help" onmouseenter="showCellErrorTip(this,'orange','${c.key==='posicion'?'POSICI\u00d3N DUPLICADA':'ORDEN DUPLICADA'}','Existe m\u00e1s de una fila con este mismo valor en la columna.')" onmouseleave="hideCellErrorTip()" ontouchstart="showCellErrorTip(this,&quot;orange&quot;,&quot;${c.key==='posicion'?'POSICI\u00d3N DUPLICADA':'ORDEN DUPLICADA'}&quot;,&quot;Existe m\u00e1s de una fila con este mismo valor en la columna.&quot;); event.stopPropagation()"></i>` : ''}
                                    </div>
                                </td>`;
                    }).join('')}

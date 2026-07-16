@@ -76,16 +76,53 @@ tr:hover td { background-color: rgba(0, 100, 209, 0.05) !important; }
 .term-warn-blink { animation: termWarnBlink 1s ease-in-out infinite; }
 
 @keyframes dupCellBlink {
-  0%, 100% { background-color: rgba(239, 68, 68, 0.30); }
-  50%       { background-color: rgba(239, 68, 68, 0.05); }
+  0%, 100% { background-color: rgba(249, 115, 22, 0.28); }
+  50%       { background-color: rgba(249, 115, 22, 0.05); }
 }
 .cell-dup-blink { animation: dupCellBlink 0.8s ease-in-out infinite; }
 
 @keyframes sectionMissingBlink {
-  0%, 100% { background-color: rgba(239, 68, 68, 0.35); }
-  50%       { background-color: rgba(239, 68, 68, 0.05); }
+  0%, 100% { background-color: rgba(202, 138, 4, 0.30); }
+  50%       { background-color: rgba(202, 138, 4, 0.05); }
 }
 .cell-seccion-missing { animation: sectionMissingBlink 0.8s ease-in-out infinite; }
+
+@keyframes incompatBlink {
+  0%, 100% { background-color: rgba(239, 68, 68, 0.28); }
+  50%       { background-color: rgba(239, 68, 68, 0.05); }
+}
+.cell-incompat-blink { animation: incompatBlink 0.8s ease-in-out infinite; }
+
+@keyframes nonNumBlink {
+  0%, 100% { background-color: rgba(168, 85, 247, 0.25); }
+  50%       { background-color: rgba(168, 85, 247, 0.05); }
+}
+.cell-nonnum-blink { animation: nonNumBlink 0.8s ease-in-out infinite; }
+
+/* Estado: círculos de error en tarjeta DATOS */
+@keyframes estadoDotOrange {
+  0%, 100% { opacity: 1;    box-shadow: 0 0 6px 1px rgba(249,115,22,0.8); }
+  50%       { opacity: 0.3; box-shadow: 0 0 0px 0px rgba(249,115,22,0); }
+}
+.estado-dot-orange { background-color: #f97316; animation: estadoDotOrange 1s ease-in-out infinite; }
+
+@keyframes estadoDotYellow {
+  0%, 100% { opacity: 1;    box-shadow: 0 0 6px 1px rgba(234,179,8,0.9); }
+  50%       { opacity: 0.3; box-shadow: 0 0 0px 0px rgba(234,179,8,0); }
+}
+.estado-dot-yellow { background-color: #ca8a04; animation: estadoDotYellow 1s ease-in-out infinite; }
+
+@keyframes estadoDotRed {
+  0%, 100% { opacity: 1;    box-shadow: 0 0 6px 1px rgba(239,68,68,0.8); }
+  50%       { opacity: 0.3; box-shadow: 0 0 0px 0px rgba(239,68,68,0); }
+}
+.estado-dot-red { background-color: #ef4444; animation: estadoDotRed 1s ease-in-out infinite; }
+
+@keyframes estadoDotPurple {
+  0%, 100% { opacity: 1;    box-shadow: 0 0 6px 1px rgba(168,85,247,0.8); }
+  50%       { opacity: 0.3; box-shadow: 0 0 0px 0px rgba(168,85,247,0); }
+}
+.estado-dot-purple { background-color: #a855f7; animation: estadoDotPurple 1s ease-in-out infinite; }
 
 .eye-on { 
   color: var(--color-warning) !important; 

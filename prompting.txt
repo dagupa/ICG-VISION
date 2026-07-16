@@ -1,4 +1,131 @@
 ================================================================================
+2026-07-16 (actualización de la ayuda con nuevas funcionalidades)
+PROMPT:
+Actualizar la ayuda con todas las nuevas funcionalidades.
+
+SOLUCIÓN:
+- index.html, sección 2 (Barra de herramientas):
+  · Filtro por elemento y filtro por cable actualizados para mencionar el separador "+" (multi-valor).
+- index.html, sección 4 (Tabla de conexiones):
+  · Reescrita completamente: checkbox + personalizar columnas se mantienen.
+  · Añadidos cuatro bloques de error (uno por tipo) con su color identificativo:
+    naranja (dup), ámbar (sección), rojo (terminal incompat), morado (longitud).
+  · Entrada unificada para el aviso en encabezados de columna (todos los tipos).
+- index.html, sección 5 (Panel lateral):
+  · Tarjeta DATOS actualizada para mencionar el apartado ESTADO y referenciar sección 10.
+- index.html, nueva sección 10 (Control de calidad del fichero Excel):
+  · Descripción general del análisis automático al cargar el fichero.
+  · Cuatro entradas detalladas (duplicados, sección, terminal, longitud) con círculos de color.
+  · Entrada para el indicador ESTADO: gris/verde/colores parpadeantes + tooltip.
+
+================================================================================
+2026-07-16 (tooltip enriquecido para todos los tipos de error en celdas)
+PROMPT:
+Quiero que al pasar el ratón por cualquier celda con error aparezca el mismo tooltip
+enriquecido que muestra el error de terminal (tarjeta flotante con título, descripción
+y "Toca para cerrar"), no solo el title HTML del navegador.
+
+SOLUCIÓN:
+- index.html: div 'termCompatTip' renombrado a 'cellErrorTip' con IDs en cada parte
+  (cellErrorTipCard, cellErrorTipIcon, cellErrorTipTitle, cellErrorTipBody, cellErrorTipHint).
+- js/app.js: 
+  · Nueva función showCellErrorTip(el, scheme, titleText, bodyHtml): aplica dinámicamente
+    el esquema de color (red/orange/amber/purple) a todos los elementos del tooltip.
+  · Nueva función hideCellErrorTip(): oculta el tooltip genérico.
+  · showTermCompatTip/hideTermCompatTip → thin wrappers que llaman a las funciones genéricas.
+  · Iconos en render: hasMissingSeccion, hasNonNumLong, isDupCell usan onmouseenter/onmouseleave
+    con showCellErrorTip/hideCellErrorTip en lugar de title="".
+
+================================================================================
+2026-07-16 (icono con tooltip en todas las celdas con error)
+PROMPT:
+En las celdas de los terminales cuando hay un error se añade un icono con tooltip explicativo.
+Quiero que esto ocurra en todas las celdas con errores de las diferentes columnas.
+
+SOLUCIÓN:
+- js/app.js, renderTable() - celda:
+  · Añadida variable `dupTooltip` con mensaje específico según columna (posición u orden).
+  · isDupCell: nuevo icono `copy` naranja (text-orange-500) con title=dupTooltip.
+  · isDupCell: añadido text-orange-600 dark:text-orange-400 al div contenedor.
+  · hasIncompat, hasMissingSeccion, hasNonNumLong ya tenían icono — sin cambio.
+
+================================================================================
+2026-07-16 (parpadeo en celdas con error de terminal y longitud)
+PROMPT:
+Las celdas con errores en terminales o en la longitud también tienen que parpadear.
+
+SOLUCIÓN:
+- css/app.css: Añadidas dos nuevas animaciones de parpadeo:
+  · incompatBlink + .cell-incompat-blink → parpadeo rojo (rgba 239,68,68)
+  · nonNumBlink + .cell-nonnum-blink → parpadeo morado (rgba 168,85,247)
+- js/app.js, renderTable() - celda:
+  · hasIncompat: sustituido bg-red-50/dark:bg-red-900/10 por clase cell-incompat-blink
+  · hasNonNumLong: sustituido bg-purple-50/dark:bg-purple-900/10 por clase cell-nonnum-blink
+
+================================================================================
+2026-07-16 (armonizar colores de errores en columnas con colores del ESTADO)
+PROMPT:
+Armonizar los colores de los errores en las columnas de la tabla con los definidos para el ESTADO.
+
+SOLUCIÓN:
+- css/app.css: 
+  · cell-dup-blink → naranja (rgba 249,115,22)
+  · cell-seccion-missing → ámbar (rgba 202,138,4)
+- js/app.js, renderTable() - icono cabecera columna:
+  · Añadida variable warnColorClass con color por tipo:
+    rojo (terminal incompat), naranja (duplicados), morado (longitud), ámbar (sección)
+- js/app.js, renderTable() - celda:
+  · hasNonNumLong: bg-red → bg-purple-50/dark:bg-purple-900/10, text-purple-600, icono text-purple-500
+  · hasMissingSeccion: icono text-red-600 → text-amber-600 dark:text-amber-400
+  · hasIncompat: sin cambio (rojo)
+
+================================================================================
+2026-07-16 (colores diferenciados por tipo de error en ESTADO)
+PROMPT:
+Cambiar los colores de los círculos del apartado ESTADO:
+1. Posiciones duplicadas → Naranja parpadeante
+2. Órdenes duplicadas → Naranja parpadeante
+3. Sección sin definir con terminal asignado → Amarillo parpadeante
+4. Terminal incompatible con la sección → Rojo parpadeante
+5. Longitud con valor no numérico → Morado parpadeante
+
+SOLUCIÓN:
+- js/app.js, updateEstadoUI(): cada error ahora lleva su clase CSS específica
+  (estado-dot-orange, estado-dot-yellow, estado-dot-red, estado-dot-purple).
+- css/app.css: sustituido el único @keyframes estadoDotBlink por 4 animaciones
+  independientes (Orange, Yellow, Red, Purple) con su glow de color.
+  Amarillo usa #ca8a04 (amber-600) en lugar de amarillo puro para garantizar
+  contraste visible en modo claro y oscuro.
+
+================================================================================
+2026-07-16 (aparatado ESTADO en tarjeta Datos del sidebar)
+PROMPT:
+En la tarjeta "Datos" añadir justo debajo de la fecha un apartado "ESTADO" con círculos de colores.
+Verde fijo: todo correcto. Rojo parpadeante: un círculo por cada tipo de error con tooltip al pasar el ratón.
+Errores considerados: sección sin definir con terminal asignado, terminal incompatible con sección,
+posiciones duplicadas, órdenes duplicadas, longitud no numérica.
+
+SOLUCIÓN:
+- js/app.js: Nuevos Sets globales `_seccionMissingSet` y `_termIncompatSet`.
+  · _checkDuplicateColumns() los puebla y llama a `updateEstadoUI()` al final.
+  · Nueva función `updateEstadoUI()`: muestra gris (sin datos), verde "Correcto" (sin errores)
+    o círculos rojos parpadeantes con tooltip descriptivo (uno por tipo de error).
+- index.html: Nuevo bloque `<div class="flex flex-col...">` con id="estado-circles" debajo
+  de la fila Fecha/Plano dentro de la tarjeta DATOS del sidebar.
+- css/app.css: Nueva keyframe `estadoDotBlink` + clase `.estado-dot-blink` (parpadeo con glow rojo).
+
+================================================================================
+2026-07-16 (centrar icono de error en celda)
+PROMPT:
+Actualmente cuando se detecta un error las celdas parpadean de color rojo y muestran un icono de advertencia justificado a la izquierda. Quiero que ese icono quede centrado en la celda.
+
+SOLUCIÓN:
+- js/app.js, renderizado de filas en Lista conexiones (~línea 3283):
+  · Al div contenedor del icono/valor se le añade la clase `justify-center` condicionalmente cuando `hasMissingSeccion` es true.
+  · Esto centra el icono `alert-circle` en las celdas de SECCIÓN vacías que tienen terminal asignado (caso más visible en la tabla).
+  · El cambio es: `${hasMissingSeccion?'justify-center':''}` añadido a las clases del div flex.
+
+================================================================================
 2026-07-09 (eliminar filas con solo datos en A/B antes de cargar)
 PROMPT:
 Si las filas del Excel tienen datos en la columna A (posición) o B (orden)
