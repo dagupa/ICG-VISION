@@ -733,6 +733,7 @@
            { id: 'I', key: 'de_punto', visible: true, width: 80, es: 'DE PUNTO', en: 'FROM POINT' },
            { id: 'J', key: 'de_terminal', visible: true, width: 100, es: 'DE TERMINAL', en: 'FROM TERM.' },
            { id: 'K', key: 'de_manguito', visible: true, width: 100, es: 'DE MANGUITO', en: 'FROM SLEEVE' },
+           { id: 'L', key: 'para_manguito', visible: true, width: 100, es: 'DE MARCA', en: 'FROM LABEL' },
            { id: 'M', key: 'para_elemento', visible: true, width: 100, es: 'PARA ELEM.', en: 'TO ELEM.' },
            { id: 'N', key: 'para_punto', visible: true, width: 80, es: 'PARA PUNTO', en: 'TO POINT' },
            { id: 'O', key: 'para_terminal', visible: true, width: 100, es: 'PARA TERMINAL', en: 'TO TERM.' },

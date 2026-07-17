@@ -615,3 +615,20 @@ SOLUCION:
   normalmente. El pan de 1 dedo sigue funcionando via touchmove
   (que si llama preventDefault para evitar el scroll del navegador).
 ================================================================================
+
+================================================================================
+2026-07-17 (columna L `De Marca` en vista Lista de Conexiones)
+PROMPT:
+Quiero que el programa tenga en cuenta la columna L `De Marca` y que se muestre
+en la vista de `lista de conexiones`.
+
+SOLUCION:
+- js/app.js, array columns[] (~linea 735):
+  . Anadida entrada para la columna L entre K (de_manguito) y M (para_elemento):
+    { id: 'L', key: 'para_manguito', visible: true, width: 100, es: 'DE MARCA', en: 'FROM LABEL' }
+  . La clave 'para_manguito' ya se leia del Excel (columna L) desde la carga del
+    fichero y ya estaba en ERROR_COLUMNS y TXT_KEYS; solo faltaba la entrada en
+    el array columns[] que controla las columnas de la tabla de lista.
+  . visible: true para que aparezca por defecto (se puede ocultar con Personalizar Columnas).
+================================================================================
+
