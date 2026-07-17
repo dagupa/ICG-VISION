@@ -1,4 +1,23 @@
 ================================================================================
+2026-07-16 (eliminar bloque redundante window.crimpingMasterData de app.js)
+PROMPT:
+Comprobar si los datos de crimpingMasterData estaban duplicados entre master-data.js
+y app.js, y eliminar el bloque redundante.
+
+ANÁLISIS:
+- master-data.js: const crimpingMasterData = [...] → fuente real de datos (usada por app.js)
+- app.js: window.crimpingMasterData = [...] → código muerto (asignado pero nunca leído)
+  porque las referencias en app.js a `crimpingMasterData` resuelven al `const` global
+  de master-data.js, no a la propiedad `window.crimpingMasterData`.
+- Ambas copias eran idénticas en contenido.
+
+SOLUCIÓN:
+- Eliminado el bloque `// --- MASTER DATA CRIMPAR ---` + `window.crimpingMasterData = [...]`
+  de js/app.js (~580 líneas, de la línea 93 a la 671).
+- js/master-data.js queda como única fuente de verdad para los datos de crimpado.
+- Para añadir nuevos terminales: editar solo master-data.js.
+
+================================================================================
 2026-07-16 (actualización de la ayuda con nuevas funcionalidades)
 PROMPT:
 Actualizar la ayuda con todas las nuevas funcionalidades.
