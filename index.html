@@ -533,7 +533,7 @@
                <!-- 10. Control de calidad del fichero -->
                <section>
                    <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">10. Control de calidad del fichero Excel</h4>
-                   <p class="text-[11px] opacity-70 mb-3">Al cargar el fichero, ICG Visión analiza automáticamente su contenido y detecta cuatro tipos de incidencias. Los errores se señalizan con colores coherentes en la tabla, en los encabezados de columna y en el indicador ESTADO de la tarjeta Datos.</p>
+                   <p class="text-[11px] opacity-70 mb-3">Al cargar el fichero, ICG Visión analiza automáticamente su contenido y detecta cinco tipos de incidencias. Los errores se señalizan con colores coherentes en la tabla, en los encabezados de columna y en el indicador ESTADO de la tarjeta Datos.</p>
                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2">
                            <div class="flex flex-col gap-1.5 shrink-0 pt-1">
@@ -559,6 +559,12 @@
                                <span class="w-3 h-3 rounded-full estado-dot-purple"></span>
                            </div>
                            <div><p class="text-xs font-bold text-purple-600">Longitud con valor no numérico (Morado)</p><p class="text-[11px] leading-tight opacity-80">La columna <em>Longitud</em> (E) contiene caracteres no numéricos. La celda parpadea en morado. El icono de aviso muestra un tooltip indicando que debe revisarse la columna E del Excel.</p></div>
+                       </div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2">
+                           <div class="flex flex-col gap-1.5 shrink-0 pt-1">
+                               <span class="w-3 h-3 rounded-full estado-dot-pink"></span>
+                           </div>
+                           <div><p class="text-xs font-bold text-pink-600">Terminal / pin no existe en master-data.js (Rosa)</p><p class="text-[11px] leading-tight opacity-80">El código de <em>De Terminal</em> o <em>Para Terminal</em> no está dado de alta en la base de datos master-data.js. La celda parpadea en rosa. El mismo control se aplica al registrar una incidencia manualmente: no se guarda si el código no existe en master-data.js.</p></div>
                        </div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="activity" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Indicador ESTADO en tarjeta Datos</p><p class="text-[11px] leading-tight opacity-80">El apartado ESTADO de la tarjeta lateral resume el estado del fichero con círculos de colores: <span class="inline-block w-2 h-2 rounded-full bg-slate-400 align-middle"></span> gris = sin datos cargados · <span class="inline-block w-2 h-2 rounded-full bg-green-500 align-middle"></span> verde = sin errores · círculos de colores parpadeantes = errores detectados (uno por tipo). Al pasar el ratón sobre cada círculo se muestra el tipo y número de filas afectadas.</p></div></div>
                    </div>

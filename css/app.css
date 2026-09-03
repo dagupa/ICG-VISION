@@ -99,6 +99,12 @@ tr:hover td { background-color: rgba(0, 100, 209, 0.05) !important; }
 }
 .cell-nonnum-blink { animation: nonNumBlink 0.8s ease-in-out infinite; }
 
+@keyframes notFoundBlink {
+  0%, 100% { background-color: rgba(236, 72, 153, 0.28); }
+  50%       { background-color: rgba(236, 72, 153, 0.05); }
+}
+.cell-notfound-blink { animation: notFoundBlink 0.8s ease-in-out infinite; }
+
 /* Estado: círculos de error en tarjeta DATOS */
 @keyframes estadoDotOrange {
   0%, 100% { opacity: 1;    box-shadow: 0 0 6px 1px rgba(249,115,22,0.8); }
@@ -123,6 +129,12 @@ tr:hover td { background-color: rgba(0, 100, 209, 0.05) !important; }
   50%       { opacity: 0.3; box-shadow: 0 0 0px 0px rgba(168,85,247,0); }
 }
 .estado-dot-purple { background-color: #a855f7; animation: estadoDotPurple 1s ease-in-out infinite; }
+
+@keyframes estadoDotPink {
+  0%, 100% { opacity: 1;    box-shadow: 0 0 6px 1px rgba(236,72,153,0.8); }
+  50%       { opacity: 0.3; box-shadow: 0 0 0px 0px rgba(236,72,153,0); }
+}
+.estado-dot-pink { background-color: #ec4899; animation: estadoDotPink 1s ease-in-out infinite; }
 
 .eye-on { 
   color: var(--color-warning) !important; 

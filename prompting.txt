@@ -631,4 +631,120 @@ SOLUCION:
     el array columns[] que controla las columnas de la tabla de lista.
   . visible: true para que aparezca por defecto (se puede ocultar con Personalizar Columnas).
 ================================================================================
+================================================================================
+2026-09-03
+PROMPT:
+Cuando se registra un error o notifica una incidencia en el campo "De terminal"
+o "Para terminal" es necesario comprobar que el código nuevo que se introduce
+es correcto. Para ello el programa debe de buscar el código en master-data.js
+y si existe te dejará introducirlo, pero si no existe mostrará el siguiente
+mensaje "El código introducido no es correcto o no está dado de alta en la
+base de datos master-data.js".
 
+SOLUCIÓN:
+- js/app.js: nueva función isValidTerminalCode(code) que comprueba si el código
+  (comparado en mayúsculas, sin espacios) existe como `id` en crimpingMasterData
+  (window.crimpingMasterData, definido en js/master-data.js). Un código vacío
+  se considera válido (permite dejar el campo en blanco).
+- js/app.js, saveError() (modal de incidencia/error de una fila, campos
+  'de_terminal' y 'para_terminal' del ERROR_COLUMNS): antes de calcular los
+  cambios, se recorren los inputs del modal y si alguno de esos dos campos
+  tiene un valor no vacío que no existe en el maestro de crimpado, se muestra
+  la notificación de error solicitada, se hace foco en el campo y se cancela
+  el guardado (no se cierra el modal ni se aplican cambios).
+================================================================================
+================================================================================
+2026-09-03 (2)
+PROMPT:
+Además, tiene que comprobar que el terminal introducido es válido para la
+sección del cable y si no es correcto te indicará el siguiente mensaje
+"El terminal/pin introducido no es válido para la sección de este cable".
+
+SOLUCIÓN:
+- js/app.js, saveError(): tras validar que el código de 'de_terminal' /
+  'para_terminal' existe en el maestro (isValidTerminalCode), se reutiliza la
+  función ya existente checkSectionCompatibility(terminalId, seccion) —usada
+  en la vista de esquema para marcar celdas incompatibles— para comprobar que
+  ese terminal admite la sección indicada en el campo 'D — Sección' del mismo
+  modal (se lee el valor actual del input, por si el usuario también lo ha
+  modificado, no el valor original de la fila).
+- Si checkSectionCompatibility devuelve { ok: false } (el terminal existe pero
+  no admite esa sección), se muestra el nuevo mensaje de error, foco en el
+  campo y se cancela el guardado. Si el terminal no tiene datos de sección en
+  master-data.js (devuelve null) no se bloquea, igual que en el resto de la app.
+================================================================================
+================================================================================
+2026-09-03 (3)
+PROMPT:
+Cuando se carga un fichero excel el programa realiza una serie de validaciones
+como que los terminales son compatibles con la sección del cable, que no hay
+celdas de la sección vacías, que el formato de la longitud de los cables es
+correcto, que no hay duplicidades en las columnas Pos. y Orden. Ahora necesito
+que también compruebe que los terminales que estan en las columnas "De terminal"
+o "Para terminal" existen en master-data.js. En el caso de que no existan se
+indicará el siguiente mensaje: "El terminal / pin no existe o no está dado de
+alta en la base de datos".
+
+SOLUCIÓN:
+- js/app.js: nuevo Set global _termNotFoundSet, junto a los existentes
+  _dupPosicions/_dupOrdenes/_nonNumericLongitud/_seccionMissingSet/_termIncompatSet.
+- _checkDuplicateColumns(data) (validación al cargar el Excel): nuevo cálculo
+  termNotFoundPos con las filas cuyo de_terminal/para_terminal tiene valor (no
+  vacío, no 'S/T', no material tipo isKN) y para el que isValidTerminalCode()
+  devuelve false (código no existe en crimpingMasterData). Se añade al alert
+  resumen ("El terminal / pin no existe o no está dado de alta en la base de
+  datos (N): pos. ...") y a la condición de salida temprana de la función.
+- updateEstadoUI(): nueva entrada de círculo rosa (estado-dot-pink) que muestra
+  cuántas líneas tienen un terminal/pin no encontrado en master-data.js.
+- renderTable(): mismo tratamiento visual que el resto de incidencias de esta
+  columna:
+  · Pre-scan hasDeTerminalNotFound/hasParaTerminalNotFound para el icono de aviso
+    parpadeante en la cabecera de las columnas J y O (color rosa, con su propio
+    tooltip y opción de filtrar sólo esas filas vía toggleTerminalErrorFilter).
+  · Filtro por columna (bloque "2. Filtrado"): además del caso de sección
+    incompatible ya existente, ahora también incluye las filas con terminal no
+    encontrado (isValidTerminalCode(v) === false) aunque no tengan sección.
+  · Celda: hasTermNotFound marca la celda con cell-notfound-blink (parpadeo
+    rosa), texto rosa y un icono triangle-alert con tooltip "TERMINAL NO EXISTE"
+    (usa showCellErrorTip con el nuevo esquema 'pink').
+- js/app.js, showCellErrorTip(): nuevo esquema de color 'pink' en el objeto
+  schemes, junto a red/orange/amber/purple.
+- css/app.css: nuevas clases cell-notfound-blink (@keyframes notFoundBlink,
+  fondo rosa parpadeante) y estado-dot-pink (@keyframes estadoDotPink).
+- index.html, sección 10 (Control de calidad del fichero Excel): añadida la
+  quinta entrada "Terminal / pin no existe en master-data.js (Rosa)" con su
+  círculo estado-dot-pink, y actualizado el contador de "cuatro" a "cinco"
+  tipos de incidencias detectadas.
+- Nota: esta misma validación (isValidTerminalCode) ya se usaba desde la
+  sesión anterior en saveError() (modal de incidencia) para impedir guardar un
+  código de terminal inexistente; ahora también se aplica de forma automática
+  al cargar el Excel, con el mismo criterio de comparación (mayúsculas, sin
+  espacios) contra el campo `id` de crimpingMasterData.
+================================================================================
+================================================================================
+2026-09-03 (4)
+PROMPT:
+Los siguientes códigos son excepciones que no aparecen en master-data.js, pero
+que sí que se admiten: todos los códigos con prefijo "KN-PELAR" y además una
+lista de códigos concretos (641M054, 641M089, 641M10047, 641M10160, 641M10272,
+641M10295, 641M110, 641M130, 641M144, 641M275, 641M280, 641M281, 641M289,
+641M371, 641M860, 641M861, 641M862, 641M960, 641M964, 641M993, H0014682,
+641M10294, 641M072, 641M073, 641M080, 641M10026, 641M10027, 641M10112,
+641M10172, 641M10174, 641M10263, 641M115, 641M184, 641M267, 641M294, 641M295,
+641M298, 641M302, 641M331, 641M351, 641M597, 641M598, 641M744, 641M830,
+641M855, 695000).
+
+SOLUCIÓN:
+- js/app.js: la excepción se añade en un único punto, isValidTerminalCode(code),
+  para que la acepten automáticamente TODOS los consumidores de esta función
+  (validación al cargar el Excel en _checkDuplicateColumns, el filtro/aviso de
+  columna y el resaltado de celda en renderTable, y la validación del modal de
+  incidencia en saveError()):
+  · Nuevo Set global KNOWN_TERMINAL_EXCEPTIONS con la lista de códigos exactos
+    admitidos (comparados en mayúsculas, igual que el resto de la función).
+  · isValidTerminalCode(code) ahora devuelve true sin consultar
+    crimpingMasterData si el código (en mayúsculas) empieza por "KN-PELAR" o
+    está en KNOWN_TERMINAL_EXCEPTIONS, antes de hacer el .some() de siempre.
+- No se ha tocado isKN() (usada solo para excluir "S/T"/"S/M"/"KN-"/"PELADO" de
+  los conteos de incidencias, no de la validez del código) ni master-data.js.
+================================================================================
