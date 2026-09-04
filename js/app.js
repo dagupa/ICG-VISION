@@ -1715,7 +1715,7 @@ function selectMaterial(name) {
             // Terminal / pin no dado de alta en master-data.js (columnas J y O)
             const termNotFoundPos = data
                 .filter(r => {
-                    const chk = key => { const v = r[key]||''; if (!v || v==='S/T' || isKN(v)) return false; return !isValidTerminalCode(v); };
+                    const chk = key => { const v = r[key]||''; if (!v || isKN(v)) return false; return !isValidTerminalCode(v); };
                     return chk('de_terminal') || chk('para_terminal');
                 })
                 .map(r => r.posicion).filter(Boolean);
@@ -2785,7 +2785,7 @@ function handleHelpEasterEgg() {
            // Pre-scan: detectar si hay terminales que no existen en master-data.js
            const _hasTermNotFound = key => d.some(r => {
                const v = r[key] || '';
-               if (!v || v === 'S/T' || isKN(v)) return false;
+               if (!v || isKN(v)) return false;
                return !isValidTerminalCode(v);
            });
            const hasDeTerminalNotFound   = _hasTermNotFound('de_terminal');
@@ -2861,7 +2861,7 @@ function handleHelpEasterEgg() {
                } else {
                    d = d.filter(r => {
                        const v = r[filterColumn] || '';
-                       if (!v || v === 'S/T' || isKN(v)) return false;
+                       if (!v || isKN(v)) return false;
                        if (filterType === 'notFound') return !isValidTerminalCode(v);
                        if (!r.seccion) return false;
                        const sc = checkSectionCompatibility(v, r.seccion);
@@ -2905,7 +2905,7 @@ function handleHelpEasterEgg() {
                        const isTerminalCol = c.key === 'de_terminal' || c.key === 'para_terminal';
                        const termSC = isTerminalCol && v && v !== 'S/T' && !isKN(v) && r.seccion ? checkSectionCompatibility(v, r.seccion) : null;
                        const hasIncompat = termSC && !termSC.ok;
-                       const hasTermNotFound = isTerminalCol && v && v !== 'S/T' && !isKN(v) && !isValidTerminalCode(v);
+                       const hasTermNotFound = isTerminalCol && v && !isKN(v) && !isValidTerminalCode(v);
                        const hasCableNotFound = c.key === 'cod_cable' && v && !isValidCableCode(v);
                        const hasSleeveNotFound = c.key === 'de_manguito' && v && !isValidSleeveCode(v);
                        const isDupCell = (c.key === 'posicion' && _dupPosicions.has((r.posicion||'').toString().trim())) || (c.key === 'orden' && _dupOrdenes.has((r.orden||'').toString().trim()));

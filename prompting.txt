@@ -1,3 +1,17 @@
+2026-09-04 (detección de S/T como error en terminales)
+PROMPT:
+Al cargar el fichero me está identificando correctamente como error el texto "S/M"
+cuando aparece en alguna celda de la columna "De Manguito", pero no está
+reconociendo como error el texto "S/T" cuando aparece en una celda de las columnas
+"De Terminal" o "Para Terminal". Revisar el código y corregir lo necesario.
+
+SOLUCIÓN:
+- js/app.js: se elimina la exclusión de "S/T" únicamente en las validaciones de
+  terminal no dado de alta, tanto al cargar el fichero como al mostrar, filtrar y
+  resumir los errores de las celdas de "De Terminal" y "Para Terminal".
+- Se mantienen las exclusiones de "S/T" en las comprobaciones de compatibilidad de
+  sección y de sección obligatoria, donde representa ausencia de terminal real.
+
 ================================================================================
 2026-09-04 11:07:49 (selección visual de filas en lista de conexiones)
 PROMPT:
