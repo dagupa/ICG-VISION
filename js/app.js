@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.10.0';
+    const VERSION = '0.10.1';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
