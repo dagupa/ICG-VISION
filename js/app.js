@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.9.0';
+    const VERSION = '0.10.0';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -112,14 +112,15 @@
  
         let currentSortCol = null, sortAsc = true;
        let rawData = [], reportMetadata = {}, masterMap = { cables: {}, terminals: {}, sleeves: {} };
-       let currentView = 'table', filterText = '', filterMarcaText = '', filterTerminalError = null, selectedMaterial = null, currentLang = 'es';
+    let currentView = 'table', filterText = '', filterMarcaText = '', filterTerminalError = null, selectedMaterial = null, selectedConnectionPosition = null, currentLang = 'es';
        let summaryViewMode = 'cards'; 
        let currentZoom = 1, panX = 0, panY = 0, isPanning = false, resizingCol = null, startX, startWidth, thDragIdx = null, baseViewBox = { x: 0, y: 0, w: 0, h: 0 };
        let lastTouchX = 0, lastTouchY = 0, lastTouchDist = 0; 
        let detailPinSequence = [], detailPinDataMap = new Map(), currentDetailIndex = 0;
        let progressMap = {};
        let _dupPosicions = new Set(), _dupOrdenes = new Set(), _nonNumericLongitud = new Set();
-       let _seccionMissingSet = new Set(), _termIncompatSet = new Set(), _termNotFoundSet = new Set();
+    let _seccionMissingSet = new Set(), _termIncompatSet = new Set(), _termNotFoundSet = new Set();
+    let _cableNotFoundSet = new Set(), _sleeveNotFoundSet = new Set();
        let _lastPinPopoverArgs = null;
        let _schemaSortedPins = [], _schemaPinDataCache = {};
        let _termTipTimeout = null;
@@ -679,6 +680,14 @@ function markConnectionDone(posicion) {
            if (idToSearch.startsWith('KN-PELAR') || KNOWN_TERMINAL_EXCEPTIONS.has(idToSearch)) return true;
            return crimpingMasterData.some(item => item.id.toString().toUpperCase() === idToSearch);
        }
+       function isValidCableCode(code) {
+           if (!code) return true;
+           return VALID_CABLE_CODES.has(code.toString().trim().toUpperCase());
+       }
+       function isValidSleeveCode(code) {
+           if (!code) return true;
+           return VALID_SLEEVE_CODES.has(code.toString().trim().toUpperCase());
+       }
 
        function saveError() {
            if (!_errorModalPosicion) return;
@@ -689,14 +698,19 @@ function markConnectionDone(posicion) {
            const seccionValue = seccionInput?.value?.trim();
            for (const input of inputs) {
                const key = input.dataset.key;
-               if (key !== 'de_terminal' && key !== 'para_terminal') continue;
+               if (!['de_terminal', 'para_terminal', 'cod_cable', 'de_manguito'].includes(key)) continue;
                const terminalValue = input.value?.trim();
-               if (!isValidTerminalCode(terminalValue)) {
+               const valid = key === 'cod_cable' ? isValidCableCode(terminalValue)
+                   : key === 'de_manguito' ? isValidSleeveCode(terminalValue)
+                   : isValidTerminalCode(terminalValue);
+               if (!valid) {
                    showNotification('El código introducido no es correcto o no está dado de alta en la base de datos master-data.js', 'error');
                    input.focus();
                    return;
                }
-               const compat = checkSectionCompatibility(terminalValue, seccionValue);
+               const compat = key === 'de_terminal' || key === 'para_terminal'
+                   ? checkSectionCompatibility(terminalValue, seccionValue)
+                   : null;
                if (compat && !compat.ok) {
                    showNotification('El terminal/pin introducido no es válido para la sección de este cable', 'error');
                    input.focus();
@@ -1644,7 +1658,7 @@ function nextDetailStep() {
        function goToDetailStep(idx) { currentDetailIndex = idx; renderDetailStep(); renderProgressList(); }
  
        function updateMetadataUI() { document.getElementById('meta-equipo').innerText = reportMetadata.equipo || '---'; document.getElementById('meta-desc').innerText = reportMetadata.desc || '---'; document.getElementById('meta-lista').innerText = reportMetadata.lista || '---'; document.getElementById('meta-edicion').innerText = reportMetadata.edicion || '---'; document.getElementById('meta-fecha').innerText = reportMetadata.fecha || '---'; document.getElementById('meta-plano').innerText = reportMetadata.plano || '---'; }
-       function clearAllFilters() { document.getElementById('filterInput').value = ''; document.getElementById('filterMarcaInput').value = ''; document.getElementById('globalSearchInput').value = ''; filterText = ''; filterMarcaText = ''; selectedMaterial = null; currentMatchIdx = -1; document.getElementById('searchCounter').innerText = ''; document.getElementById('elementQuickActions').classList.add('hidden'); updateView(); }
+    function clearAllFilters() { document.getElementById('filterInput').value = ''; document.getElementById('filterMarcaInput').value = ''; document.getElementById('globalSearchInput').value = ''; filterText = ''; filterMarcaText = ''; filterTerminalError = null; selectedMaterial = null; currentMatchIdx = -1; document.getElementById('searchCounter').innerText = ''; document.getElementById('elementQuickActions').classList.add('hidden'); updateView(); }
        function toggleTerminalErrorFilter(key) {
            filterTerminalError = (filterTerminalError === key) ? null : key;
            renderTable();
@@ -1670,6 +1684,7 @@ function selectMaterial(name) {
         function _checkDuplicateColumns(data) {
             _dupPosicions.clear(); _dupOrdenes.clear(); _nonNumericLongitud.clear();
             _seccionMissingSet.clear(); _termIncompatSet.clear(); _termNotFoundSet.clear();
+            _cableNotFoundSet.clear(); _sleeveNotFoundSet.clear();
             const getDuplicates = field => {
                 const counts = {};
                 data.forEach(r => { const v = (r[field]||'').toString().trim(); if (v) counts[v] = (counts[v]||0)+1; });
@@ -1705,12 +1720,21 @@ function selectMaterial(name) {
                 })
                 .map(r => r.posicion).filter(Boolean);
 
+            const cableNotFoundPos = data
+                .filter(r => r.cod_cable && !isValidCableCode(r.cod_cable))
+                .map(r => r.posicion).filter(Boolean);
+            const sleeveNotFoundPos = data
+                .filter(r => r.de_manguito && !isValidSleeveCode(r.de_manguito))
+                .map(r => r.posicion).filter(Boolean);
+
             secMissingPos.forEach(v => _seccionMissingSet.add(v.toString().trim()));
             termIncompatPos.forEach(v => _termIncompatSet.add(v.toString().trim()));
             termNotFoundPos.forEach(v => _termNotFoundSet.add(v.toString().trim()));
+            cableNotFoundPos.forEach(v => _cableNotFoundSet.add(v.toString().trim()));
+            sleeveNotFoundPos.forEach(v => _sleeveNotFoundSet.add(v.toString().trim()));
             updateEstadoUI();
 
-            if (!dupA.length && !dupB.length && !secMissingPos.length && !termIncompatPos.length && !_nonNumericLongitud.size && !termNotFoundPos.length) return;
+            if (!dupA.length && !dupB.length && !secMissingPos.length && !termIncompatPos.length && !_nonNumericLongitud.size && !termNotFoundPos.length && !cableNotFoundPos.length && !sleeveNotFoundPos.length) return;
 
             const _listPos = (arr, max = 10) => arr.length <= max ? arr.join(', ') : arr.slice(0, max).join(', ') + ` y ${arr.length - max} más...`;
 
@@ -1721,8 +1745,44 @@ function selectMaterial(name) {
             if (termIncompatPos.length) msg += `\n● Terminal incompatible con la sección (${termIncompatPos.length}): pos. ${_listPos(termIncompatPos)}`;
             if (_nonNumericLongitud.size) msg += `\n● Longitud con valor no numérico (col. E) (${_nonNumericLongitud.size}): pos. ${_listPos([..._nonNumericLongitud])}`;
             if (termNotFoundPos.length) msg += `\n● El terminal / pin no existe o no está dado de alta en la base de datos (${termNotFoundPos.length}): pos. ${_listPos(termNotFoundPos)}`;
+            if (cableNotFoundPos.length) msg += `\n● ID CABLE no existe o no está dado de alta en la base de datos (${cableNotFoundPos.length}): pos. ${_listPos(cableNotFoundPos)}`;
+            if (sleeveNotFoundPos.length) msg += `\n● DE MANGUITO no existe o no está dado de alta en la base de datos (${sleeveNotFoundPos.length}): pos. ${_listPos(sleeveNotFoundPos)}`;
             msg += '\n\nRevisa el fichero antes de continuar.';
-            setTimeout(() => window.alert(msg), 200);
+            setTimeout(() => showFileIssuesModal(msg), 200);
+        }
+
+        function showFileIssuesModal(message) {
+            const modal = document.getElementById('fileIssuesModal');
+            const messageElement = document.getElementById('fileIssuesMessage');
+            if (!modal || !messageElement) return;
+            const escapeHtml = value => value.replace(/[&<>"']/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[character]));
+            const getErrorClass = line => {
+                if (line.includes('Posiciones duplicadas') || line.includes('Órdenes duplicadas')) return 'estado-dot-orange';
+                if (line.includes('Sección sin definir')) return 'estado-dot-yellow';
+                if (line.includes('Terminal incompatible')) return 'estado-dot-red';
+                if (line.includes('Longitud con valor no numérico')) return 'estado-dot-purple';
+                if (line.includes('terminal / pin no existe')) return 'estado-dot-pink';
+                if (line.includes('ID CABLE no existe')) return 'estado-dot-emerald';
+                if (line.includes('DE MANGUITO no existe')) return 'estado-dot-brown';
+                return null;
+            };
+            messageElement.innerHTML = message.split('\n').map(line => {
+                const errorClass = getErrorClass(line);
+                if (!errorClass) return `<div>${escapeHtml(line) || '&nbsp;'}</div>`;
+                return `<div class="flex items-start gap-2"><span class="w-2 h-2 rounded-full ${errorClass} mt-1.5 shrink-0"></span><span>${escapeHtml(line.replace(/^\s*●\s*/, ''))}</span></div>`;
+            }).join('');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeFileIssuesModal() {
+            const modal = document.getElementById('fileIssuesModal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
         }
 
         function updateEstadoUI() {
@@ -1740,14 +1800,29 @@ function selectMaterial(name) {
             if (_termIncompatSet.size > 0)    errores.push({ css: 'estado-dot-red',    txt: `Terminal incompatible con la sección: ${_termIncompatSet.size} líneas` });
             if (_nonNumericLongitud.size > 0) errores.push({ css: 'estado-dot-purple', txt: `Longitud con valor no numérico: ${_nonNumericLongitud.size} líneas` });
             if (_termNotFoundSet.size > 0)    errores.push({ css: 'estado-dot-pink',   txt: `Terminal / pin no existe en master-data.js: ${_termNotFoundSet.size} líneas` });
+            if (_cableNotFoundSet.size > 0)    errores.push({ css: 'estado-dot-emerald', txt: `ID CABLE no existe en master-data.js: ${_cableNotFoundSet.size} líneas` });
+            if (_sleeveNotFoundSet.size > 0)   errores.push({ css: 'estado-dot-brown',  txt: `DE MANGUITO no existe en master-data.js: ${_sleeveNotFoundSet.size} líneas` });
             if (errores.length === 0) {
                 container.innerHTML = `<span class="w-3 h-3 rounded-full bg-green-500 inline-block flex-shrink-0" title="Sin errores detectados"></span>
                     <span class="text-[9px] text-green-600 dark:text-green-400 font-semibold">Correcto</span>`;
             } else {
                 container.innerHTML = errores.map(e =>
-                    `<span class="w-3 h-3 rounded-full inline-block flex-shrink-0 ${e.css} cursor-help" title="${e.txt}"></span>`
+                    `<span class="w-3 h-3 rounded-full inline-block flex-shrink-0 ${e.css} cursor-help" title="${e.txt}" ontouchstart="showEstadoErrorTip(this, '${e.css}', '${e.txt}'); event.stopPropagation()"></span>`
                 ).join('');
             }
+        }
+
+        function showEstadoErrorTip(element, errorClass, message) {
+            const schemes = {
+                'estado-dot-orange': 'orange',
+                'estado-dot-yellow': 'amber',
+                'estado-dot-red': 'red',
+                'estado-dot-purple': 'purple',
+                'estado-dot-pink': 'pink',
+                'estado-dot-emerald': 'emerald',
+                'estado-dot-brown': 'brown'
+            };
+            showCellErrorTip(element, schemes[errorClass] || 'red', 'ESTADO', `<p>${message}</p>`);
         }
 
          function handleFileUpload(event) {
@@ -1795,7 +1870,7 @@ function selectMaterial(name) {
                    return DATA_KEYS.some(k => (r[k]||'').trim() !== '');
                });
                rawData.forEach(r => { if (r.cod_cable && r.desc_cable) masterMap.cables[r.cod_cable.toString().trim()] = r.desc_cable; if (r.de_terminal && r.desc_terminal_de) masterMap.terminals[r.de_terminal.toString().trim()] = r.desc_terminal_de; if (r.para_terminal && r.desc_terminal_para) masterMap.terminals[r.para_terminal.toString().trim()] = r.desc_terminal_para; if (r.de_manguito && r.desc_manguito) masterMap.sleeves[r.de_manguito.toString().trim()] = r.desc_manguito; if (r.para_manguito && r.desc_manguito) masterMap.sleeves[r.para_manguito.toString().trim()] = r.desc_manguito; });
-loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); _checkDuplicateColumns(rawData); clearAllFilters();
+ loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); _checkDuplicateColumns(rawData); currentView = 'table'; clearAllFilters();
            }; reader.readAsArrayBuffer(f);
        }
        function handleBreakerClick(event) { if (event) event.stopPropagation(); const b = document.getElementById('landingBreaker'), e = document.getElementById('landingEye'); b.classList.add('is-on'); if (e) e.classList.add('eye-on'); setTimeout(() => { const input = document.getElementById('csvInputLanding'); if (input) input.click(); }, 400); }
@@ -2416,6 +2491,12 @@ internalBridges.forEach((b, idx) => {
            ms[currentMatchIdx].classList.add('search-row-match'); ms[currentMatchIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
            c.innerText = `${currentMatchIdx + 1}/${ms.length}`;
        }
+       function selectConnectionRow(event, row) {
+           if (event.target.closest('button, input, i')) return;
+           selectedConnectionPosition = decodeURIComponent(row.dataset.position);
+           document.querySelectorAll('#tableBody tr.row-selected').forEach(selectedRow => selectedRow.classList.remove('row-selected'));
+           row.classList.add('row-selected');
+       }
        function startResize(e, col) { resizingCol = col; startX = e.clientX; startWidth = col.width; e.preventDefault(); }
        function hTHDragStart(e, i) { thDragIdx = i; }
        function hTHDragOver(e) { e.preventDefault(); }
@@ -2450,6 +2531,8 @@ internalBridges.forEach((b, idx) => {
                amber:  { border:'border-amber-300 dark:border-amber-700',   icon:'w-4 h-4 shrink-0 text-amber-600',  title:'text-[11px] font-black uppercase tracking-wide text-amber-700 dark:text-amber-400',  body:'text-[10px] leading-snug space-y-0.5 text-amber-600 dark:text-amber-400',  hint:'text-[9px] mt-2 italic text-amber-300 dark:text-amber-600' },
                purple: { border:'border-purple-300 dark:border-purple-700', icon:'w-4 h-4 shrink-0 text-purple-500', title:'text-[11px] font-black uppercase tracking-wide text-purple-600 dark:text-purple-400', body:'text-[10px] leading-snug space-y-0.5 text-purple-500 dark:text-purple-400', hint:'text-[9px] mt-2 italic text-purple-300 dark:text-purple-600' },
                pink:   { border:'border-pink-300 dark:border-pink-700',     icon:'w-4 h-4 shrink-0 text-pink-500',   title:'text-[11px] font-black uppercase tracking-wide text-pink-600 dark:text-pink-400',   body:'text-[10px] leading-snug space-y-0.5 text-pink-500 dark:text-pink-400',   hint:'text-[9px] mt-2 italic text-pink-300 dark:text-pink-600' },
+               emerald:{ border:'border-emerald-300 dark:border-emerald-700', icon:'w-4 h-4 shrink-0 text-emerald-500', title:'text-[11px] font-black uppercase tracking-wide text-emerald-600 dark:text-emerald-400', body:'text-[10px] leading-snug space-y-0.5 text-emerald-500 dark:text-emerald-400', hint:'text-[9px] mt-2 italic text-emerald-300 dark:text-emerald-600' },
+               brown:  { border:'border-amber-300 dark:border-amber-700',   icon:'w-4 h-4 shrink-0 text-[#a67c52]',  title:'text-[11px] font-black uppercase tracking-wide text-[#8f6b45]',  body:'text-[10px] leading-snug space-y-0.5 text-[#a67c52]',  hint:'text-[9px] mt-2 italic text-[#c4a17a]' },
            };
            const tip     = document.getElementById('cellErrorTip');
            const card    = document.getElementById('cellErrorTipCard');
@@ -2513,28 +2596,45 @@ internalBridges.forEach((b, idx) => {
                        </div>
                    </div>
  
-                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       <!-- PANEL 1: PELADO (Mantiene su estilo) -->
-                       <div class="bg-white dark:bg-sap-darkCard border border-sap-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-                           <div class="card-header-uniform">
-                            <span class="title-text">INSTRUCCIONES DE PELADO</span>
-                        </div>
-                           <div class="p-4 flex flex-col flex-grow">
-                               <div class="bg-white rounded-lg flex items-center justify-center p-2 mb-4 h-64 border border-gray-50 shadow-inner overflow-hidden">
-                                   <img src="${CRIMP_PATHS.pelacables}${data.img_pela}.jpg" class="max-h-full w-full object-contain" onerror="${imgFallback}">
-                               </div>
-                               <div class="space-y-3">
-                                   <div><p class="text-[9px] text-sap-secondaryText font-black uppercase tracking-tighter">Herramienta</p><p class="text-sm font-black text-sap-text dark:text-white leading-tight">${data.txt_pela}</p></div>
-                                   <div class="pt-2 border-t border-emerald-100 mt-1">
-                                       <span class="text-[9px] font-black text-emerald-800/60 uppercase tracking-tight">LONGITUD:</span>
-                                       <span class="text-base font-black text-emerald-600 tabular-nums ml-1">${data.txt_longitud} mm</span>
+                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                       <div class="flex flex-col gap-0">
+                           <!-- PANEL 1: PELADO -->
+                           <div class="bg-white dark:bg-sap-darkCard border border-sap-border rounded-xl shadow-sm overflow-hidden flex flex-col">
+                               <div class="card-header-uniform">
+                                <span class="title-text">INSTRUCCIONES DE PELADO</span>
+                            </div>
+                               <div class="p-4 flex flex-col">
+                                   <div class="bg-white rounded-lg flex items-center justify-center p-2 mb-3 h-48 border border-gray-50 shadow-inner overflow-hidden">
+                                       <img src="${CRIMP_PATHS.pelacables}${data.img_pela}.jpg" class="max-h-full w-full object-contain" onerror="${imgFallback}">
+                                   </div>
+                                   <div class="space-y-2">
+                                       <div><p class="text-[9px] text-sap-secondaryText font-black uppercase tracking-tighter">Herramienta</p><p class="text-sm font-black text-sap-text dark:text-white leading-tight">${data.txt_pela}</p></div>
+                                       <div class="pt-2 border-t border-emerald-100 mt-1">
+                                           <span class="text-[9px] font-black text-emerald-800/60 uppercase tracking-tight">LONGITUD:</span>
+                                           <span class="text-base font-black text-emerald-600 tabular-nums ml-1">${data.txt_longitud} mm</span>
+                                       </div>
                                    </div>
                                </div>
                            </div>
+
+                           ${data.txt_ext && data.img_ext ? `
+                           <!-- PANEL EXTRACTOR -->
+                           <div class="bg-white dark:bg-sap-darkCard border border-sap-border rounded-xl shadow-sm overflow-hidden flex flex-col">
+                               <div class="card-header-uniform">
+                                <span class="title-text">EXTRACTOR</span>
+                            </div>
+                               <div class="p-2 flex items-center gap-3">
+                                   <div class="w-20 h-14 bg-white border border-gray-200 rounded flex-shrink-0 flex items-center justify-center p-1">
+                                       <img src="${CRIMP_PATHS.extractores}${data.img_ext}.jpg" class="max-h-full w-full object-contain" onerror="${imgFallback}">
+                                   </div>
+                                   <p class="text-xs font-black text-sap-text dark:text-white truncate">${data.txt_ext}</p>
+                               </div>
+                           </div>
+                           ` : ''}
                        </div>
  
                        <!-- PANEL 2: CRIMPADO (Dinámico) -->
-                       <div class="bg-white dark:bg-sap-darkCard border-2 border-sap-blue/30 rounded-xl shadow-md overflow-hidden flex flex-col text-left">
+                       <div class="h-full bg-white dark:bg-sap-darkCard border-2 border-sap-blue/30 rounded-xl shadow-md overflow-hidden flex flex-col text-left">
                            <div class="card-header-uniform">
                             <span class="title-text">HERRAMIENTA DE CRIMPADO</span>
                             <div class="px-2 py-0.5 bg-white/20 rounded text-[10px] font-bold text-white">Matriz: ${data.txt_matriz || 'N/A'}</div>
@@ -2589,10 +2689,11 @@ internalBridges.forEach((b, idx) => {
                        <div class="md:col-span-2 bg-white dark:bg-sap-darkCard border border-sap-border rounded-xl shadow-sm overflow-hidden flex flex-col">
                            <div class="card-header-uniform">
                             <span class="title-text">AYUDA VISUAL / CRITERIO DE CALIDAD</span>
-                            ${data.txt_ext ? `<span class="text-[9px] font-bold text-white uppercase opacity-80">Extractor: ${data.txt_ext}</span>` : ''}
                         </div>
-                           <div class="p-4 flex items-center justify-center bg-white h-80 shadow-inner">
+                           <div class="p-4">
+                               <div class="flex flex-col items-center justify-center bg-white h-80 shadow-inner">
                                <img src="${CRIMP_PATHS.ayuda}${data.img_obs}.jpg" class="max-h-full w-auto object-contain" onerror="${imgFallback}">
+                               </div>
                            </div>
                        </div>
                    </div>
@@ -2689,6 +2790,8 @@ function handleHelpEasterEgg() {
            });
            const hasDeTerminalNotFound   = _hasTermNotFound('de_terminal');
            const hasParaTerminalNotFound = _hasTermNotFound('para_terminal');
+           const hasCableNotFound = d.some(r => r.cod_cable && !isValidCableCode(r.cod_cable));
+           const hasSleeveNotFound = d.some(r => r.de_manguito && !isValidSleeveCode(r.de_manguito));
 
            // Pre-scan: detectar si hay filas con sección vacía pero con terminal asignado
            const _tvh = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t));
@@ -2701,31 +2804,28 @@ function handleHelpEasterEgg() {
            h.innerHTML = `<tr class="bg-sap-shell text-white">${a.map((c, i) => {
                const isSorted = currentSortCol === c.key;
                const sortIcon = isSorted ? (sortAsc ? ' <i data-lucide="chevron-up" class="inline w-3 h-3"></i>' : ' <i data-lucide="chevron-down" class="inline w-3 h-3"></i>') : '';
-               const isFiltered       = filterTerminalError === c.key;
                const colHasTermErrors = (c.key === 'de_terminal' && hasDeTerminalErrors) || (c.key === 'para_terminal' && hasParaTerminalErrors);
                const colHasTermNotFound = (c.key === 'de_terminal' && hasDeTerminalNotFound) || (c.key === 'para_terminal' && hasParaTerminalNotFound);
+               const colHasCableNotFound = c.key === 'cod_cable' && hasCableNotFound;
+               const colHasSleeveNotFound = c.key === 'de_manguito' && hasSleeveNotFound;
                const colHasDupErrors  = (c.key === 'posicion' && hasDupPosicion) || (c.key === 'orden' && hasDupOrden);
                const colHasSecErrors  = c.key === 'seccion' && hasSeccionMissingErrors;
                const colHasNonNumLong = c.key === 'longitud' && hasNonNumericLongitud;
-               const colHasAnyError   = colHasTermErrors || colHasTermNotFound || colHasDupErrors || colHasSecErrors || colHasNonNumLong;
-               const warnTitle = colHasTermNotFound
-                   ? (isFiltered ? 'Mostrando solo terminales no encontrados — clic para quitar filtro' : 'Hay terminales que no existen en master-data.js — clic para filtrar')
-                   : colHasTermErrors
-                   ? (isFiltered ? 'Mostrando solo errores — clic para quitar filtro' : 'Hay terminales con sección incompatible — clic para filtrar')
-                   : colHasDupErrors
-                       ? (isFiltered ? 'Mostrando solo duplicados — clic para quitar filtro' : 'Hay valores duplicados en esta columna — clic para filtrar')
-                       : colHasNonNumLong
-                           ? (isFiltered ? 'Mostrando solo longitudes no numéricas — clic para quitar filtro' : 'Hay longitudes con caracteres no numéricos — clic para filtrar')
-                           : (isFiltered ? 'Mostrando solo errores de sección — clic para quitar filtro' : 'Hay filas con terminal asignado pero sin sección — clic para filtrar');
-               const warnColorClass = isFiltered ? 'text-yellow-300'
-                   : colHasTermNotFound ? 'text-pink-300 term-warn-blink'
-                   : colHasTermErrors  ? 'text-red-300 term-warn-blink'
-                   : colHasDupErrors   ? 'text-orange-300 term-warn-blink'
-                   : colHasNonNumLong  ? 'text-purple-300 term-warn-blink'
-                   : 'text-amber-300 term-warn-blink';
-               const warnIcon = colHasAnyError
-                   ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 ${warnColorClass} cursor-pointer" title="${warnTitle}" onclick="event.stopPropagation(); toggleTerminalErrorFilter('${c.key}')"></i>`
-                   : '';
+               const errorIndicators = [];
+               if (colHasDupErrors) errorIndicators.push({ type: 'duplicate', color: 'text-orange-300', title: 'Valores duplicados en esta columna' });
+               if (colHasSecErrors) errorIndicators.push({ type: 'missingSection', color: 'text-amber-300', title: 'Terminal asignado con sección sin definir' });
+               if (colHasTermErrors) errorIndicators.push({ type: 'incompatible', color: 'text-red-300', title: 'Terminal incompatible con la sección' });
+               if (colHasNonNumLong) errorIndicators.push({ type: 'nonNumericLength', color: 'text-purple-300', title: 'Longitud con caracteres no numéricos' });
+               if (colHasTermNotFound) errorIndicators.push({ type: 'notFound', color: 'text-pink-300', title: 'Terminal o pin no existe en master-data.js' });
+               if (colHasCableNotFound) errorIndicators.push({ type: 'cableNotFound', color: 'text-emerald-300', title: 'ID CABLE no existe en master-data.js' });
+               if (colHasSleeveNotFound) errorIndicators.push({ type: 'sleeveNotFound', color: 'text-[#c49a6c]', title: 'DE MANGUITO no existe en master-data.js' });
+               const warnIcon = errorIndicators.map(error => {
+                   const filterId = `${c.key}:${error.type}`;
+                   const isFiltered = filterTerminalError === filterId;
+                   const title = isFiltered ? `Mostrando solo este tipo de error — clic para quitar filtro` : `${error.title} — clic para filtrar`;
+                   const color = isFiltered ? 'text-yellow-300' : `${error.color} term-warn-blink`;
+                   return `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 ${color} cursor-pointer" title="${title}" onclick="event.stopPropagation(); toggleTerminalErrorFilter('${filterId}')"></i>`;
+               }).join('');
                return `<th class="p-3 text-[10px] font-black uppercase border-r border-white/10 text-left relative cursor-pointer hover:bg-white/10 active:bg-sap-darkBlue transition-all select-none bg-sap-shell" 
                            style="width: ${c.width}px; min-width: ${c.width}px;" 
                            draggable="true" 
@@ -2745,19 +2845,24 @@ function handleHelpEasterEgg() {
 
            // 2. Filtrado por error de columna (sobre los ya pre-filtrados)
            if (filterTerminalError) {
-               if (filterTerminalError === 'posicion') {
+               const [filterColumn, filterType] = filterTerminalError.split(':');
+               if (filterColumn === 'posicion' && filterType === 'duplicate') {
                    d = d.filter(r => _dupPosicions.has((r.posicion||'').toString().trim()));
-               } else if (filterTerminalError === 'orden') {
+               } else if (filterColumn === 'orden' && filterType === 'duplicate') {
                    d = d.filter(r => _dupOrdenes.has((r.orden||'').toString().trim()));
-               } else if (filterTerminalError === 'seccion') {
+               } else if (filterColumn === 'seccion' && filterType === 'missingSection') {
                    d = d.filter(r => !r.seccion && (_tvh(r.de_terminal) || _tvh(r.para_terminal)));
-               } else if (filterTerminalError === 'longitud') {
+               } else if (filterColumn === 'longitud' && filterType === 'nonNumericLength') {
                    d = d.filter(r => _nonNumericLongitud.has((r.posicion||'').toString().trim()));
+               } else if (filterColumn === 'cod_cable' && filterType === 'cableNotFound') {
+                   d = d.filter(r => r.cod_cable && !isValidCableCode(r.cod_cable));
+               } else if (filterColumn === 'de_manguito' && filterType === 'sleeveNotFound') {
+                   d = d.filter(r => r.de_manguito && !isValidSleeveCode(r.de_manguito));
                } else {
                    d = d.filter(r => {
-                       const v = r[filterTerminalError] || '';
+                       const v = r[filterColumn] || '';
                        if (!v || v === 'S/T' || isKN(v)) return false;
-                       if (!isValidTerminalCode(v)) return true;
+                       if (filterType === 'notFound') return !isValidTerminalCode(v);
                        if (!r.seccion) return false;
                        const sc = checkSectionCompatibility(v, r.seccion);
                        return sc && !sc.ok;
@@ -2781,8 +2886,9 @@ function handleHelpEasterEgg() {
                const isSelected = selectedMaterial && (r.de_terminal === selectedMaterial || r.para_terminal === selectedMaterial || r.de_manguito === selectedMaterial);
                const hasError = errorsMap[r.posicion] !== undefined;
                const rowClass = r.deleted ? 'row-deleted' : r.added ? 'row-added' : '';
+               const isConnectionSelected = selectedConnectionPosition === String(r.posicion);
                
-               return `<tr class="border-b border-sap-border dark:border-slate-700 text-left ${isSelected?'bg-amber-100 dark:bg-blue-600/30':''} ${isFinished?'row-completed':''} ${rowClass} ${hasError?'border-l-4 border-l-red-500 dark:border-l-red-500':''}">
+               return `<tr data-position="${encodeURIComponent(String(r.posicion))}" onclick="selectConnectionRow(event, this)" class="border-b border-sap-border dark:border-slate-700 text-left cursor-pointer ${isSelected?'bg-amber-100 dark:bg-blue-600/30':''} ${isConnectionSelected?'row-selected':''} ${isFinished?'row-completed':''} ${rowClass} ${hasError?'border-l-4 border-l-red-500 dark:border-l-red-500':''}">
                    ${a.map(c => {
                        if (c.key === 'status') {
                            return `<td class="p-3 text-center border-r border-sap-border/20">
@@ -2800,16 +2906,20 @@ function handleHelpEasterEgg() {
                        const termSC = isTerminalCol && v && v !== 'S/T' && !isKN(v) && r.seccion ? checkSectionCompatibility(v, r.seccion) : null;
                        const hasIncompat = termSC && !termSC.ok;
                        const hasTermNotFound = isTerminalCol && v && v !== 'S/T' && !isKN(v) && !isValidTerminalCode(v);
+                       const hasCableNotFound = c.key === 'cod_cable' && v && !isValidCableCode(v);
+                       const hasSleeveNotFound = c.key === 'de_manguito' && v && !isValidSleeveCode(v);
                        const isDupCell = (c.key === 'posicion' && _dupPosicions.has((r.posicion||'').toString().trim())) || (c.key === 'orden' && _dupOrdenes.has((r.orden||'').toString().trim()));
                        const dupTooltip = c.key === 'posicion' ? 'Posición duplicada — existe otra fila con el mismo valor' : 'Orden duplicada — existe otra fila con el mismo valor';
                        const _termHasVal = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t));
                        const hasMissingSeccion = c.key === 'seccion' && !v && (_termHasVal(r.de_terminal) || _termHasVal(r.para_terminal));
                        const hasNonNumLong = c.key === 'longitud' && _nonNumericLongitud.has((r.posicion||'').toString().trim());
-                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'cell-incompat-blink':''} ${hasTermNotFound?'cell-notfound-blink':''} ${isDupCell?'cell-dup-blink':''} ${hasMissingSeccion?'cell-seccion-missing':''} ${hasNonNumLong?'cell-nonnum-blink':''}"
+                       return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'cell-incompat-blink':''} ${hasTermNotFound?'cell-notfound-blink':''} ${hasCableNotFound?'cell-cable-notfound-blink':''} ${hasSleeveNotFound?'cell-sleeve-notfound-blink':''} ${isDupCell?'cell-dup-blink':''} ${hasMissingSeccion?'cell-seccion-missing':''} ${hasNonNumLong?'cell-nonnum-blink':''}"
                                    style="width: ${c.width}px;" 
                                    ${isElementCol ? `onclick="applyTableFilter('${v}')"` : ''}>
-                                   <div class="flex items-center gap-1 min-w-0 ${hasIncompat?'text-red-600 dark:text-red-400':''} ${hasTermNotFound?'text-pink-600 dark:text-pink-400':''} ${hasNonNumLong?'text-purple-600 dark:text-purple-400':''} ${isDupCell?'text-orange-600 dark:text-orange-400':''} ${hasMissingSeccion?'justify-center':''}">
+                                   <div class="flex items-center gap-1 min-w-0 ${hasIncompat?'text-red-600 dark:text-red-400':''} ${hasTermNotFound?'text-pink-600 dark:text-pink-400':''} ${hasCableNotFound?'text-emerald-600 dark:text-emerald-400':''} ${hasSleeveNotFound?'text-[#a67c52] dark:text-[#d2ad82]':''} ${hasNonNumLong?'text-purple-600 dark:text-purple-400':''} ${isDupCell?'text-orange-600 dark:text-orange-400':''} ${hasMissingSeccion?'justify-center':''}">
                                        <span class="truncate">${v}</span>
+                                       ${hasCableNotFound ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-emerald-500 cursor-help" onmouseenter="showCellErrorTip(this,'emerald','ID CABLE NO EXISTE','El código de cable no está dado de alta en la base de datos.')" onmouseleave="hideCellErrorTip()" ontouchstart="showCellErrorTip(this,&quot;emerald&quot;,&quot;ID CABLE NO EXISTE&quot;,&quot;El código de cable no está dado de alta en la base de datos.&quot;); event.stopPropagation()"></i>` : ''}
+                                       ${hasSleeveNotFound ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-[#a67c52] cursor-help" onmouseenter="showCellErrorTip(this,'brown','DE MANGUITO NO EXISTE','El código de manguito no está dado de alta en la base de datos.')" onmouseleave="hideCellErrorTip()" ontouchstart="showCellErrorTip(this,&quot;brown&quot;,&quot;DE MANGUITO NO EXISTE&quot;,&quot;El código de manguito no está dado de alta en la base de datos.&quot;); event.stopPropagation()"></i>` : ''}
                                        ${hasIncompat ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-red-500 cursor-help" onmouseenter="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}')" onmouseleave="hideCellErrorTip()" ontouchstart="showTermCompatTip(this,'${v}','${r.seccion}','${termSC.validSections.join(', ')}'); event.stopPropagation()"></i>` : ''}
                                        ${hasTermNotFound ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-pink-500 cursor-help" onmouseenter="showCellErrorTip(this,'pink','TERMINAL NO EXISTE','El terminal / pin no existe o no est\u00e1 dado de alta en la base de datos.')" onmouseleave="hideCellErrorTip()" ontouchstart="showCellErrorTip(this,&quot;pink&quot;,&quot;TERMINAL NO EXISTE&quot;,&quot;El terminal / pin no existe o no est\u00e1 dado de alta en la base de datos.&quot;); event.stopPropagation()"></i>` : ''}
                                        ${hasMissingSeccion ? `<i data-lucide="alert-circle" class="w-3 h-3 shrink-0 text-amber-600 dark:text-amber-400 cursor-help" onmouseenter="showCellErrorTip(this,'amber','SECCI\u00d3N OBLIGATORIA','La fila tiene terminal asignado pero la secci\u00f3n del cable no est\u00e1 definida.')" onmouseleave="hideCellErrorTip()" ontouchstart="showCellErrorTip(this,&quot;amber&quot;,&quot;SECCI\u00d3N OBLIGATORIA&quot;,&quot;La fila tiene terminal asignado pero la secci\u00f3n del cable no est\u00e1 definida.&quot;); event.stopPropagation()"></i>` : ''}

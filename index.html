@@ -170,7 +170,7 @@
                    <button onclick="toggleIncidenciasMenu()" id="btnIncidencias" class="p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-all relative" title="INCIDENCIAS"><i data-lucide="triangle-alert" class="w-6 h-6"></i><span id="errorBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center"></span></button>
                    <div id="incidenciasDropdown" class="hidden absolute right-0 top-10 w-64 bg-white dark:bg-slate-800 border border-sap-border rounded-xl shadow-2xl z-[200] overflow-hidden">
                        <div class="px-3 pt-3 pb-1"><p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Incidencias</p></div>
-                       <button onclick="activateIncidenciaMode()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-sap-blue/10"><span>Corregir Incidencia</span></button>
+                       <button onclick="activateIncidenciaMode()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-sap-blue/10"><span>Solicitar cambio</span></button>
                        <button onclick="toggleIncidenciasMenu(); openAddCableModal()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-sap-blue/10"><span>Añadir Cable Nuevo</span></button>
                        <button onclick="toggleIncidenciasMenu(); openDeleteCableModal()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-sap-blue/10"><span>Eliminar Cable Completo</span></button>
                        <button onclick="toggleIncidenciasMenu(); exportErrorReport()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-sap-blue/10"><span>Exportar incidencias</span></button>
@@ -302,7 +302,7 @@
    <div id="errorModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[260] p-4">
        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
            <div class="flex items-center justify-between p-5 border-b border-sap-border shrink-0">
-               <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center"><i class="fas fa-exclamation-triangle text-red-600"></i></div><div><h2 class="text-base font-bold">Registrar error</h2><p class="text-xs text-slate-500">Posición: <span id="errorModalPosicion" class="font-bold text-sap-blue"></span></p></div></div>
+               <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center"><i class="fas fa-exclamation-triangle text-red-600"></i></div><div><h2 class="text-base font-bold">Registrar cambio</h2><p class="text-xs text-slate-500">Posición: <span id="errorModalPosicion" class="font-bold text-sap-blue"></span></p></div></div>
                <button onclick="closeErrorModal()"><i class="fas fa-times"></i></button>
            </div>
            <div class="overflow-y-auto flex-1 p-5"><p class="text-xs text-slate-500 mb-4">Modifica únicamente los campos que contengan errores.</p><div id="errorModalFields" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div></div>
@@ -516,7 +516,7 @@
                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="chevron-right" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Navegación paso a paso</p><p class="text-[11px] leading-tight opacity-80">Los botones ANTERIOR y SIGUIENTE guían al operario por cada punto de conexión del elemento. Muestra el cable a instalar, el terminal, el manguito y las especificaciones de crimpado.</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="list" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Panel de puntos</p><p class="text-[11px] leading-tight opacity-80">Panel lateral izquierdo con todos los puntos de conexión del elemento, indicando cuáles están completados.</p></div></div>
-                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-500"></i></div><div><p class="text-xs font-bold">Notificar incidencia</p><p class="text-[11px] leading-tight opacity-80">Permite registrar o exportar incidencias directamente desde el Modo Visión sin salir del asistente.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="triangle-alert" class="w-5 h-5 text-red-500"></i></div><div><p class="text-xs font-bold">Solicitar cambio</p><p class="text-[11px] leading-tight opacity-80">Permite registrar o exportar incidencias directamente desde el Modo Visión sin salir del asistente.</p></div></div>
                    </div>
                </section>
 
@@ -533,7 +533,7 @@
                <!-- 10. Control de calidad del fichero -->
                <section>
                    <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">10. Control de calidad del fichero Excel</h4>
-                   <p class="text-[11px] opacity-70 mb-3">Al cargar el fichero, ICG Visión analiza automáticamente su contenido y detecta cinco tipos de incidencias. Los errores se señalizan con colores coherentes en la tabla, en los encabezados de columna y en el indicador ESTADO de la tarjeta Datos.</p>
+                   <p class="text-[11px] opacity-70 mb-3">Al cargar el fichero, ICG Visión analiza automáticamente su contenido y detecta siete tipos de incidencias. Los errores se señalizan con colores coherentes en la tabla, en los encabezados de columna y en el indicador ESTADO de la tarjeta Datos.</p>
                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2">
                            <div class="flex flex-col gap-1.5 shrink-0 pt-1">
@@ -565,6 +565,18 @@
                                <span class="w-3 h-3 rounded-full estado-dot-pink"></span>
                            </div>
                            <div><p class="text-xs font-bold text-pink-600">Terminal / pin no existe en master-data.js (Rosa)</p><p class="text-[11px] leading-tight opacity-80">El código de <em>De Terminal</em> o <em>Para Terminal</em> no está dado de alta en la base de datos master-data.js. La celda parpadea en rosa. El mismo control se aplica al registrar una incidencia manualmente: no se guarda si el código no existe en master-data.js.</p></div>
+                       </div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2">
+                           <div class="flex flex-col gap-1.5 shrink-0 pt-1">
+                               <span class="w-3 h-3 rounded-full estado-dot-emerald"></span>
+                           </div>
+                           <div><p class="text-xs font-bold text-emerald-600">ID CABLE no existe (Verde esmeralda)</p><p class="text-[11px] leading-tight opacity-80">El código de <em>ID CABLE</em> no está incluido en el catálogo de master-data.js. La celda parpadea en verde esmeralda y el icono muestra el detalle con ratón o al tocarlo. El mismo control se aplica al corregir una incidencia.</p></div>
+                       </div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2">
+                           <div class="flex flex-col gap-1.5 shrink-0 pt-1">
+                               <span class="w-3 h-3 rounded-full estado-dot-brown"></span>
+                           </div>
+                           <div><p class="text-xs font-bold text-[#a67c52]">DE MANGUITO no existe (Marrón claro)</p><p class="text-[11px] leading-tight opacity-80">El código de <em>De Manguito</em> no está incluido en el catálogo de master-data.js. La celda parpadea en marrón claro y el icono muestra el detalle con ratón o al tocarlo. El mismo control se aplica al corregir una incidencia.</p></div>
                        </div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm md:col-span-2"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="activity" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Indicador ESTADO en tarjeta Datos</p><p class="text-[11px] leading-tight opacity-80">El apartado ESTADO de la tarjeta lateral resume el estado del fichero con círculos de colores: <span class="inline-block w-2 h-2 rounded-full bg-slate-400 align-middle"></span> gris = sin datos cargados · <span class="inline-block w-2 h-2 rounded-full bg-green-500 align-middle"></span> verde = sin errores · círculos de colores parpadeantes = errores detectados (uno por tipo). Al pasar el ratón sobre cada círculo se muestra el tipo y número de filas afectadas.</p></div></div>
                    </div>
@@ -694,7 +706,7 @@
                    <button onclick="toggleVisionIncidenciasMenu()" id="btnVisionIncidencias" class="bg-white/10 hover:bg-red-500/80 p-2 rounded flex items-center justify-center transition-colors relative text-white"><i data-lucide="triangle-alert" class="w-4 h-4"></i><span id="errorBadgeVision" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center"></span></button>
                    <div id="visionIncidenciasDropdown" class="hidden absolute right-0 top-10 w-52 bg-white dark:bg-slate-800 border border-sap-border rounded-xl shadow-2xl z-[300] overflow-hidden">
                        <div class="px-3 pt-3 pb-1"><p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Incidencias</p></div>
-                       <button onclick="openIncidentFromVision()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm"><span>Notificar incidencia</span></button>
+                       <button onclick="openIncidentFromVision()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm"><span>Solicitar cambio</span></button>
                        <div class="h-px bg-sap-border mx-3"></div>
                        <button onclick="exportErrorReport(); toggleVisionIncidenciasMenu()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm"><span>Exportar incidencias</span></button>
                    </div>
@@ -757,6 +769,20 @@
            </div>
            <div id="cellErrorTipBody" class="text-[10px] text-red-500 dark:text-red-400 leading-snug space-y-0.5"></div>
            <p id="cellErrorTipHint" class="text-[9px] text-red-300 dark:text-red-600 mt-2 italic">Toca para cerrar</p>
+       </div>
+   </div>
+
+   <!-- Modal de incidencias detectadas al cargar un fichero -->
+   <div id="fileIssuesModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center z-[400] p-4">
+       <div class="bg-white dark:bg-sap-darkCard w-full max-w-xl rounded-xl shadow-2xl border border-sap-border overflow-hidden flex flex-col">
+           <div class="bg-sap-shell p-4 flex justify-between items-center text-white">
+               <h3 class="font-bold text-sm uppercase tracking-widest">Incidencias detectadas</h3>
+               <button type="button" onclick="closeFileIssuesModal()" aria-label="Cerrar"><i data-lucide="x"></i></button>
+           </div>
+           <pre id="fileIssuesMessage" class="p-5 m-0 whitespace-pre-wrap text-sm leading-relaxed text-sap-text dark:text-white max-h-[65vh] overflow-y-auto"></pre>
+           <div class="p-4 flex justify-end border-t border-sap-border dark:border-slate-700">
+               <button type="button" onclick="closeFileIssuesModal()" class="px-5 py-2 bg-sap-blue text-white rounded-lg font-bold">Aceptar</button>
+           </div>
        </div>
    </div>
 

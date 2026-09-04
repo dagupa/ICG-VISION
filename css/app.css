@@ -105,6 +105,18 @@ tr:hover td { background-color: rgba(0, 100, 209, 0.05) !important; }
 }
 .cell-notfound-blink { animation: notFoundBlink 0.8s ease-in-out infinite; }
 
+@keyframes cableNotFoundBlink {
+  0%, 100% { background-color: rgba(16, 185, 129, 0.28); }
+  50%       { background-color: rgba(16, 185, 129, 0.05); }
+}
+.cell-cable-notfound-blink { animation: cableNotFoundBlink 0.8s ease-in-out infinite; }
+
+@keyframes sleeveNotFoundBlink {
+  0%, 100% { background-color: rgba(184, 149, 106, 0.28); }
+  50%       { background-color: rgba(184, 149, 106, 0.05); }
+}
+.cell-sleeve-notfound-blink { animation: sleeveNotFoundBlink 0.8s ease-in-out infinite; }
+
 /* Estado: círculos de error en tarjeta DATOS */
 @keyframes estadoDotOrange {
   0%, 100% { opacity: 1;    box-shadow: 0 0 6px 1px rgba(249,115,22,0.8); }
@@ -135,6 +147,17 @@ tr:hover td { background-color: rgba(0, 100, 209, 0.05) !important; }
   50%       { opacity: 0.3; box-shadow: 0 0 0px 0px rgba(236,72,153,0); }
 }
 .estado-dot-pink { background-color: #ec4899; animation: estadoDotPink 1s ease-in-out infinite; }
+.estado-dot-emerald { background-color: #10b981; animation: estadoDotEmerald 1s ease-in-out infinite; }
+.estado-dot-brown { background-color: #b8956a; animation: estadoDotBrown 1s ease-in-out infinite; }
+
+@keyframes estadoDotEmerald {
+  0%, 100% { opacity: 1;    box-shadow: 0 0 6px 1px rgba(16,185,129,0.8); }
+  50%       { opacity: 0.3; box-shadow: 0 0 0px 0px rgba(16,185,129,0); }
+}
+@keyframes estadoDotBrown {
+  0%, 100% { opacity: 1;    box-shadow: 0 0 6px 1px rgba(184,149,106,0.8); }
+  50%       { opacity: 0.3; box-shadow: 0 0 0px 0px rgba(184,149,106,0); }
+}
 
 .eye-on { 
   color: var(--color-warning) !important; 
@@ -195,6 +218,16 @@ th { position: relative; }
 .row-deleted { background-color: rgba(248, 113, 113, 0.12) !important; }
 .row-deleted td { color: var(--color-slate-500); text-decoration: line-through; opacity: 0.65; }
 .dark .row-deleted { background-color: rgba(248, 113, 113, 0.18) !important; }
+.row-selected td {
+  background-color: #c7f0f2 !important;
+  box-shadow: inset 3px 0 0 #0f766e;
+}
+.row-selected td:first-child { box-shadow: inset 4px 0 0 #0f766e; }
+.dark .row-selected td {
+  background-color: #155e75 !important;
+  box-shadow: inset 3px 0 0 #67e8f9;
+}
+.dark .row-selected td:first-child { box-shadow: inset 4px 0 0 #67e8f9; }
 .cell-modified { background-color: rgba(251, 191, 36, 0.25); }
 .cell-order-changed { background-color: rgba(255, 199, 206, 0.55); }
 .cell-modified div, .cell-order-changed div { color: inherit; }

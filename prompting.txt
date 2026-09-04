@@ -1,4 +1,48 @@
 ================================================================================
+2026-09-04 11:07:49 (selección visual de filas en lista de conexiones)
+PROMPT:
+En el modo lista de conexiones, al hacer clic o pulsar con el dedo una línea debe
+marcarse de otro color, con buena claridad tanto en modo claro como en modo oscuro,
+sin impedir ver correctamente toda la información.
+
+SOLUCIÓN:
+- js/app.js: se añade una posición de conexión seleccionada y un controlador de
+  clic/toque para aplicar la selección a una sola fila, ignorando controles internos.
+- css/app.css: se añade el estilo row-selected con fondo turquesa claro en modo claro
+  y turquesa oscuro con borde cian en modo oscuro, manteniendo los colores de texto e
+  incidencias de cada celda.
+- Validación completada sin errores en JavaScript ni CSS.
+================================================================================
+2026-09-04 10:58:39 (color esmeralda y parpadeo uniforme)
+PROMPT:
+Cambiar el color azul celeste del error de ID CABLE por verde esmeralda y hacer
+que los colores nuevos parpadeen como el resto en la tarjeta de estado.
+
+SOLUCIÓN:
+- El error de ID CABLE usa verde esmeralda en celdas, iconos, tooltips, cabeceras,
+  modal inicial, semáforo y documentación.
+- css/app.css: la animación de la celda de cable pasa a verde esmeralda.
+- Los indicadores de estado esmeralda y marrón claro adoptan el mismo patrón que
+  los demás: alternancia de opacidad y resplandor cada segundo.
+- Eliminadas las referencias exclusivas al esquema celeste anterior.
+================================================================================
+================================================================================
+2026-09-04 10:49:26 (finalizar validación de cables y manguitos)
+PROMPT:
+Si falta algo en la integración de la validación de ID CABLE y DE MANGUITO,
+terminarlo.
+
+SOLUCIÓN:
+- css/app.css: añadidas las animaciones de parpadeo azul celeste para ID CABLE
+  no válido y marrón claro para DE MANGUITO no válido.
+- js/app.js: los iconos de ambas celdas muestran el tooltip enriquecido tanto con
+  ratón como al tocarlos en tablet.
+- index.html: el manual pasa de cinco a siete tipos de incidencia e incorpora la
+  explicación de los errores de cable y manguito con sus colores correspondientes.
+- Verificada la integración completa: catálogos, carga, modal inicial, semáforo,
+  cabeceras, filtros, celdas y validación al corregir incidencias.
+================================================================================
+================================================================================
 2026-07-16 (eliminar bloque redundante window.crimpingMasterData de app.js)
 PROMPT:
 Comprobar si los datos de crimpingMasterData estaban duplicados entre master-data.js
@@ -748,3 +792,136 @@ SOLUCIÓN:
 - No se ha tocado isKN() (usada solo para excluir "S/T"/"S/M"/"KN-"/"PELADO" de
   los conteos de incidencias, no de la validez del código) ni master-data.js.
 ================================================================================
+
+2026-09-04 08:47:57 (mostrar extractores en especificaciones técnicas de crimpado)
+PROMPT:
+Integrar la información del extractor para que se muestre únicamente cuando el
+terminal o pin tenga un extractor asociado.
+
+SOLUCIÓN:
+- js/app.js, openCrimpingModal():
+  · Se elimina el texto suelto del extractor de la cabecera de ayuda visual.
+  · Se añade un bloque visual opcional con imagen y descripción del extractor.
+  · El bloque solo se renderiza cuando existen tanto data.txt_ext como data.img_ext.
+  · La imagen se carga desde CRIMP_PATHS.extractores usando data.img_ext.
+- Se mantiene sin cambios la vista de terminales que no tienen extractor asociado.
+================================================================================
+
+2026-09-04 09:07:55 (reorganizar visualización del extractor)
+PROMPT:
+Reducir el protagonismo del extractor, mostrar su imagen con un tamaño similar al
+de la tenaza y colocarlo en un apartado propio debajo de las instrucciones de pelado.
+
+SOLUCIÓN:
+- js/app.js, openCrimpingModal():
+  · El extractor pasa a un panel independiente situado bajo "INSTRUCCIONES DE PELADO".
+  · El panel solo se renderiza cuando existen data.txt_ext y data.img_ext.
+  · Se reduce la altura de la imagen de pelado y del extractor para equilibrar la
+    columna izquierda con la herramienta de crimpado.
+  · "AYUDA VISUAL / CRITERIO DE CALIDAD" vuelve a ser un panel independiente a
+    ancho completo, sin información del extractor.
+================================================================================
+
+  2026-09-04 09:20:27 (compactar extractor y eliminar huecos visuales)
+  PROMPT:
+  Reducir la tarjeta del extractor para que ocupe un espacio similar a la información
+  de la tenaza, usar una imagen del mismo tamaño y eliminar el espacio entre tarjetas.
+
+  SOLUCIÓN:
+  - js/app.js, openCrimpingModal():
+    · La tarjeta del extractor pasa a formato horizontal compacto.
+    · La imagen usa las mismas dimensiones de miniatura que la tenaza: w-20 h-14.
+    · Se elimina el espacio vertical entre pelado y extractor mediante gap-0.
+    · Al reducir la altura de la columna izquierda se evita el hueco visual bajo la
+      herramienta de crimpado antes del panel de calidad.
+  ================================================================================
+
+    2026-09-04 09:26:56 (alinear marco inferior de crimpado y extractor)
+    PROMPT:
+    Hacer algo más grande la tarjeta de la herramienta de crimpado para que su marco
+    inferior coincida con el marco inferior de la tarjeta del extractor.
+
+    SOLUCIÓN:
+    - js/app.js, panel "HERRAMIENTA DE CRIMPADO": se añade la clase h-full para que
+      la tarjeta se estire hasta la altura de la fila compartida con la columna de
+      pelado y extractor, manteniendo intacto el contenido y sus tamaños.
+    ================================================================================
+
+    2026-09-04 09:41:34 (tooltip táctil del semáforo de estado)
+    PROMPT:
+    Mostrar también en tablet la información de cada luz del semáforo de colores de
+    la tarjeta DATOS al tocarla.
+
+    SOLUCIÓN:
+    - js/app.js, updateEstadoUI(): las luces de error conservan su atributo title para
+      escritorio y añaden ontouchstart para abrir el tooltip enriquecido existente.
+    - js/app.js: nueva función showEstadoErrorTip() que asigna el esquema de color
+      correspondiente y muestra el detalle del error al tocar cada luz.
+    - El cierre al tocar fuera y el cierre automático del tooltip existente se mantienen.
+    ================================================================================
+
+    2026-09-04 09:47:21 (vista inicial al cargar fichero)
+    PROMPT:
+    Cuando se cargue un fichero, la vista por defecto debe ser siempre "Lista de conexiones".
+
+    SOLUCIÓN:
+    - js/app.js, handleFileUpload(): se establece currentView = 'table' al finalizar
+      la carga y antes de refrescar la vista mediante clearAllFilters(). Así cada fichero
+      nuevo se muestra inicialmente en la Lista de conexiones, aunque antes se estuviera
+      usando otra vista.
+    ================================================================================
+
+    2026-09-04 09:52:38 (sustituir aviso nativo de incidencias)
+    PROMPT:
+    Eliminar el texto automático "ESTA PÁGINA DICE" de la ventana que aparece al
+    detectar incidencias en el fichero Excel.
+
+    SOLUCIÓN:
+    - index.html: se añade el modal propio fileIssuesModal con título, mensaje y botón
+      de aceptación.
+    - js/app.js: el aviso de incidencias deja de usar window.alert() y muestra el nuevo
+      modal mediante showFileIssuesModal(). El mensaje se inserta con textContent para
+      conservar sus saltos de línea y evitar interpretar contenido del fichero como HTML.
+    ================================================================================
+
+    2026-09-04 09:54:39 (colores del semáforo en modal de incidencias)
+    PROMPT:
+    Identificar los errores en el modal creado añadiendo el punto de color usado en el
+    semáforo para indicar cada tipo de error.
+
+    SOLUCIÓN:
+    - js/app.js, showFileIssuesModal(): cada línea de incidencia incorpora un punto
+      visual con la misma clase de color del semáforo:
+      · naranja: posiciones u órdenes duplicadas
+      · amarillo: sección sin definir
+      · rojo: terminal incompatible
+      · morado: longitud no numérica
+      · rosa: terminal o pin no existente
+    - El contenido procedente del fichero se escapa antes de insertarse en el modal.
+    ================================================================================
+
+    2026-09-04 09:59:54 (indicadores múltiples por columna)
+    PROMPT:
+    Cuando una misma columna tenga errores de distinto tipo, mostrar tantos triángulos
+    de color como tipos de error existan y filtrar por el tipo seleccionado al pulsarlo.
+
+    SOLUCIÓN:
+    - js/app.js, renderTable(): se sustituye el indicador único por una colección de
+      indicadores independientes para duplicados, sección sin definir, incompatibilidad,
+      longitud no numérica y terminal no encontrado.
+    - Cada triángulo conserva el color del semáforo y usa un filtro compuesto por columna
+      y tipo de error, evitando que un tipo oculte a los demás.
+    - El filtrado de filas reconoce los identificadores compuestos y muestra únicamente
+      las incidencias correspondientes al triángulo pulsado.
+    ================================================================================
+
+    2026-09-04 10:15:38 (limpiar filtros de errores con la papelera)
+    PROMPT:
+    Al pulsar la papelera, borrar también los filtros activados desde los triángulos
+    de error de los encabezados.
+
+    SOLUCIÓN:
+    - js/app.js, clearAllFilters(): se añade el reinicio de filterTerminalError junto
+      al resto de filtros. La papelera de escritorio y la versión móvil quedan cubiertas
+      porque ambas utilizan esta función común.
+    ================================================================================
