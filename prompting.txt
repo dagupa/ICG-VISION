@@ -1,3 +1,17 @@
+2026-09-15 (excepciones de terminal sin sección)
+PROMPT:
+Los códigos que forman parte de const KNOWN_TERMINAL_EXCEPTIONS no son pines ni
+terminales, por lo que no es necesario contrastar la sección para conocer la
+herramienta. Si alguno de esos códigos aparece en el campo "De terminal"
+"Para terminal" no se considerará error si el campo "Sección" está vacio.
+
+SOLUCIÓN:
+- js/app.js: se añade isKnownTerminalException() y se excluyen los códigos de
+  KNOWN_TERMINAL_EXCEPTIONS de la incidencia "Sección sin definir con terminal
+  asignado" en la carga, filtros y renderizado de la tabla.
+- Se mantiene la validación de códigos y la comprobación de compatibilidad para
+  terminales reales cuando existe una sección informada.
+================================================================================
 2026-09-04 (detección de S/T como error en terminales)
 PROMPT:
 Al cargar el fichero me está identificando correctamente como error el texto "S/M"

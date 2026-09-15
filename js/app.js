@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.10.1';
+    const VERSION = '0.10.2';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -667,13 +667,17 @@ function markConnectionDone(posicion) {
        // Comprueba que un código de terminal exista en el maestro de crimpado (master-data.js).
        // Excepciones admitidas aunque no figuren en master-data.js.
        const KNOWN_TERMINAL_EXCEPTIONS = new Set([
-           '641M054', '641M089', '641M10047', '641M10160', '641M10272', '641M10295', '641M10294', '641M110', '641M130',
+           '641M054', '641M089', '641M10047', '641M10160', '641M10272', '641M10295', '', '641M110', '641M130',
            '641M144', '641M275', '641M280', '641M281', '641M289', '641M371', '641M860', '641M861', '641M862',
            '641M960', '641M964', '641M993', 'H0014682', '641M10294', '641M072', '641M073', '641M080',
            '641M10026', '641M10027', '641M10112', '641M10172', '641M10174', '641M10263', '641M115', '641M184',
            '641M267', '641M294', '641M295', '641M298', '641M302', '641M331', '641M351', '641M597', '641M598',
            '641M744', '641M830', '641M855', '695000', 'H0656683',
        ]);
+       function isKnownTerminalException(code) {
+           if (!code) return false;
+           return KNOWN_TERMINAL_EXCEPTIONS.has(code.toString().trim().toUpperCase());
+       }
        function isValidTerminalCode(code) {
            if (!code) return true;
            const idToSearch = code.toString().trim().toUpperCase();
@@ -1695,7 +1699,7 @@ function selectMaterial(name) {
             dupB.forEach(v => _dupOrdenes.add(v));
 
             // Sección faltante con terminal asignado
-            const _tv = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t));
+            const _tv = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t) && !isKnownTerminalException(t));
             const secMissingPos = data
                 .filter(r => !r.seccion && (_tv(r.de_terminal) || _tv(r.para_terminal)))
                 .map(r => r.posicion).filter(Boolean);
@@ -2794,7 +2798,7 @@ function handleHelpEasterEgg() {
            const hasSleeveNotFound = d.some(r => r.de_manguito && !isValidSleeveCode(r.de_manguito));
 
            // Pre-scan: detectar si hay filas con sección vacía pero con terminal asignado
-           const _tvh = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t));
+           const _tvh = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t) && !isKnownTerminalException(t));
            const hasSeccionMissingErrors = d.some(r => !r.seccion && (_tvh(r.de_terminal) || _tvh(r.para_terminal)));
            const hasDupPosicion = _dupPosicions.size > 0;
            const hasDupOrden    = _dupOrdenes.size > 0;
@@ -2910,7 +2914,7 @@ function handleHelpEasterEgg() {
                        const hasSleeveNotFound = c.key === 'de_manguito' && v && !isValidSleeveCode(v);
                        const isDupCell = (c.key === 'posicion' && _dupPosicions.has((r.posicion||'').toString().trim())) || (c.key === 'orden' && _dupOrdenes.has((r.orden||'').toString().trim()));
                        const dupTooltip = c.key === 'posicion' ? 'Posición duplicada — existe otra fila con el mismo valor' : 'Orden duplicada — existe otra fila con el mismo valor';
-                       const _termHasVal = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t));
+                       const _termHasVal = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t) && !isKnownTerminalException(t));
                        const hasMissingSeccion = c.key === 'seccion' && !v && (_termHasVal(r.de_terminal) || _termHasVal(r.para_terminal));
                        const hasNonNumLong = c.key === 'longitud' && _nonNumericLongitud.has((r.posicion||'').toString().trim());
                        return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'cell-incompat-blink':''} ${hasTermNotFound?'cell-notfound-blink':''} ${hasCableNotFound?'cell-cable-notfound-blink':''} ${hasSleeveNotFound?'cell-sleeve-notfound-blink':''} ${isDupCell?'cell-dup-blink':''} ${hasMissingSeccion?'cell-seccion-missing':''} ${hasNonNumLong?'cell-nonnum-blink':''}"
