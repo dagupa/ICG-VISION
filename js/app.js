@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.10.2';
+    const VERSION = '0.10.3';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -773,7 +773,7 @@ function markConnectionDone(posicion) {
                return TXT_KEYS.map(k => {
                    const v = changes[k] !== undefined ? changes[k] : (r[k] || '');
                    if (TXT_BLANK_IF[k] && TXT_BLANK_IF[k].includes(v)) return '';
-                   return v;
+                   return k === 'longitud' ? normalizeLengthDecimalSeparator(v) : v;
                }).join('\t');
            });
            const content = lines.join('\r\n');
@@ -834,13 +834,14 @@ function markConnectionDone(posicion) {
                        return { v: state, s: rowStyle ? { ...rowStyle, font: { bold: true } } : { font: { bold: true } } };
                    }
                    const isChanged = changes[key] !== undefined;
-                   const value = isChanged ? changes[key] : (row[key] || '');
+                   let value = isChanged ? changes[key] : (row[key] || '');
                    const style = {};
                    if (rowStyle) Object.assign(style, rowStyle);
                    if (key === 'orden' && row.orderChanged) Object.assign(style, ORDER_CHANGED_STYLE);
                    if (row.deleted && key !== 'estado') Object.assign(style, DELETED_STYLE);
                    if (row.added && key !== 'estado') Object.assign(style, ADDED_STYLE);
                    if (isChanged) Object.assign(style, MODIFIED_STYLE, RED);
+                   if (key === 'longitud') value = normalizeLengthDecimalSeparator(value);
                    return Object.keys(style).length ? { v: value, s: style } : { v: value };
                });
                wsData.push(cells);
@@ -1829,6 +1830,10 @@ function selectMaterial(name) {
             showCellErrorTip(element, schemes[errorClass] || 'red', 'ESTADO', `<p>${message}</p>`);
         }
 
+        function normalizeLengthDecimalSeparator(value) {
+            return String(value ?? '').replace(/(\d)\.(\d)/g, '$1,$2');
+        }
+
          function handleFileUpload(event) {
            const f = event.target.files[0]; if (!f) return;
            const reader = new FileReader();
@@ -1857,7 +1862,7 @@ function selectMaterial(name) {
                rawData = json.map(row => ({
                    posicion:       _sv(row['A']), orden:          _sv(row['B']),
                    cod_cable:      _sv(row['C']), seccion:        _sv(row['D']),
-                   longitud:       _sv(row['E']), marcado:        _sv(row['F']),
+                   longitud:       normalizeLengthDecimalSeparator(_sv(row['E'])), marcado:        _sv(row['F']),
                    cable_marca:    _sv(row['G']), de_elemento:    _sv(row['H']),
                    de_punto:       _sv(row['I']), de_terminal:    _sv(row['J']),
                    de_manguito:    _sv(row['K']), para_manguito:  _sv(row['L']),

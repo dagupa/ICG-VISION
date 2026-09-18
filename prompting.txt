@@ -1,3 +1,21 @@
+2026-09-18 13:42:29 (separador decimal de longitudes en Excel y exportación SAP)
+PROMPT:
+En el fichero Excel la longitud de los cables viene representada en metros. En
+las celdas se usa como separador decimal "," y sin embargo el informe lo muestra
+como ".". Esto ocasiona que al exportar la lista de conexiones a .txt para SAP,
+SAP interprete la longitud como un número entero y la suma final sea incorrecta.
+
+SOLUCIÓN:
+- js/app.js: se añade normalizeLengthDecimalSeparator(), que convierte únicamente
+  los puntos situados entre dígitos a comas en la columna LONGITUD, manteniendo los
+  rangos y los valores que ya usan coma.
+- La normalización se aplica al cargar el Excel, por lo que la tabla muestra el
+  separador decimal español.
+- La exportación .txt para SAP y el informe Excel vuelven a normalizar LONGITUD,
+  incluyendo correcciones manuales introducidas desde el modal de incidencias.
+- Validación del archivo completada sin errores detectados por VS Code. No fue
+  posible ejecutar node --check porque Node.js no está instalado en el entorno.
+================================================================================
 2026-09-15 (excepciones de terminal sin sección)
 PROMPT:
 Los códigos que forman parte de const KNOWN_TERMINAL_EXCEPTIONS no son pines ni
