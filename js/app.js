@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.11.0';
+    const VERSION = '0.12.0';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -113,7 +113,7 @@
         let currentSortCol = null, sortAsc = true;
        let rawData = [], reportMetadata = {}, masterMap = { cables: {}, terminals: {}, sleeves: {} };
     let currentView = 'table', filterText = '', filterMarcaText = '', filterTerminalError = null, selectedMaterial = null, selectedConnectionPosition = null, currentLang = 'es';
-    let selectedGraphMaterial = null, selectedGraphPositions = new Set(), showOnlyGraphSelection = false;
+    let selectedGraphMaterial = null, selectedGraphTool = null, selectedGraphPositions = new Set(), showOnlyGraphSelection = false;
        let summaryViewMode = 'cards'; 
        let currentZoom = 1, panX = 0, panY = 0, isPanning = false, resizingCol = null, startX, startWidth, thDragIdx = null, baseViewBox = { x: 0, y: 0, w: 0, h: 0 };
        let lastTouchX = 0, lastTouchY = 0, lastTouchDist = 0; 
@@ -1468,11 +1468,14 @@ function clearAllFiltersMobile() {
            outputs.forEach(c => { if (!pinMap.has(c.de_punto)) pinMap.set(c.de_punto, []); pinMap.get(c.de_punto).push({ ...c, type: 'out' }); });
            detailPinSequence = Array.from(pinMap.keys()).sort((a, b) => a.localeCompare(b, undefined, {numeric: true})); detailPinDataMap = pinMap; currentDetailIndex = 0;
            if (detailPinSequence.length === 0) return;
-           document.getElementById('detailElementName').innerText = elN.toUpperCase(); document.getElementById('detailModal').classList.remove('hidden'); document.getElementById('detailModal').classList.add('flex');
+            const detailModal = document.getElementById('detailModal');
+            detailModal.appendChild(document.getElementById('graphPanelsContainer'));
+            document.getElementById('detailElementName').innerText = elN.toUpperCase(); detailModal.classList.remove('hidden'); detailModal.classList.add('flex');
            renderDetailStep(); renderProgressList();
        }
        function closeDetailMode() {
     document.getElementById('detailModal').classList.add('hidden');
+        document.getElementById('graphModal').appendChild(document.getElementById('graphPanelsContainer'));
     const s = filterText.trim();
     if (s) drawDiagram(s);
     updateView();
@@ -1506,6 +1509,9 @@ function getHoleRightClass(codigo) {
 function renderDetailStep() {
    const pin = detailPinSequence[currentDetailIndex], connections = detailPinDataMap.get(pin);
    const currentElName = document.getElementById('detailElementName').innerText.toLowerCase();
+    const currentPinLabel = document.getElementById('currentPinLabel');
+    const isCurrentPinSelected = (selectedGraphMaterial || selectedGraphTool) && connections.some(c => selectedGraphPositions.has(String(c.posicion)));
+    ['px-6', 'py-2', 'border-4', 'border-amber-400', 'bg-amber-100', 'dark:bg-amber-900/30', 'shadow-lg'].forEach(className => currentPinLabel.classList.toggle(className, !!isCurrentPinSelected));
    
    document.getElementById('currentPinLabel').innerText = pin; 
    document.getElementById('pinCounter').innerText = `PASO ${currentDetailIndex + 1} DE ${detailPinSequence.length}`;
@@ -1529,7 +1535,7 @@ function renderDetailStep() {
  
    document.getElementById('progressFill').style.width = `${((currentDetailIndex + 1) / detailPinSequence.length) * 100}%`;
    
-   document.getElementById('currentPinCables').innerHTML = connections.map(c => {
+    document.getElementById('currentPinCables').innerHTML = connections.filter(c => !showOnlyGraphSelection || selectedGraphPositions.has(String(c.posicion))).map(c => {
        const isOut = c.type === 'out';
        const termOrig = isOut ? c.de_terminal : c.para_terminal;
        const isPseudo = isKN(termOrig);
@@ -1550,13 +1556,12 @@ function renderDetailStep() {
            if ((row.de_elemento || '').toLowerCase() === currentElName) isCurrentSideOk = prog.de === true;
            else if ((row.para_elemento || '').toLowerCase() === currentElName) isCurrentSideOk = prog.para === true;
        }
- 
        const obs = c.observaciones && c.observaciones !== "---" ? c.observaciones : "";
        const crimpData = getCrimpingInfo(termOrig, c.seccion);
        const sectionCheck = !isPseudo ? checkSectionCompatibility(termOrig, c.seccion) : null;
        const defaultSvg = `<svg viewBox="0 0 64 32" class="w-full h-full text-slate-600"><rect x="2" y="8" width="25" height="16" rx="2" fill="#ef4444"/><circle cx="45" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="4"/><circle cx="45" cy="16" r="4" fill="currentColor"/><path d="M25 16 L35 16" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg>`;
  
-       return `<div class="bg-sap-card dark:bg-sap-darkCard p-6 rounded-2xl border-l-8 ${isOut ? 'border-l-sap-blue' : 'border-l-emerald-500'} shadow-xl flex flex-col gap-4 ${isCurrentSideOk ? 'opacity-50 ring-2 ring-[#10b981]/30' : ''}">
+    return `<div class="bg-sap-card dark:bg-sap-darkCard p-6 rounded-2xl border-l-8 ${isOut ? 'border-l-sap-blue' : 'border-l-emerald-500'} shadow-xl flex flex-col gap-4 ${isCurrentSideOk ? 'opacity-50 ring-2 ring-[#10b981]/30' : ''}">
            <div class="flex justify-between items-start text-left">
                <span class="px-3 py-1 bg-sap-shell/10 rounded text-[10px] font-black uppercase text-sap-secondaryText">${isOut?'Salida':'Entrada'}</span>
                <span class="text-2xl font-black text-sap-blue">${getCableDisplayLabel(c)}</span>
@@ -1644,8 +1649,10 @@ function renderDetailStep() {
            }
            return false;
        });
+
+       const isSelectedByMaterial = (selectedGraphMaterial || selectedGraphTool) && connections.some(c => selectedGraphPositions.has(String(c.posicion)));
        
-       return `<button onclick="goToDetailStep(${i})" class="w-full flex items-center justify-center p-3 rounded-lg border text-center transition-all ${i === currentDetailIndex ? 'bg-sap-blue text-white shadow-lg scale-105' : (isAllDone ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200' : 'bg-white dark:bg-slate-800 border-sap-border')}">
+       return `<button onclick="goToDetailStep(${i})" class="w-full flex items-center justify-center p-3 rounded-lg border text-center transition-all ${i === currentDetailIndex ? 'bg-sap-blue text-white shadow-lg scale-105' : (isAllDone ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200' : 'bg-white dark:bg-slate-800 border-sap-border')} ${isSelectedByMaterial ? 'ring-4 ring-amber-400 border-amber-400' : ''}">
            <div class="flex flex-col items-center gap-1 min-w-0">
                <span class="font-black text-sm truncate uppercase tracking-tighter">${pin}</span>
                <i id="tick-${i}" data-lucide="check-circle-2" class="w-3 h-3 text-[#10b981] ${isAllDone ? '' : 'hidden'}"></i>
@@ -2102,7 +2109,6 @@ function selectMaterial(name) {
   // 1. Panel de Materiales y Lógica de Gráfico
 function renderMaterialPanel(elementName) {
    const list = document.getElementById('materialPanelList');
-   const panel = document.getElementById('materialPanel');
    const search = elementName.toLowerCase();
    
    // Filtramos las filas donde interviene el elemento seleccionado
@@ -2112,10 +2118,19 @@ function renderMaterialPanel(elementName) {
    );
    
    const materialCounts = {};
+   const crimpTools = new Map();
    const addMaterial = (code, description, row) => {
        if (!materialCounts[code]) materialCounts[code] = { qty: 0, desc: description, positions: new Set() };
        materialCounts[code].qty += 1;
        materialCounts[code].positions.add(String(row.posicion));
+   };
+   const addCrimpTool = (terminal, row) => {
+       const data = getCrimpingInfo(terminal, row.seccion);
+       if (!data || !data.img_tenaza) return;
+       const image = data.img_tenaza.trim();
+       if (!image) return;
+       if (!crimpTools.has(image)) crimpTools.set(image, { image, name: data.txt_tenaza || image, positions: new Set() });
+       crimpTools.get(image).positions.add(String(row.posicion));
    };
  
    rows.forEach(r => {
@@ -2126,10 +2141,12 @@ function renderMaterialPanel(elementName) {
        if (esOrigen && r.de_terminal && r.de_terminal !== 'S/T' && !isKN(r.de_terminal)) {
            const cod = r.de_terminal.toString().trim();
            addMaterial(cod, masterMap.terminals[cod] || 'Sin descripción técnica', r);
+           addCrimpTool(cod, r);
        }
        if (esDestino && r.para_terminal && r.para_terminal !== 'S/T' && !isKN(r.para_terminal)) {
            const cod = r.para_terminal.toString().trim();
            addMaterial(cod, masterMap.terminals[cod] || 'Sin descripción técnica', r);
+           addCrimpTool(cod, r);
        }
  
        // 2. Procesar Manguitos (Basado estrictamente en r.de_manguito por cable)
@@ -2144,12 +2161,7 @@ function renderMaterialPanel(elementName) {
    });
  
    const items = Object.entries(materialCounts);
-   if (items.length === 0) {
-       panel.classList.add('hidden');
-       return;
-   }
- 
-   list.innerHTML = items.map(([name, data]) => {
+   list.innerHTML = items.length ? items.map(([name, data]) => {
        const encodedName = encodeURIComponent(name);
        const encodedPositions = encodeURIComponent(JSON.stringify(Array.from(data.positions)));
        const isSelected = selectedGraphMaterial === name;
@@ -2161,9 +2173,25 @@ function renderMaterialPanel(elementName) {
            </div>
            <span class="ml-3 px-2 py-0.5 bg-sap-blue/10 text-sap-blue font-black rounded-full text-[10px]">${data.qty} uds</span>
        </button>`;
-   }).join('');
-   
-   panel.classList.remove('hidden');
+   }).join('') : '<p class="p-3 text-[11px] text-sap-secondaryText">No hay materiales registrados para este elemento.</p>';
+
+   const crimpToolsContainer = document.getElementById('materialCrimpTools');
+   const tools = Array.from(crimpTools.values());
+   crimpToolsContainer.innerHTML = tools.length
+       ? tools.map(tool => {
+           const encodedImage = encodeURIComponent(tool.image);
+           const encodedPositions = encodeURIComponent(JSON.stringify(Array.from(tool.positions)));
+           const isSelected = selectedGraphTool === tool.image;
+           return `
+           <button type="button" onclick="selectGraphTool('${encodedImage}', '${encodedPositions}')" class="w-full flex items-center gap-3 p-2 border-b dark:border-slate-700 last:border-0 text-left cursor-pointer ${isSelected ? 'bg-emerald-100 dark:bg-emerald-900/40 ring-1 ring-emerald-500' : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}">
+               <div class="w-28 h-20 shrink-0 bg-white rounded border border-slate-200 flex items-center justify-center p-1">
+                   <img src="${CRIMP_PATHS.crimpadoras}${encodeURIComponent(tool.image)}.jpg" alt="Tenaza ${tool.name}" class="max-h-full max-w-full object-contain" onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden')">
+                   <span class="hidden text-[10px] text-slate-500 text-center">Foto no disponible</span>
+               </div>
+               <span class="min-w-0 text-xs font-bold text-sap-text dark:text-slate-100">${tool.name}</span>
+           </button>`;
+       }).join('')
+       : '<p class="p-3 text-[11px] text-sap-secondaryText">No hay tenaza de crimpado registrada para estos materiales.</p>';
    if (window.lucide) lucide.createIcons();
 }
 
@@ -2171,29 +2199,60 @@ function selectGraphMaterial(encodedName, encodedPositions) {
    const name = decodeURIComponent(encodedName);
    if (selectedGraphMaterial === name) {
        selectedGraphMaterial = null;
+       selectedGraphTool = null;
        selectedGraphPositions.clear();
        showOnlyGraphSelection = false;
    } else {
        selectedGraphMaterial = name;
+       selectedGraphTool = null;
        selectedGraphPositions = new Set(JSON.parse(decodeURIComponent(encodedPositions)));
    }
    updateGraphSelectionFilterControl();
    updateGraphMaterialHighlight();
-   const elementName = document.getElementById('graphElementName').innerText;
+    const elementName = getGraphPanelElementName();
    renderMaterialPanel(elementName);
+        if (!document.getElementById('detailModal').classList.contains('hidden')) { renderDetailStep(); renderProgressList(); }
+}
+
+function selectGraphTool(encodedImage, encodedPositions) {
+   const image = decodeURIComponent(encodedImage);
+   if (selectedGraphTool === image) {
+       selectedGraphMaterial = null;
+       selectedGraphTool = null;
+       selectedGraphPositions.clear();
+       showOnlyGraphSelection = false;
+   } else {
+       selectedGraphMaterial = null;
+       selectedGraphTool = image;
+       selectedGraphPositions = new Set(JSON.parse(decodeURIComponent(encodedPositions)));
+   }
+   updateGraphSelectionFilterControl();
+   updateGraphMaterialHighlight();
+    renderMaterialPanel(getGraphPanelElementName());
+    if (!document.getElementById('detailModal').classList.contains('hidden')) { renderDetailStep(); renderProgressList(); }
+}
+
+function getGraphPanelElementName() {
+    const detailModal = document.getElementById('detailModal');
+    const element = detailModal && !detailModal.classList.contains('hidden')
+         ? document.getElementById('detailElementName')
+         : document.getElementById('graphElementName');
+    return element?.innerText.trim() || filterText.trim();
 }
 
 function updateGraphSelectionFilterControl() {
     const checkbox = document.getElementById('showOnlyGraphSelection');
     if (!checkbox) return;
-    checkbox.disabled = !selectedGraphMaterial;
-    checkbox.checked = !!selectedGraphMaterial && showOnlyGraphSelection;
+    const hasSelection = !!(selectedGraphMaterial || selectedGraphTool);
+    checkbox.disabled = !hasSelection;
+    checkbox.checked = hasSelection && showOnlyGraphSelection;
 }
 
 function toggleGraphSelectionFilter(isEnabled) {
-    if (!selectedGraphMaterial) return;
+    if (!selectedGraphMaterial && !selectedGraphTool) return;
     showOnlyGraphSelection = isEnabled;
     updateGraphMaterialHighlight();
+    if (!document.getElementById('detailModal').classList.contains('hidden')) renderDetailStep();
 }
 
 function updateGraphMaterialHighlight() {
@@ -2202,13 +2261,14 @@ function updateGraphMaterialHighlight() {
        connection.classList.toggle('material-highlight', positions.some(position => selectedGraphPositions.has(position)));
    });
     const diagram = document.getElementById('diagramSvg');
-    if (diagram) diagram.classList.toggle('show-only-selection', showOnlyGraphSelection && !!selectedGraphMaterial);
+    if (diagram) diagram.classList.toggle('show-only-selection', showOnlyGraphSelection && !!(selectedGraphMaterial || selectedGraphTool));
 }
  
 function openGraphicalView() { 
    const s = filterText.trim(); 
    if (!s) return; 
     selectedGraphMaterial = null;
+    selectedGraphTool = null;
     selectedGraphPositions.clear();
     showOnlyGraphSelection = false;
     updateGraphSelectionFilterControl();
@@ -2218,18 +2278,12 @@ function openGraphicalView() {
    headerElement.innerText = s.toUpperCase(); 
    
    // Asociar el evento directamente sobre el elemento existente
-   headerElement.onclick = function() {
-       const panel = document.getElementById('materialPanel');
-       if (panel.classList.contains('hidden')) {
-           renderMaterialPanel(s);
-           panel.classList.remove('hidden');
-       } else {
-           panel.classList.add('hidden');
-       }
-   };
+   headerElement.onclick = toggleGraphMaterialPanel;
    
    // Abrir el modal
+    document.getElementById('graphModal').appendChild(document.getElementById('graphPanelsContainer'));
    document.getElementById('materialPanel').classList.add('hidden');
+    document.getElementById('crimpToolPanel').classList.add('hidden');
    document.getElementById('graphModal').classList.remove('hidden'); 
    document.getElementById('graphModal').classList.add('flex'); 
    
@@ -2249,16 +2303,41 @@ function toggleMaterialPanel() {
        panel.classList.add('hidden');
    }
 }
+
+function toggleGraphMaterialPanel() {
+    const elementName = getGraphPanelElementName();
+    if (!elementName) return;
+    const panel = document.getElementById('materialPanel');
+    if (panel.classList.contains('hidden')) {
+         renderMaterialPanel(elementName);
+         panel.classList.remove('hidden');
+    } else {
+         panel.classList.add('hidden');
+    }
+}
+
+function toggleCrimpToolPanel() {
+    const elementName = getGraphPanelElementName();
+   if (!elementName) return;
+   const panel = document.getElementById('crimpToolPanel');
+   if (panel.classList.contains('hidden')) {
+       renderMaterialPanel(elementName);
+       panel.classList.remove('hidden');
+   } else {
+       panel.classList.add('hidden');
+   }
+}
  
 function closeGraphicalView() { 
    document.getElementById('graphModal').classList.add('hidden'); 
    document.getElementById('materialPanel').classList.add('hidden'); // Cerramos panel
+    document.getElementById('crimpToolPanel').classList.add('hidden');
    hidePinPopover(); 
    updateView(); 
 }
   
        
-    function navigateToElement(t) { const panel = document.getElementById('materialPanel'); const refreshPanel = !panel.classList.contains('hidden'); selectedGraphMaterial = null; selectedGraphPositions.clear(); showOnlyGraphSelection = false; updateGraphSelectionFilterControl(); filterText = t; document.getElementById('filterInput').value = t; document.getElementById('elementQuickActions').classList.remove('hidden'); updateView(); drawDiagram(t); document.getElementById('graphElementName').innerText = t.toUpperCase(); if (refreshPanel) renderMaterialPanel(t); }
+    function navigateToElement(t) { const panel = document.getElementById('materialPanel'); const toolPanel = document.getElementById('crimpToolPanel'); const refreshPanels = !panel.classList.contains('hidden') || !toolPanel.classList.contains('hidden'); selectedGraphMaterial = null; selectedGraphTool = null; selectedGraphPositions.clear(); showOnlyGraphSelection = false; updateGraphSelectionFilterControl(); filterText = t; document.getElementById('filterInput').value = t; document.getElementById('elementQuickActions').classList.remove('hidden'); updateView(); drawDiagram(t); document.getElementById('graphElementName').innerText = t.toUpperCase(); if (refreshPanels) renderMaterialPanel(t); }
        function markCurrentElementAsFinished() {
            const search = filterText.trim().toLowerCase();
            if (!search || rawData.length === 0) return;

@@ -666,7 +666,8 @@
        <div class="h-auto min-h-[3rem] bg-sap-shell flex items-center justify-between px-3 sm:px-6 text-white shrink-0 flex-wrap gap-y-1 py-1">
             <div class="flex items-center gap-2 min-w-0">
                 <span class="font-bold text-xs uppercase tracking-widest hidden sm:inline">Esquema Gráfico</span>
-                <span id="graphElementName" class="bg-sap-blue px-2 py-0.5 rounded text-xs ml-1 border border-white/20 cursor-pointer"></span>
+                <button id="graphElementName" type="button" title="Mostrar u ocultar materiales" class="bg-sap-blue px-2 py-0.5 rounded text-xs ml-1 border border-white/20 cursor-pointer"></button>
+                <button onclick="toggleCrimpToolPanel()" title="Mostrar tenazas de crimpado" class="w-8 h-8 bg-sap-blue hover:bg-sap-darkBlue text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="wrench" class="w-4 h-4"></i></button>
             </div>
             <div class="flex items-center gap-1 sm:gap-2 flex-wrap justify-end">
                 <button onclick="markCurrentElementAsFinished()" class="w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
@@ -687,10 +688,16 @@
                <div id="popoverContent" class="space-y-4 text-[11px] text-left overflow-y-auto custom-scrollbar flex-1 pr-1"></div>
            </div>
        </div>
-       <div id="materialPanel" class="hidden absolute top-20 right-6 w-80 bg-white dark:bg-sap-darkCard border border-sap-border rounded-lg shadow-2xl z-[170] overflow-hidden">
-           <div class="bg-sap-shell px-4 py-2 flex justify-between items-center text-white"><span class="text-[10px] font-black uppercase tracking-widest">Material Necesario</span><button onclick="document.getElementById('materialPanel').classList.add('hidden')"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+    <div id="graphPanelsContainer" class="graph-panels-container">
+    <div id="materialPanel" class="hidden graph-floating-panel graph-material-panel flex flex-col bg-white dark:bg-sap-darkCard border border-sap-border rounded-lg shadow-2xl z-[170] overflow-y-auto custom-scrollbar">
+           <div class="bg-sap-shell px-4 py-2 flex justify-between items-center text-white shrink-0"><span class="text-[10px] font-black uppercase tracking-widest">Material Necesario</span><button onclick="document.getElementById('materialPanel').classList.add('hidden')"><i data-lucide="x" class="w-4 h-4"></i></button></div>
            <label class="flex items-center gap-2 px-3 py-2 border-b border-sap-border text-xs text-sap-text dark:text-slate-200"><input id="showOnlyGraphSelection" type="checkbox" class="accent-amber-500" disabled onchange="toggleGraphSelectionFilter(this.checked)"><span>Mostrar sólo selección</span></label>
-           <div id="materialPanelList" class="p-2 max-h-[50vh] overflow-y-auto custom-scrollbar"></div>
+           <div id="materialPanelList" class="p-2 max-h-[28vh] overflow-y-auto custom-scrollbar shrink-0"></div>
+       </div>
+       <div id="crimpToolPanel" class="hidden graph-floating-panel graph-tool-panel flex flex-col bg-white dark:bg-sap-darkCard border border-emerald-300 dark:border-emerald-800 rounded-lg shadow-2xl z-[170] overflow-y-auto custom-scrollbar">
+           <div class="bg-emerald-800 px-4 py-2 flex justify-between items-center text-white shrink-0"><span class="text-[10px] font-black uppercase tracking-widest">Tenazas de crimpado</span><button onclick="document.getElementById('crimpToolPanel').classList.add('hidden')"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+           <div id="materialCrimpTools" class="max-h-[70vh] overflow-y-auto custom-scrollbar"></div>
+       </div>
        </div>
    </div>
  
@@ -700,7 +707,10 @@
            <div class="flex-1"></div>
            <div class="flex flex-col items-center justify-center text-center">
                <span class="text-white text-[9px] font-black uppercase tracking-[0.2em] opacity-80 leading-none">CONEXIONADO DE ELEMENTO</span>
-               <h2 id="detailElementName" class="text-2xl font-black -mt-0.5 tabular-nums">---</h2>
+               <div class="flex items-center gap-2">
+                   <button id="detailElementName" type="button" onclick="toggleGraphMaterialPanel()" title="Mostrar u ocultar materiales" class="text-2xl font-black -mt-0.5 tabular-nums">---</button>
+                   <button onclick="toggleCrimpToolPanel()" title="Mostrar tenazas de crimpado" class="w-8 h-8 bg-sap-blue hover:bg-sap-darkBlue text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="wrench" class="w-4 h-4"></i></button>
+               </div>
            </div>
            <div class="flex-1 flex justify-end gap-3 items-center">
                <div class="relative shrink-0" id="visionIncidenciasMenuContainer">
@@ -725,7 +735,7 @@
                <div class="max-w-4xl w-full flex flex-col items-center gap-8 text-left">
                    <div class="text-center">
                        <div class="text-sap-secondaryText text-sm font-bold uppercase tracking-widest mb-2">Punto Actual</div>
-                       <h1 id="currentPinLabel" class="text-7xl md:text-9xl font-black text-sap-blue tabular-nums">---</h1>
+                       <h1 id="currentPinLabel" class="inline-block rounded-xl transition-all text-7xl md:text-9xl font-black text-sap-blue tabular-nums">---</h1>
                        <div id="pinCounter" class="mt-4 text-lg font-bold text-sap-secondaryText bg-sap-shell/5 px-6 py-2 rounded-full inline-block">Paso 1 de 1</div>
                    </div>
                    <div id="currentPinCables" class="w-full grid grid-cols-1 md:grid-cols-2 gap-4"></div>

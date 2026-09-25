@@ -1,3 +1,91 @@
+2026-09-25 14:45:07 (resaltar los cuadros de puntos y no las tarjetas de cables en VISION)
+PROMPT:
+En el modo VISION, como no vienen representados los cables, lo que se tiene que iluminar al seleccionar los materiales o las tenazas son los cuadros de los puntos de conexión.
+
+SOLUCIÓN:
+- js/app.js: se elimina el resaltado de las tarjetas de cables y se resalta cada
+  cuadro de punto relacionado con las posiciones seleccionadas; también se
+  enmarca en ámbar el punto activo cuando pertenece a la selección.
+- index.html: se habilita el marco del punto activo en VISION.
+================================================================================
+
+2026-09-25 14:34:33 (añadir controles de materiales y tenazas al modo VISION)
+PROMPT:
+Implementar los dos mismos botones de materiales y tenazas en el modo VISION.
+
+SOLUCIÓN:
+- index.html: se añaden junto al elemento actual los botones de materiales y
+  tenazas en la cabecera VISION.
+- js/app.js: los paneles compartidos se mueven al modal activo; seleccionar un
+  material o tenaza resalta las conexiones afectadas en las tarjetas de VISION,
+  y "Mostrar sólo selección" filtra el paso actual.
+================================================================================
+
+2026-09-25 14:29:57 (ubicar y recolorear botón independiente de tenazas)
+PROMPT:
+Mover el botón de tenazas junto al botón de materiales, usar el mismo color azul
+que las herramientas en otras ventanas y asegurar que el botón de materiales no
+abra la ventana de tenazas.
+
+SOLUCIÓN:
+- index.html: se mueve el botón de tenazas junto al nombre del elemento y se
+  cambia su color a azul sap.
+- js/app.js: el botón del nombre del elemento abre únicamente la ventana de
+  materiales; el botón de tenazas mantiene su control independiente.
+================================================================================
+
+2026-09-25 14:18:48 (colocar la ventana de tenazas debajo de materiales)
+PROMPT:
+La ventana de las tenazas debe aparecer debajo de la ventana de materiales, no a
+su derecha.
+
+SOLUCIÓN:
+- index.html y css/app.css: los paneles independientes se apilan en una columna
+  con scroll propio, manteniendo el panel de tenazas inmediatamente debajo de
+  materiales tanto en escritorio como en móvil.
+================================================================================
+
+2026-09-25 14:15:24 (actualizar el material visible al navegar entre elementos)
+PROMPT:
+Mantener las ventanas de materiales y tenazas independientes, con encabezados de
+colores diferentes, y resaltar las conexiones al seleccionar una tenaza igual que
+al seleccionar un material.
+
+SOLUCIÓN:
+- js/app.js: al reabrir materiales desde el esquema, se consultan los datos del
+  elemento actualmente visible, evitando reutilizar el elemento inicial.
+- index.html: se identifica el control del nombre del elemento como botón para
+  abrir/cerrar materiales y se añade su descripción accesible.
+================================================================================
+
+2026-09-25 14:14:29 (ventanas independientes de materiales y tenazas)
+PROMPT:
+Las ventanas de materiales y tenazas deben ser independientes, usar colores
+diferentes en los encabezados y resaltar las conexiones afectadas al seleccionar
+una herramienta igual que al seleccionar un material.
+
+SOLUCIÓN:
+- index.html y css/app.css: se separan en dos ventanas flotantes con cierres y
+  desplazamiento independientes; el encabezado de tenazas usa un tono verde
+  distinto del azul de materiales, con distribución adaptable a móvil.
+- js/app.js: cada tenaza acumula las posiciones donde se utiliza; al seleccionarla
+  se resaltan esas conexiones y se habilita el filtro "Mostrar sólo selección".
+- Se añade un acceso independiente a la ventana de tenazas en la cabecera gráfica.
+================================================================================
+
+2026-09-25 14:01:51 (mostrar fotos de tenazas necesarias en panel de materiales)
+PROMPT:
+Cuando se muestra la ventana de materiales, justo debajo debe aparecer otra ventana
+con la foto de la tenaza o tenazas necesarias para crimpar esos materiales.
+
+SOLUCIÓN:
+- js/app.js: al calcular los materiales del elemento, se consultan las tenazas por
+  terminal y sección en el maestro de crimpado; las herramientas se muestran sin
+  duplicados con la imagen y el nombre definidos en los datos.
+- index.html: se añade debajo del listado una sección "Tenazas de crimpado", con
+  desplazamiento independiente y un mensaje cuando no hay una tenaza registrada.
+================================================================================
+
 2026-09-25 13:50:42 (mantener visible el punto de conexión en vista filtrada)
 PROMPT:
 En el modo "Mostrar sólo selección", el recorrido del material debe mostrarse
