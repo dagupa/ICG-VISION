@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.10.3';
+    const VERSION = '0.10.4';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -141,7 +141,7 @@
            { id: 'I', key: 'de_punto', visible: true, width: 80, es: 'DE PUNTO', en: 'FROM POINT' },
            { id: 'J', key: 'de_terminal', visible: true, width: 100, es: 'DE TERMINAL', en: 'FROM TERM.' },
            { id: 'K', key: 'de_manguito', visible: true, width: 100, es: 'DE MANGUITO', en: 'FROM SLEEVE' },
-           { id: 'L', key: 'para_manguito', visible: true, width: 100, es: 'DE MARCA', en: 'FROM LABEL' },
+           { id: 'L', key: 'de_marca', visible: true, width: 100, es: 'DE MARCA', en: 'FROM LABEL' },
            { id: 'M', key: 'para_elemento', visible: true, width: 100, es: 'PARA ELEM.', en: 'TO ELEM.' },
            { id: 'N', key: 'para_punto', visible: true, width: 80, es: 'PARA PUNTO', en: 'TO POINT' },
            { id: 'O', key: 'para_terminal', visible: true, width: 100, es: 'PARA TERMINAL', en: 'TO TERM.' },
@@ -151,6 +151,20 @@
            { id: 'Z', key: 'desc_terminal_de', visible: false, width: 180, es: 'DESC. TERM. DE', en: 'FROM TERM DESC' },
            { id: 'AA', key: 'desc_terminal_para', visible: false, width: 180, es: 'DESC. TERM. PARA', en: 'TO TERM DESC' }
        ];
+
+       function getCableDisplayLabel(connection) {
+           const cableMark = String(connection?.cable_marca || '').trim();
+           return cableMark || String(connection?.de_marca || '').trim();
+       }
+
+       function normalizeDeMarcaAlias(record) {
+           const normalized = { ...record };
+           if (!String(normalized.de_marca || '').trim() && normalized.para_manguito) {
+               normalized.de_marca = normalized.para_manguito;
+           }
+           delete normalized.para_manguito;
+           return normalized;
+       }
  
        function getStorageKey() {
            const equipo = reportMetadata.equipo || 'default';
@@ -159,7 +173,16 @@
        function saveProgress() { try { localStorage.setItem(getStorageKey(), JSON.stringify(progressMap)); } catch (e) { console.error("Error saving progress", e); } }
        function loadProgress() { try { const stored = localStorage.getItem(getStorageKey()); progressMap = stored ? JSON.parse(stored) : {}; } catch (e) { progressMap = {}; } }
        function saveErrors() { try { localStorage.setItem(getStorageKey() + '_errors', JSON.stringify(errorsMap)); } catch (e) { console.error("Error saving errors", e); } }
-       function loadErrors() { try { const stored = localStorage.getItem(getStorageKey() + '_errors'); errorsMap = stored ? JSON.parse(stored) : {}; } catch (e) { errorsMap = {}; } }
+       function loadErrors() {
+           try {
+               const stored = localStorage.getItem(getStorageKey() + '_errors');
+               errorsMap = stored ? JSON.parse(stored) : {};
+               errorsMap = Object.fromEntries(Object.entries(errorsMap).map(([posicion, changes]) => [posicion, normalizeDeMarcaAlias(changes || {})]));
+               if (stored) saveErrors();
+           } catch (e) {
+               errorsMap = {};
+           }
+       }
 
        // ── ADMINISTRADOR: carpeta de autoguardado (IndexedDB para persistir el DirectoryHandle) ──
      const _IDB_NAME = 'ICGVisionAdmin';
@@ -553,7 +576,7 @@ function markConnectionDone(posicion) {
                        <i class="fas ${hasError ? 'fa-exclamation-triangle' : 'fa-plug'} text-xs"></i>
                    </div>
                    <div class="min-w-0">
-                       <p class="text-sm font-bold text-sap-text dark:text-white truncate">${c.cable_marca || c.posicion}</p>
+                       <p class="text-sm font-bold text-sap-text dark:text-white truncate">${getCableDisplayLabel(c) || c.posicion}</p>
                        <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Pos: ${c.posicion} · ${c.cod_cable || '—'}</p>
                    </div>
                    ${hasError ? '<span class="ml-auto text-[9px] font-bold text-red-500 uppercase">Con incidencia</span>' : ''}
@@ -599,7 +622,7 @@ function markConnectionDone(posicion) {
            { key: 'de_punto',         label: 'I — De Punto Conexión' },
            { key: 'de_terminal',      label: 'J — De Terminal' },
            { key: 'de_manguito',      label: 'K — De Manguito' },
-           { key: 'para_manguito',    label: 'L — De Marca' },
+           { key: 'de_marca',         label: 'L — De Marca' },
            { key: 'para_elemento',    label: 'M — Para Elemento' },
            { key: 'para_punto',       label: 'N — Para Punto Conexión' },
            { key: 'para_terminal',    label: 'O — Para Terminal' },
@@ -762,7 +785,7 @@ function markConnectionDone(posicion) {
            const TXT_KEYS = [
                'posicion', 'orden', 'cod_cable', 'seccion', 'longitud',
                'marcado', 'cable_marca', 'de_elemento', 'de_punto', 'de_terminal',
-               'de_manguito', 'para_manguito', 'para_elemento', 'para_punto', 'para_terminal', 'observaciones'
+               'de_manguito', 'de_marca', 'para_elemento', 'para_punto', 'para_terminal', 'observaciones'
            ];
            const TXT_BLANK_IF = { de_terminal: ['S/T','S/M'], de_manguito: ['S/T','S/M'], para_terminal: ['S/T','S/M'] };
            // Elimina encabezado
@@ -804,7 +827,7 @@ function markConnectionDone(posicion) {
            if (!rawData || rawData.length === 0) { showNotification('No hay datos cargados', 'error'); return; }
  
            const COL_KEYS = ['posicion','orden','cod_cable','seccion','longitud','marcado','cable_marca',
-                             'de_elemento','de_punto','de_terminal','de_manguito','para_manguito',
+                             'de_elemento','de_punto','de_terminal','de_manguito','de_marca',
                              'para_elemento','para_punto','para_terminal','observaciones','estado'];
            const COL_HEADERS = ['Posición','Orden dentro de la lista','Cod. cable','Sección','Longitud',
                                 'Marcado','Cable / Marca','De Elemento','De Punto Conexión','De Terminal',
@@ -937,9 +960,9 @@ function markConnectionDone(posicion) {
                     }
                 }
 
-                // Restaurar datos
+                // Restaurar datos y normalizar el nombre antiguo de la columna L.
                 progressMap = data.progress || {};
-                errorsMap = data.errors || {};
+                errorsMap = Object.fromEntries(Object.entries(data.errors || {}).map(([posicion, changes]) => [posicion, normalizeDeMarcaAlias(changes || {})]));
 
                 // Persistir en localStorage
                 saveProgress();
@@ -950,6 +973,7 @@ function markConnectionDone(posicion) {
        } else if (Array.isArray(data.rawData)) {
            rawData = data.rawData;
        }
+       rawData = rawData.map(normalizeDeMarcaAlias);
  
                 renderTable();
 
@@ -1122,7 +1146,7 @@ function openAddCableModal() {
     document.getElementById('crudParaElemento').value = '';
     document.getElementById('crudParaPunto').value = '';
     document.getElementById('crudParaTerminal').value = '';
-    document.getElementById('crudParaManguito').value = '';
+    document.getElementById('crudDeMarca').value = '';
     document.getElementById('crudObservaciones').value = '';
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -1224,7 +1248,7 @@ function saveIncidencia() {
     const para_elemento = document.getElementById('crudParaElemento')?.value?.trim();
     const para_punto = document.getElementById('crudParaPunto')?.value?.trim();
     const para_terminal = document.getElementById('crudParaTerminal')?.value?.trim();
-    const para_manguito = document.getElementById('crudParaManguito')?.value?.trim();
+    const de_marca = document.getElementById('crudDeMarca')?.value?.trim();
     const observaciones = document.getElementById('crudObservaciones')?.value?.trim();
 
     if (!posicion || !ordenValue) {
@@ -1265,7 +1289,7 @@ function saveIncidencia() {
         para_elemento: para_elemento || '',
         para_punto: para_punto || '',
         para_terminal: para_terminal || '',
-        para_manguito: para_manguito || '',
+        de_marca: de_marca || '',
         observaciones: observaciones || '',
         modificado: true,
         added: true
@@ -1312,7 +1336,7 @@ function deleteCableComplete() {
                // Se inicializa con una cadena vacía para que la primera línea sea un salto de línea al unir con \r\n
                let contentLines = [""]; 
                groupedSleeves[ref].forEach(r => {
-                   const marca = cleanText(r.cable_marca), o = `${cleanText(r.de_elemento)} ${cleanText(r.de_punto)}`, d = `${cleanText(r.para_elemento)} ${cleanText(r.para_punto)}`;
+                   const marca = cleanText(getCableDisplayLabel(r)), o = `${cleanText(r.de_elemento)} ${cleanText(r.de_punto)}`, d = `${cleanText(r.para_elemento)} ${cleanText(r.para_punto)}`;
                    contentLines.push([marca, o, "", d, o, marca, d].join(","));
                });
                zip.file(`${teamPrefix}-${sanitize(ref)}.txt`, contentLines.join("\r\n"));
@@ -1511,9 +1535,9 @@ function renderDetailStep() {
        
        // --- CONTROL ANTICRUZADO ESTRICTO PARA MANGUITOS EN MODO VISION ---
        // La única columna fiable de manguito es de_manguito (K).
-       // para_manguito (L = "De Marca") no es un manguito y no debe usarse como tal.
+         // de_marca (L) es una etiqueta y no debe tratarse como un manguito.
        const rawM = c.de_manguito || "";
-       const m = (rawM && rawM !== 'S/M' && rawM !== 'S/E' && rawM !== c.cable_marca) ? rawM : "S/M";
+         const m = (rawM && rawM !== 'S/M' && rawM !== 'S/E' && rawM !== getCableDisplayLabel(c)) ? rawM : "S/M";
        // ------------------------------------------------------------------
        
        const peer = isOut ? c.para_elemento : c.de_elemento;
@@ -1534,7 +1558,7 @@ function renderDetailStep() {
        return `<div class="bg-sap-card dark:bg-sap-darkCard p-6 rounded-2xl border-l-8 ${isOut ? 'border-l-sap-blue' : 'border-l-emerald-500'} shadow-xl flex flex-col gap-4 ${isCurrentSideOk ? 'opacity-50 ring-2 ring-[#10b981]/30' : ''}">
            <div class="flex justify-between items-start text-left">
                <span class="px-3 py-1 bg-sap-shell/10 rounded text-[10px] font-black uppercase text-sap-secondaryText">${isOut?'Salida':'Entrada'}</span>
-               <span class="text-2xl font-black text-sap-blue">${c.cable_marca}</span>
+               <span class="text-2xl font-black text-sap-blue">${getCableDisplayLabel(c)}</span>
            </div>
            <div class="grid grid-cols-2 gap-4"><div><p class="text-[9px] font-bold uppercase opacity-60">ID</p><p class="text-sm font-bold truncate">${c.cod_cable}</p></div><div><p class="text-[9px] font-bold uppercase opacity-60">Secc.</p><p class="text-sm font-bold">${c.seccion} mm²</p></div></div>
            <div class="p-3 bg-sap-shell/5 rounded-xl flex items-center gap-3"><div class="w-10 h-10 bg-sap-blue/10 flex items-center justify-center rounded-lg text-sap-blue"><i data-lucide="arrow-right-left" class="w-5 h-5"></i></div><div class="min-w-0"><p class="text-[9px] font-bold uppercase opacity-60">${isOut?'Destino':'Origen'}</p><p class="text-base font-black truncate text-sap-blue">${peer}</p></div></div>
@@ -1567,7 +1591,7 @@ function renderDetailStep() {
                 <div class="flex items-stretch border ${getManguitoBgClass(m)} rounded-r-lg shadow-sm overflow-hidden font-mono text-[11px] text-black">
                  <div class="flex-1 flex">
     <div class="w-1/2 border-r border-black/20 py-1 px-2 flex flex-col items-center justify-center text-center font-bold">
-        <span>${c.cable_marca || ''}</span>
+        <span>${getCableDisplayLabel(c)}</span>
     </div>
     <div class="w-1/2 py-1 px-2 flex flex-col items-center justify-center text-center font-bold leading-tight">
         <span class="truncate w-full">${c.de_elemento || ''} ${c.de_punto || ''}</span>
@@ -1858,14 +1882,14 @@ function selectMaterial(name) {
                }
                // Mapeo de datos (igual en ambos formatos): A=posicion B=orden C=cod_cable D=seccion
                // E=longitud F=marcado G=cable_marca H=de_elemento I=de_punto J=de_terminal
-               // K=de_manguito L=para_manguito M=para_elemento N=para_punto O=para_terminal P=observaciones
+               // K=de_manguito L=de_marca M=para_elemento N=para_punto O=para_terminal P=observaciones
                rawData = json.map(row => ({
                    posicion:       _sv(row['A']), orden:          _sv(row['B']),
                    cod_cable:      _sv(row['C']), seccion:        _sv(row['D']),
                    longitud:       normalizeLengthDecimalSeparator(_sv(row['E'])), marcado:        _sv(row['F']),
                    cable_marca:    _sv(row['G']), de_elemento:    _sv(row['H']),
                    de_punto:       _sv(row['I']), de_terminal:    _sv(row['J']),
-                   de_manguito:    _sv(row['K']), para_manguito:  _sv(row['L']),
+                   de_manguito:    _sv(row['K']), de_marca:       _sv(row['L']),
                    para_elemento:  _sv(row['M']), para_punto:     _sv(row['N']),
                    para_terminal:  _sv(row['O']), observaciones:  _sv(row['P']),
                    desc_cable:         _sv(row['X']), desc_manguito:      _sv(row['Y']),
@@ -1874,11 +1898,11 @@ function selectMaterial(name) {
                    if (!_isNumPos(r.posicion)) return false;
                    // Descartar filas donde solo A y/o B tienen dato y el resto (C-P) están vacías
                    const DATA_KEYS = ['cod_cable','seccion','longitud','marcado','cable_marca',
-                       'de_elemento','de_punto','de_terminal','de_manguito','para_manguito',
+                       'de_elemento','de_punto','de_terminal','de_manguito','de_marca',
                        'para_elemento','para_punto','para_terminal','observaciones'];
                    return DATA_KEYS.some(k => (r[k]||'').trim() !== '');
                });
-               rawData.forEach(r => { if (r.cod_cable && r.desc_cable) masterMap.cables[r.cod_cable.toString().trim()] = r.desc_cable; if (r.de_terminal && r.desc_terminal_de) masterMap.terminals[r.de_terminal.toString().trim()] = r.desc_terminal_de; if (r.para_terminal && r.desc_terminal_para) masterMap.terminals[r.para_terminal.toString().trim()] = r.desc_terminal_para; if (r.de_manguito && r.desc_manguito) masterMap.sleeves[r.de_manguito.toString().trim()] = r.desc_manguito; if (r.para_manguito && r.desc_manguito) masterMap.sleeves[r.para_manguito.toString().trim()] = r.desc_manguito; });
+               rawData.forEach(r => { if (r.cod_cable && r.desc_cable) masterMap.cables[r.cod_cable.toString().trim()] = r.desc_cable; if (r.de_terminal && r.desc_terminal_de) masterMap.terminals[r.de_terminal.toString().trim()] = r.desc_terminal_de; if (r.para_terminal && r.desc_terminal_para) masterMap.terminals[r.para_terminal.toString().trim()] = r.desc_terminal_para; if (r.de_manguito && r.desc_manguito) masterMap.sleeves[r.de_manguito.toString().trim()] = r.desc_manguito; });
  loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); _checkDuplicateColumns(rawData); currentView = 'table'; clearAllFilters();
            }; reader.readAsArrayBuffer(f);
        }
@@ -1962,7 +1986,7 @@ function selectMaterial(name) {
            // Buscamos los datos del cable por posición (identificador único) para evitar
            // confusión cuando varios cables comparten el mismo nombre/marca.
            const cableData = (cn.posicion ? rawData.find(wire => wire.posicion === cn.posicion) : null)
-               || rawData.find(wire => wire.cable_marca === cn.label);
+               || rawData.find(wire => getCableDisplayLabel(wire) === cn.label);
            const section = cableData ? cableData.seccion : "";
            const crimpData = getCrimpingInfo(cn.term, section);
            const sectionCheck = !isPseudoTerminal ? checkSectionCompatibility(cn.term, section) : null;
@@ -2041,7 +2065,7 @@ function selectMaterial(name) {
   } else if (d.type === 'cable') {
        const cd = d.posicion
            ? rawData.find(r => r.posicion === d.posicion)
-           : rawData.find(r => r.cable_marca === d.label);
+           : rawData.find(r => getCableDisplayLabel(r) === d.label);
        const allCd = cd ? [cd] : [];
        h.innerText = `Detalle de Cable: ${d.label}`;
        const longitudesHtml = allCd.map(r => `
@@ -2113,7 +2137,7 @@ function renderMaterialPanel(elementName) {
        if ((esOrigen || esDestino) && r.de_manguito && r.de_manguito !== 'S/M' && r.de_manguito !== 'S/E') {
            const cod = r.de_manguito.toString().trim();
            // Control estricto anti-cruce: Si coincide con la marca del cable por desfase, se ignora
-           if (cod !== (r.cable_marca || '').toString().trim()) {
+           if (cod !== getCableDisplayLabel(r)) {
                if (!materialCounts[cod]) {
                    materialCounts[cod] = { qty: 0, desc: masterMap.sleeves[cod] || r.desc_manguito || 'Sin descripción técnica' };
                }
@@ -2280,7 +2304,8 @@ internalBridges.forEach((b, idx) => {
     svg.innerHTML += `<circle cx="${mX + mainW}" cy="${y2}" r="4" fill="${bridgeColor}" stroke="${bridgeColor === '#10b981' ? '#059669' : '#ea580c'}" stroke-width="1" opacity="0.9" pointer-events="none" />`;
     
     // Dibuja la etiqueta de texto con la marca del cable puente
-    svg.innerHTML += ` <text x="${arcX + 14}" y="${(y1 + y2) / 2}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: b.cable_marca, posicion: b.posicion}))}')" transform="rotate(-90, ${arcX + 14}, ${(y1 + y2) / 2})" style="fill:${bridgeColor}; font-size:10px; font-weight:900; letter-spacing: 0.5px;"> ${b.cable_marca} </text>`;
+    const bridgeLabel = getCableDisplayLabel(b);
+    svg.innerHTML += ` <text x="${arcX + 14}" y="${(y1 + y2) / 2}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: bridgeLabel, posicion: b.posicion}))}')" transform="rotate(-90, ${arcX + 14}, ${(y1 + y2) / 2})" style="fill:${bridgeColor}; font-size:10px; font-weight:900; letter-spacing: 0.5px;"> ${bridgeLabel} </text>`;
 });
  
       // 2. PINES Y CONEXIONES EXTERNAS
@@ -2291,23 +2316,23 @@ internalBridges.forEach((b, idx) => {
       const pCs = [
            ...pD.in.map(c => ({ 
                term: c.para_terminal, 
-               sleeve: (c.de_manguito !== c.cable_marca) ? c.de_manguito : 'S/M', 
-               label: c.cable_marca,
+               sleeve: (c.de_manguito !== getCableDisplayLabel(c)) ? c.de_manguito : 'S/M',
+               label: getCableDisplayLabel(c),
                posicion: c.posicion,
                observaciones: c.observaciones || ''
            })), 
            ...pD.out.map(c => ({ 
                term: c.de_terminal, 
-               sleeve: (c.de_manguito !== c.cable_marca) ? c.de_manguito : 'S/M', 
-               label: c.cable_marca,
+               sleeve: (c.de_manguito !== getCableDisplayLabel(c)) ? c.de_manguito : 'S/M',
+               label: getCableDisplayLabel(c),
                posicion: c.posicion,
                observaciones: c.observaciones || ''
            }))
        ];
        _schemaPinDataCache[pin] = pCs;
        
-       const cablesConMarcaIn  = pD.in.filter(c => (c.cable_marca||'') !== '' && (c.de_elemento||'').toLowerCase() !== search);
-       const cablesConMarcaOut = pD.out.filter(c => (c.cable_marca||'') !== '' && (c.para_elemento||'').toLowerCase() !== search);
+         const cablesConMarcaIn  = pD.in.filter(c => getCableDisplayLabel(c) !== '' && (c.de_elemento||'').toLowerCase() !== search);
+         const cablesConMarcaOut = pD.out.filter(c => getCableDisplayLabel(c) !== '' && (c.para_elemento||'').toLowerCase() !== search);
        const totalPin    = cablesConMarcaIn.length + cablesConMarcaOut.length;
        const completadosPin = cablesConMarcaIn.filter(c => (progressMap[c.posicion]||{}).para === true).length
                             + cablesConMarcaOut.filter(c => (progressMap[c.posicion]||{}).de === true).length;
@@ -2323,10 +2348,10 @@ internalBridges.forEach((b, idx) => {
        const extIn = pD.in.filter(c => (c.de_elemento||'').toLowerCase() !== search);
        if (extIn.length > 0) {
            const stubX = mX - 100, blockRightEdge = stubX - 100;
-           const anyLocalOk = extIn.some(c => (progressMap[c.posicion] || {}).para === true && (c.cable_marca||'') !== '');
-           const extInConCable = extIn.filter(c => (c.cable_marca || '') !== '');
+           const anyLocalOk = extIn.some(c => (progressMap[c.posicion] || {}).para === true && getCableDisplayLabel(c) !== '');
+           const extInConCable = extIn.filter(c => getCableDisplayLabel(c) !== '');
            extIn.forEach((c) => {
-               const tieneCable = (c.cable_marca || '') !== '';
+               const tieneCable = getCableDisplayLabel(c) !== '';
                const tieneObturador = !tieneCable && (c.para_terminal || '') !== '' && (c.para_terminal || '').toUpperCase() !== 'S/T' && !isKN(c.para_terminal);
                const isBusbar = (c.observaciones || '').trim().toUpperCase() === 'BUSBAR';
                if (!tieneCable && !tieneObturador && !isBusbar) return;
@@ -2340,7 +2365,7 @@ internalBridges.forEach((b, idx) => {
                const lY = extInConCable.length > 1 ? y+(idx-(extInConCable.length-1)/2)*32 : y;
                const xInicio = extInConCable.length > 1 ? stubX : mX;
                const lineStyle = isBusbar ? `stroke:#a855f7; stroke-dasharray:4 3;` : `${isLocalOk?'stroke:#10b981;':''}`;
-               const wireLabel = isBusbar ? 'BUSBAR' : c.cable_marca;
+               const wireLabel = isBusbar ? 'BUSBAR' : getCableDisplayLabel(c);
                const wireColor = isBusbar ? '#a855f7' : `${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}`;
                svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockRightEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
                    <rect x="${blockRightEdge - 160}" y="${lY-12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${c.de_elemento}')"/>
@@ -2357,10 +2382,10 @@ internalBridges.forEach((b, idx) => {
        const extOut = pD.out.filter(c => (c.para_elemento||'').toLowerCase() !== search);
        if (extOut.length > 0) {
            const origX = mX + mainW, stubX = origX + 100, blockLeftEdge = stubX + 100;
-           const anyLocalOk = extOut.some(c => (progressMap[c.posicion] || {}).de === true && (c.cable_marca||'') !== '');
-           const extOutConCable = extOut.filter(c => (c.cable_marca || '') !== '');
+           const anyLocalOk = extOut.some(c => (progressMap[c.posicion] || {}).de === true && getCableDisplayLabel(c) !== '');
+           const extOutConCable = extOut.filter(c => getCableDisplayLabel(c) !== '');
            extOut.forEach((c) => {
-               const tieneCable = (c.cable_marca || '') !== '';
+               const tieneCable = getCableDisplayLabel(c) !== '';
                const tieneObturador = !tieneCable && (c.de_terminal || '') !== '' && (c.de_terminal || '').toUpperCase() !== 'S/T' && !isKN(c.de_terminal);
                const isBusbar = (c.observaciones || '').trim().toUpperCase() === 'BUSBAR';
                if (!tieneCable && !tieneObturador && !isBusbar) return;
@@ -2374,7 +2399,7 @@ internalBridges.forEach((b, idx) => {
                const lY = extOutConCable.length > 1 ? y+(idx-(extOutConCable.length-1)/2)*32 : y;
                const xInicio = extOutConCable.length > 1 ? stubX : origX;
                const lineStyle = isBusbar ? `stroke:#a855f7; stroke-dasharray:4 3;` : `${isLocalOk?'stroke:#10b981;':''}`;
-               const wireLabel = isBusbar ? 'BUSBAR' : c.cable_marca;
+               const wireLabel = isBusbar ? 'BUSBAR' : getCableDisplayLabel(c);
                const wireColor = isBusbar ? '#a855f7' : `${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}`;
                svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockLeftEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
                    <rect x="${blockLeftEdge}" y="${lY-12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${c.para_elemento}')"/>
@@ -2778,7 +2803,7 @@ function handleHelpEasterEgg() {
            }
            if (filterMarcaText.trim()) {
                const terms = filterMarcaText.split('+').map(t => t.trim().toLowerCase()).filter(t => t);
-               d = d.filter(r => { const marca = (r.cable_marca||'').toLowerCase(); return terms.some(s => marca.includes(s)); });
+               d = d.filter(r => { const marca = getCableDisplayLabel(r).toLowerCase(); return terms.some(s => marca.includes(s)); });
            }
 
            // Pre-scan: detectar si hay filas con incompatibilidad de sección en cada columna de terminal

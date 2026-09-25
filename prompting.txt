@@ -1,3 +1,22 @@
+2026-09-25 09:54:14 (columna De Marca y visualización de cables en esquema)
+PROMPT:
+Que todo quede alineado y se muestren siempre los cables cuando en la columna L
+"De Marca" exista información.
+
+SOLUCIÓN:
+- js/app.js: la columna L pasa a usar la clave canónica de_marca; se conserva la
+  compatibilidad al restaurar JSON que todavía contiene para_manguito, incluidas
+  las correcciones guardadas en el mapa de incidencias.
+- La etiqueta efectiva del cable usa G (cable_marca) o, si está vacía, L
+  (de_marca). El esquema dibuja esas conexiones y aplica el mismo dato al progreso,
+  las etiquetas, los popovers y las búsquedas; L deja de alimentar el catálogo de
+  manguitos, que permanece asociado únicamente a K (de_manguito).
+- Se alinean el formulario CRUD y las exportaciones con De Marca.
+- Validación: el editor no detecta errores en app.js ni index.html y git diff --check
+  termina sin incidencias. No se pudo ejecutar node --check porque Node.js no está
+  instalado en el entorno.
+================================================================================
+
 2026-09-18 13:42:29 (separador decimal de longitudes en Excel y exportación SAP)
 PROMPT:
 En el fichero Excel la longitud de los cables viene representada en metros. En
