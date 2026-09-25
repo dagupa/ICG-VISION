@@ -666,11 +666,11 @@
        <div class="h-auto min-h-[3rem] bg-sap-shell flex items-center justify-between px-3 sm:px-6 text-white shrink-0 flex-wrap gap-y-1 py-1">
             <div class="flex items-center gap-2 min-w-0">
                 <span class="font-bold text-xs uppercase tracking-widest hidden sm:inline">Esquema Gráfico</span>
-                <button id="graphElementName" type="button" title="Mostrar u ocultar materiales" class="bg-sap-blue px-2 py-0.5 rounded text-xs ml-1 border border-white/20 cursor-pointer"></button>
-                <button onclick="toggleCrimpToolPanel()" title="Mostrar tenazas de crimpado" class="w-8 h-8 bg-sap-blue hover:bg-sap-darkBlue text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="wrench" class="w-4 h-4"></i></button>
+                <button id="graphElementName" type="button" title="Mostrar u ocultar materiales" class="bg-sap-blue hover:bg-sap-darkBlue px-2 py-0.5 rounded text-xs ml-1 border border-white/20 cursor-pointer transition-all duration-150 hover:scale-105 hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"></button>
+                <button onclick="toggleCrimpToolPanel()" title="Mostrar tenazas de crimpado" class="w-8 h-8 bg-sap-blue hover:bg-sap-darkBlue text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-150 hover:scale-105 hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"><i data-lucide="wrench" class="w-4 h-4"></i></button>
             </div>
             <div class="flex items-center gap-1 sm:gap-2 flex-wrap justify-end">
-                <button onclick="markCurrentElementAsFinished()" class="w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
+                <button onclick="markCurrentElementAsFinished()" class="w-8 h-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-150 hover:scale-105 hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
                 <button onclick="openDetailMode()" class="btn-vision-neon px-2 py-1.5 text-white rounded-full font-black text-[10px] uppercase flex items-center gap-1 tracking-widest">MODO VISION</button>
                 <button onclick="closeGraphicalView()" class="bg-white/10 hover:bg-red-500 px-2 py-1.5 rounded text-[10px] font-bold uppercase flex items-center gap-1 transition-colors"><i data-lucide="log-out" class="w-3.5 h-3.5"></i><span>Salir</span></button>
             </div>
@@ -705,11 +705,11 @@
    <div id="detailModal" class="fixed inset-0 bg-white dark:bg-sap-darkBg hidden flex-col z-[200]">
        <div class="h-16 bg-sap-shell flex items-center px-6 text-white shrink-0 relative">
            <div class="flex-1"></div>
-           <div class="flex flex-col items-center justify-center text-center">
+           <div class="flex flex-col items-center justify-center text-center gap-1">
                <span class="text-white text-[9px] font-black uppercase tracking-[0.2em] opacity-80 leading-none">CONEXIONADO DE ELEMENTO</span>
                <div class="flex items-center gap-2">
-                   <button id="detailElementName" type="button" onclick="toggleGraphMaterialPanel()" title="Mostrar u ocultar materiales" class="text-2xl font-black -mt-0.5 tabular-nums">---</button>
-                   <button onclick="toggleCrimpToolPanel()" title="Mostrar tenazas de crimpado" class="w-8 h-8 bg-sap-blue hover:bg-sap-darkBlue text-white rounded-full flex items-center justify-center shadow-lg"><i data-lucide="wrench" class="w-4 h-4"></i></button>
+                   <button id="detailElementName" type="button" onclick="toggleGraphMaterialPanel()" title="Mostrar u ocultar materiales" class="bg-sap-blue hover:bg-sap-darkBlue px-1.5 py-0 rounded text-xl font-black border border-white/20 cursor-pointer transition-all duration-150 hover:scale-105 hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 tabular-nums">---</button>
+                   <button onclick="toggleCrimpToolPanel()" title="Mostrar tenazas de crimpado" class="w-8 h-8 bg-sap-blue hover:bg-sap-darkBlue text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-150 hover:scale-105 hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"><i data-lucide="wrench" class="w-4 h-4"></i></button>
                </div>
            </div>
            <div class="flex-1 flex justify-end gap-3 items-center">

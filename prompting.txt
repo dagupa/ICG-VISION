@@ -1,3 +1,124 @@
+2026-09-25 18:16:16 (excluir manguitos del filtrado de tenazas)
+PROMPT:
+Al seleccionar una tenaza, aparece también el manguito H0598681, que no necesita tenaza para su montaje.
+
+SOLUCIÓN:
+- js/app.js: los materiales se clasifican como terminales o manguitos; la
+  relación cruzada con tenazas solo admite terminales, aunque compartan cable
+  y punto de conexión.
+================================================================================
+
+2026-09-25 18:09:40 (filtrar materiales y tenazas de forma cruzada)
+PROMPT:
+Con ambas ventanas abiertas, al seleccionar un material mostrar solo las tenazas asociadas; al seleccionar una tenaza, mostrar solo los materiales asociados. Sin selección, mantener ambas listas completas.
+
+SOLUCIÓN:
+- js/app.js: las listas del panel compartido se filtran por posiciones y puntos
+  de conexión coincidentes. Al quitar la selección, se recuperan todas las
+  opciones; el filtrado por pin evita cruces entre extremos de puentes.
+================================================================================
+
+2026-09-25 18:02:17 (mostrar miniaturas de materiales sin ampliar el panel)
+PROMPT:
+En las ventanas de material necesario, tanto en modo gráfico como VISION, mostrar la imagen de cada material a la derecha de sus códigos, ajustada al tamaño actual.
+
+SOLUCIÓN:
+- js/app.js: las filas del panel compartido incluyen miniaturas de terminales
+  y manguitos de 48×32 px, colocadas a la derecha de los códigos y antes del
+  contador. Las imágenes que no existan se ocultan sin cambiar el tamaño panel.
+================================================================================
+
+2026-09-25 17:55:42 (no terminar VISION al alcanzar el final del filtro)
+PROMPT:
+En VISION, al llegar al último punto filtrado, quitar el filtro y seguir en VISION si quedan conexiones; mostrar Terminar y volver al esquema solo cuando estén completadas todas.
+
+SOLUCIÓN:
+- js/app.js: el botón Terminar depende de que todos los puntos del elemento
+  estén completados. Al alcanzar el fin de un filtro con pendientes, se desactiva
+  el filtro, se conserva VISION y se avanza al siguiente punto incompleto.
+================================================================================
+
+2026-09-25 17:44:41 (mostrar en verde el segundo extremo completado de un puente)
+PROMPT:
+En un puente, C2 aparece completado pero no se muestra en verde, aunque el primer punto del puente sí aparece verde.
+
+SOLUCIÓN:
+- js/app.js: el conteo de progreso del esquema gráfico ya incluye los extremos
+  de puentes internos por separado; el pin de origen y el de destino reflejan
+  respectivamente el estado de prog.de y prog.para.
+================================================================================
+
+2026-09-25 17:37:23 (resaltar el pin exacto para terminales en puentes)
+PROMPT:
+Al seleccionar el material 641H002, se ilumina el punto 2 aunque ese terminal corresponde al extremo F14-C2 del puente F14-2 a F14-C2.
+
+SOLUCIÓN:
+- js/app.js: la selección conserva la posición para resaltar el cable, además del
+  pin exacto de terminales y tenazas. Los manguitos continúan asociados a ambos
+  extremos del cable. Así se ilumina C2 para 641H002, no el punto 2 del puente.
+================================================================================
+
+2026-09-25 17:15:54 (marcar progreso de VISION por punto y extremo)
+PROMPT:
+Al avanzar por los puntos de conexión filtrados, VISION marca como realizados todos los puntos del filtro; debe marcarlos uno a uno al pulsar Siguiente.
+
+SOLUCIÓN:
+- js/app.js: el autocompletado de Siguiente, el indicador del punto y la casilla
+  manual identifican el extremo actual con el tipo de punto (entrada/salida).
+  Así no se marca también el extremo opuesto del mismo cable antes de llegar a
+  su propio punto.
+================================================================================
+
+2026-09-25 17:06:53 (corregir filtro de selección en VISION)
+PROMPT:
+En el modo VISION no funciona el checkbox de mostrar sólo selección.
+
+SOLUCIÓN:
+- js/app.js: el filtro limita los puntos de conexión visibles y navegables, y
+  aplica el mismo subconjunto a tarjetas, progreso, incidencias y avance para
+  no marcar conexiones ocultas como realizadas. Si no hay puntos coincidentes,
+  se muestra un estado vacío y se desactiva la navegación.
+================================================================================
+
+2026-09-25 17:01:47 (completar hover en botones de encabezado)
+PROMPT:
+Revisa todos los botones de los encabezados y ponles efecto hover a los que no lo tengan.
+
+SOLUCIÓN:
+- index.html: se revisan las barras de encabezado principal, esquema gráfico y
+  VISION; se añade hover, feedback de pulsación y foco visible al botón de
+  completar elemento, que era el único sin ese efecto.
+================================================================================
+
+2026-09-25 16:46:39 (añadir hover a materiales y tenazas en ambos modos)
+PROMPT:
+Quiero efecto hover al pasar el ratón por encima de ambos botones tanto en el modo esquema gráfico como en el modo VISION.
+
+SOLUCIÓN:
+- index.html: los botones de materiales y tenazas de ambos modos ahora tienen
+  transición de color, ampliación y sombra al pasar el ratón, además de feedback
+  al pulsarlos y un indicador visible al recibir el foco.
+================================================================================
+
+2026-09-25 16:43:40 (reducir botón de materiales para evitar solape con el rótulo)
+PROMPT:
+Reduce un poco el tamaño del botón de materiales en VISION porque se monta en las letras que hay encima.
+
+SOLUCIÓN:
+- index.html: se reduce la tipografía y el relleno del botón, se elimina el
+  margen superior negativo y se añade separación bajo el rótulo.
+================================================================================
+
+2026-09-25 16:41:07 (igualar el aspecto del botón de materiales en VISION)
+PROMPT:
+El botón para mostrar los materiales en el modo VISION no tiene aspecto de botón. Quiero que tenga el mismo aspecto del botón que hay en el esquema gráfico.
+
+SOLUCIÓN:
+- index.html: el botón de materiales VISION recibe el fondo azul, el borde, el
+  relleno y el cambio de color al pasar el cursor del botón del esquema gráfico;
+  conserva el tamaño grande para que el nombre del elemento siga destacando.
+================================================================================
+
 2026-09-25 14:45:07 (resaltar los cuadros de puntos y no las tarjetas de cables en VISION)
 PROMPT:
 En el modo VISION, como no vienen representados los cables, lo que se tiene que iluminar al seleccionar los materiales o las tenazas son los cuadros de los puntos de conexión.

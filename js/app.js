@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.12.0';
+    const VERSION = '0.13.0';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -113,7 +113,7 @@
         let currentSortCol = null, sortAsc = true;
        let rawData = [], reportMetadata = {}, masterMap = { cables: {}, terminals: {}, sleeves: {} };
     let currentView = 'table', filterText = '', filterMarcaText = '', filterTerminalError = null, selectedMaterial = null, selectedConnectionPosition = null, currentLang = 'es';
-    let selectedGraphMaterial = null, selectedGraphTool = null, selectedGraphPositions = new Set(), showOnlyGraphSelection = false;
+    let selectedGraphMaterial = null, selectedGraphTool = null, selectedGraphPositions = new Set(), selectedGraphPins = new Set(), showOnlyGraphSelection = false;
        let summaryViewMode = 'cards'; 
        let currentZoom = 1, panX = 0, panY = 0, isPanning = false, resizingCol = null, startX, startWidth, thDragIdx = null, baseViewBox = { x: 0, y: 0, w: 0, h: 0 };
        let lastTouchX = 0, lastTouchY = 0, lastTouchDist = 0; 
@@ -425,7 +425,7 @@
 }
  
        // Nueva lógica de guardado: detecta automáticamente qué lado marcar
-function toggleProgress(pos, contextElement = null) {
+function toggleProgress(pos, contextElement = null, connectionType = null) {
    if (!progressMap[pos]) progressMap[pos] = { de: false, para: false };
    
    if (contextElement) {
@@ -433,9 +433,13 @@ function toggleProgress(pos, contextElement = null) {
        if (!row) return;
        
        const s = contextElement.toLowerCase();
-       // Cambia el estado (true/false) del extremo local de forma dinámica
-       if ((row.de_elemento || '').toLowerCase() === s) progressMap[pos].de = !progressMap[pos].de;
-       if ((row.para_elemento || '').toLowerCase() === s) progressMap[pos].para = !progressMap[pos].para;
+       // VISION passes the endpoint represented by the current pin; other callers keep element-based behavior.
+       if (connectionType === 'out' && (row.de_elemento || '').toLowerCase() === s) progressMap[pos].de = !progressMap[pos].de;
+       else if (connectionType === 'in' && (row.para_elemento || '').toLowerCase() === s) progressMap[pos].para = !progressMap[pos].para;
+       else if (!connectionType) {
+           if ((row.de_elemento || '').toLowerCase() === s) progressMap[pos].de = !progressMap[pos].de;
+           if ((row.para_elemento || '').toLowerCase() === s) progressMap[pos].para = !progressMap[pos].para;
+       }
    }
    
    saveProgress();
@@ -554,8 +558,8 @@ function markConnectionDone(posicion) {
            if (!detailPinSequence || detailPinSequence.length === 0) {
                showNotification('No hay ningún punto seleccionado', 'error'); return;
            }
-           const pin = detailPinSequence[currentDetailIndex];
-           const connections = detailPinDataMap.get(pin);
+           const pin = getVisibleDetailPinSequence()[currentDetailIndex];
+           const connections = getVisibleDetailConnections(pin);
            if (!connections || connections.length === 0) {
                showNotification('No hay cables en el punto activo', 'error'); return;
            }
@@ -1461,6 +1465,49 @@ function clearAllFiltersMobile() {
        renderColumnConfig(); // Forzamos el repintado inmediato del ojo (abierto/cerrado)
    } 
 }
+       function isGraphSelectionFilterActive() {
+           return showOnlyGraphSelection && !!(selectedGraphMaterial || selectedGraphTool);
+       }
+
+       function getVisibleDetailConnections(pin) {
+           const connections = detailPinDataMap.get(pin) || [];
+           return isGraphSelectionFilterActive()
+               ? connections.filter(c => selectedGraphPositions.has(String(c.posicion)))
+               : connections;
+       }
+
+       function getVisibleDetailPinSequence() {
+           if (!isGraphSelectionFilterActive()) return detailPinSequence;
+           return detailPinSequence.filter(pin => selectedGraphPins.has(String(pin)) && getVisibleDetailConnections(pin).length > 0);
+       }
+
+       function isDetailPinComplete(pin) {
+           const connections = detailPinDataMap.get(pin) || [];
+           return connections.length > 0 && connections.every(c => {
+               const progress = progressMap[c.posicion];
+               return !!progress && (c.type === 'out' ? progress.de === true : progress.para === true);
+           });
+       }
+
+       function areAllDetailPinsComplete() {
+           return detailPinSequence.length > 0 && detailPinSequence.every(isDetailPinComplete);
+       }
+
+       function getNextIncompleteDetailPin(currentPin) {
+           const currentIndex = detailPinSequence.indexOf(currentPin);
+           for (let offset = 1; offset <= detailPinSequence.length; offset++) {
+               const pin = detailPinSequence[(currentIndex + offset) % detailPinSequence.length];
+               if (!isDetailPinComplete(pin)) return pin;
+           }
+           return null;
+       }
+
+       function syncCurrentDetailIndex(preferredPin) {
+           const visiblePins = getVisibleDetailPinSequence();
+           const visibleIndex = visiblePins.indexOf(preferredPin);
+           currentDetailIndex = visibleIndex >= 0 ? visibleIndex : 0;
+       }
+
        function openDetailMode() {
            const elN = filterText.trim(); if (!elN) return;
            const s = elN.toLowerCase(), inputs = rawData.filter(r => (r.para_elemento||'').toLowerCase() === s), outputs = rawData.filter(r => (r.de_elemento||'').toLowerCase() === s);
@@ -1468,6 +1515,7 @@ function clearAllFiltersMobile() {
            outputs.forEach(c => { if (!pinMap.has(c.de_punto)) pinMap.set(c.de_punto, []); pinMap.get(c.de_punto).push({ ...c, type: 'out' }); });
            detailPinSequence = Array.from(pinMap.keys()).sort((a, b) => a.localeCompare(b, undefined, {numeric: true})); detailPinDataMap = pinMap; currentDetailIndex = 0;
            if (detailPinSequence.length === 0) return;
+           syncCurrentDetailIndex(detailPinSequence[0]);
             const detailModal = document.getElementById('detailModal');
             detailModal.appendChild(document.getElementById('graphPanelsContainer'));
             document.getElementById('detailElementName').innerText = elN.toUpperCase(); detailModal.classList.remove('hidden'); detailModal.classList.add('flex');
@@ -1507,20 +1555,32 @@ function getHoleRightClass(codigo) {
 }
 
 function renderDetailStep() {
-   const pin = detailPinSequence[currentDetailIndex], connections = detailPinDataMap.get(pin);
+    const visiblePins = getVisibleDetailPinSequence();
+    const pin = visiblePins[currentDetailIndex], connections = getVisibleDetailConnections(pin);
    const currentElName = document.getElementById('detailElementName').innerText.toLowerCase();
     const currentPinLabel = document.getElementById('currentPinLabel');
-    const isCurrentPinSelected = (selectedGraphMaterial || selectedGraphTool) && connections.some(c => selectedGraphPositions.has(String(c.posicion)));
+    const isCurrentPinSelected = (selectedGraphMaterial || selectedGraphTool) && selectedGraphPins.has(String(pin));
     ['px-6', 'py-2', 'border-4', 'border-amber-400', 'bg-amber-100', 'dark:bg-amber-900/30', 'shadow-lg'].forEach(className => currentPinLabel.classList.toggle(className, !!isCurrentPinSelected));
+
+    if (!pin) {
+        currentPinLabel.innerText = '---';
+        document.getElementById('pinCounter').innerText = 'No hay puntos en la selección';
+        document.getElementById('btnPrevDetail').disabled = true;
+        document.getElementById('btnNextDetail').disabled = true;
+        document.getElementById('progressFill').style.width = '0%';
+        document.getElementById('currentPinCables').innerHTML = '<p class="col-span-full p-4 text-center text-sap-secondaryText">No hay puntos de conexión para esta selección.</p>';
+        renderProgressList();
+        return;
+    }
    
    document.getElementById('currentPinLabel').innerText = pin; 
-   document.getElementById('pinCounter').innerText = `PASO ${currentDetailIndex + 1} DE ${detailPinSequence.length}`;
+    document.getElementById('pinCounter').innerText = `PASO ${currentDetailIndex + 1} DE ${visiblePins.length}`;
    document.getElementById('btnPrevDetail').disabled = currentDetailIndex === 0; 
    
    const btnNext = document.getElementById('btnNextDetail');
-   const isLastStep = currentDetailIndex === detailPinSequence.length - 1;
+    const allPinsComplete = areAllDetailPinsComplete();
  
-   if (isLastStep) {
+   if (allPinsComplete) {
        btnNext.innerHTML = 'TERMINAR <i data-lucide="check-circle" class="w-8 h-8"></i>';
        btnNext.classList.remove('bg-sap-blue');
        btnNext.classList.add('bg-emerald-500');
@@ -1533,9 +1593,9 @@ function renderDetailStep() {
    }
    btnNext.disabled = false;
  
-   document.getElementById('progressFill').style.width = `${((currentDetailIndex + 1) / detailPinSequence.length) * 100}%`;
+    document.getElementById('progressFill').style.width = `${((currentDetailIndex + 1) / visiblePins.length) * 100}%`;
    
-    document.getElementById('currentPinCables').innerHTML = connections.filter(c => !showOnlyGraphSelection || selectedGraphPositions.has(String(c.posicion))).map(c => {
+    document.getElementById('currentPinCables').innerHTML = connections.map(c => {
        const isOut = c.type === 'out';
        const termOrig = isOut ? c.de_terminal : c.para_terminal;
        const isPseudo = isKN(termOrig);
@@ -1549,13 +1609,7 @@ function renderDetailStep() {
        
        const peer = isOut ? c.para_elemento : c.de_elemento;
        const prog = progressMap[c.posicion] || { de: false, para: false };
-       const row = rawData.find(r => r.posicion === c.posicion);
-       
-       let isCurrentSideOk = false;
-       if (row) {
-           if ((row.de_elemento || '').toLowerCase() === currentElName) isCurrentSideOk = prog.de === true;
-           else if ((row.para_elemento || '').toLowerCase() === currentElName) isCurrentSideOk = prog.para === true;
-       }
+       const isCurrentSideOk = isOut ? prog.de === true : prog.para === true;
        const obs = c.observaciones && c.observaciones !== "---" ? c.observaciones : "";
        const crimpData = getCrimpingInfo(termOrig, c.seccion);
        const sectionCheck = !isPseudo ? checkSectionCompatibility(termOrig, c.seccion) : null;
@@ -1614,7 +1668,7 @@ function renderDetailStep() {
           ${obs && !(m && m !== "S/M") ? `<div class="flex flex-col gap-1 w-full mt-1"><div class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 ml-1">Observaciones</div><div class="px-2 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded text-[10px] text-amber-700 dark:text-amber-400 font-medium italic leading-snug">${obs}</div></div>` : ''}
            <label class="flex items-center justify-center gap-3 w-full rounded-xl cursor-pointer select-none border-2 transition-all mt-1 ${isCurrentSideOk ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'bg-sap-shell/5 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400'}" style="min-height:52px;">
                <input type="checkbox" ${isCurrentSideOk ? 'checked' : ''} 
-                   onchange="toggleProgress('${c.posicion}', '${currentElName}')" 
+                   onchange="toggleProgress('${c.posicion}', '${currentElName}', '${c.type}')"
                    class="sr-only">
                <i data-lucide="${isCurrentSideOk ? 'check-circle-2' : 'circle'}" class="w-5 h-5 shrink-0"></i>
                <span class="text-sm font-bold uppercase tracking-wide">${isCurrentSideOk ? 'Conexión realizada' : 'Marcar como hecho'}</span>
@@ -1628,29 +1682,17 @@ function renderDetailStep() {
    const list = document.getElementById('detailProgressList');
    if (!list) return;
  
-   const currentElName = document.getElementById('detailElementName').innerText.toLowerCase();
-   
-   list.innerHTML = detailPinSequence.map((pin, i) => { 
-       const connections = detailPinDataMap.get(pin) || [];
+    list.innerHTML = getVisibleDetailPinSequence().map((pin, i) => {
+    const connections = getVisibleDetailConnections(pin);
        
        // EVALUACIÓN LOCAL ASIMÉTRICA: El punto está listo si todos los cables 
        // de este pin están validados en el extremo de este elemento actual.
        const isAllDone = connections.length > 0 && connections.every(c => {
            const prog = progressMap[c.posicion];
-           if (!prog) return false;
- 
-           const row = rawData.find(r => r.posicion === c.posicion);
-           if (!row) return false;
- 
-           if ((row.de_elemento || '').toLowerCase() === currentElName) {
-               return prog.de === true;
-           } else if ((row.para_elemento || '').toLowerCase() === currentElName) {
-               return prog.para === true;
-           }
-           return false;
+           return !!prog && (c.type === 'out' ? prog.de === true : prog.para === true);
        });
 
-       const isSelectedByMaterial = (selectedGraphMaterial || selectedGraphTool) && connections.some(c => selectedGraphPositions.has(String(c.posicion)));
+    const isSelectedByMaterial = (selectedGraphMaterial || selectedGraphTool) && selectedGraphPins.has(String(pin));
        
        return `<button onclick="goToDetailStep(${i})" class="w-full flex items-center justify-center p-3 rounded-lg border text-center transition-all ${i === currentDetailIndex ? 'bg-sap-blue text-white shadow-lg scale-105' : (isAllDone ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200' : 'bg-white dark:bg-slate-800 border-sap-border')} ${isSelectedByMaterial ? 'ring-4 ring-amber-400 border-amber-400' : ''}">
            <div class="flex flex-col items-center gap-1 min-w-0">
@@ -1663,36 +1705,52 @@ function renderDetailStep() {
    if (window.lucide) lucide.createIcons();
 }
 function nextDetailStep() {
-   const p = detailPinSequence[currentDetailIndex];
-   const cs = detailPinDataMap.get(p) || [];
+    if (areAllDetailPinsComplete()) {
+        closeDetailMode();
+        return;
+    }
+
+    const visiblePins = getVisibleDetailPinSequence();
+    const p = visiblePins[currentDetailIndex];
+    if (!p) return;
+    const cs = getVisibleDetailConnections(p);
    const currentElName = document.getElementById('detailElementName').innerText.toLowerCase();
    
    // Al pulsar Siguiente, aseguramos que el extremo de este elemento quede marcado como OK
    cs.forEach(c => {
        if (!progressMap[c.posicion]) progressMap[c.posicion] = { de: false, para: false };
        
-       const row = rawData.find(r => r.posicion === c.posicion);
-       if (row) {
-           if ((row.de_elemento || '').toLowerCase() === currentElName) progressMap[c.posicion].de = true;
-           if ((row.para_elemento || '').toLowerCase() === currentElName) progressMap[c.posicion].para = true;
-       }
+       const endpoint = c.type === 'out' ? 'de' : 'para';
+       progressMap[c.posicion][endpoint] = true;
    });
    
    saveProgress();
    registerChange();
    updateGlobalProgress();
    
-   // Control secuencial de pasos del asistente Modo Visión
-   if (currentDetailIndex < detailPinSequence.length - 1) {
-       currentDetailIndex++;
-       renderDetailStep();     // Carga el layout del siguiente pin
-       renderProgressList();   // Ilumina el tick verde del paso que acabamos de completar
-   } else {
-       closeDetailMode();      // Si es el último paso del componente, salimos de forma limpia
+   if (areAllDetailPinsComplete()) {
+       renderDetailStep();
+       renderProgressList();
+       return;
    }
+
+   const isLastVisibleStep = currentDetailIndex === visiblePins.length - 1;
+   if (isGraphSelectionFilterActive() && isLastVisibleStep) {
+       showOnlyGraphSelection = false;
+       updateGraphSelectionFilterControl();
+       const nextPin = getNextIncompleteDetailPin(p);
+       syncCurrentDetailIndex(nextPin || p);
+   } else if (currentDetailIndex < visiblePins.length - 1) {
+       currentDetailIndex++;
+   } else {
+       const nextPin = getNextIncompleteDetailPin(p);
+       syncCurrentDetailIndex(nextPin || p);
+   }
+   renderDetailStep();
+   renderProgressList();
 }
-       function prevDetailStep() { if (currentDetailIndex > 0) { currentDetailIndex--; renderDetailStep(); renderProgressList(); } }
-       function goToDetailStep(idx) { currentDetailIndex = idx; renderDetailStep(); renderProgressList(); }
+    function prevDetailStep() { if (currentDetailIndex > 0) { currentDetailIndex--; renderDetailStep(); renderProgressList(); } }
+    function goToDetailStep(idx) { currentDetailIndex = idx; renderDetailStep(); renderProgressList(); }
  
        function updateMetadataUI() { document.getElementById('meta-equipo').innerText = reportMetadata.equipo || '---'; document.getElementById('meta-desc').innerText = reportMetadata.desc || '---'; document.getElementById('meta-lista').innerText = reportMetadata.lista || '---'; document.getElementById('meta-edicion').innerText = reportMetadata.edicion || '---'; document.getElementById('meta-fecha').innerText = reportMetadata.fecha || '---'; document.getElementById('meta-plano').innerText = reportMetadata.plano || '---'; }
     function clearAllFilters() { document.getElementById('filterInput').value = ''; document.getElementById('filterMarcaInput').value = ''; document.getElementById('globalSearchInput').value = ''; filterText = ''; filterMarcaText = ''; filterTerminalError = null; selectedMaterial = null; currentMatchIdx = -1; document.getElementById('searchCounter').innerText = ''; document.getElementById('elementQuickActions').classList.add('hidden'); updateView(); }
@@ -2119,18 +2177,24 @@ function renderMaterialPanel(elementName) {
    
    const materialCounts = {};
    const crimpTools = new Map();
-   const addMaterial = (code, description, row) => {
-       if (!materialCounts[code]) materialCounts[code] = { qty: 0, desc: description, positions: new Set() };
+   const addMaterial = (code, description, row, pins = [], imageSrc = '', kind = 'terminal') => {
+       if (!materialCounts[code]) materialCounts[code] = { qty: 0, desc: description, positions: new Set(), pins: new Set(), kinds: new Set(), imageSrc };
+       else if (!materialCounts[code].imageSrc && imageSrc) materialCounts[code].imageSrc = imageSrc;
+       materialCounts[code].kinds.add(kind);
        materialCounts[code].qty += 1;
        materialCounts[code].positions.add(String(row.posicion));
+       pins.forEach(pin => {
+           if (pin != null && String(pin).trim()) materialCounts[code].pins.add(String(pin));
+       });
    };
-   const addCrimpTool = (terminal, row) => {
+   const addCrimpTool = (terminal, row, pin) => {
        const data = getCrimpingInfo(terminal, row.seccion);
        if (!data || !data.img_tenaza) return;
        const image = data.img_tenaza.trim();
        if (!image) return;
-       if (!crimpTools.has(image)) crimpTools.set(image, { image, name: data.txt_tenaza || image, positions: new Set() });
+       if (!crimpTools.has(image)) crimpTools.set(image, { image, name: data.txt_tenaza || image, positions: new Set(), pins: new Set() });
        crimpTools.get(image).positions.add(String(row.posicion));
+    if (pin != null && String(pin).trim()) crimpTools.get(image).pins.add(String(pin));
    };
  
    rows.forEach(r => {
@@ -2140,13 +2204,13 @@ function renderMaterialPanel(elementName) {
        // 1. Procesar Terminales (Mismo criterio que la barra lateral de conexiones)
        if (esOrigen && r.de_terminal && r.de_terminal !== 'S/T' && !isKN(r.de_terminal)) {
            const cod = r.de_terminal.toString().trim();
-           addMaterial(cod, masterMap.terminals[cod] || 'Sin descripción técnica', r);
-           addCrimpTool(cod, r);
+           addMaterial(cod, masterMap.terminals[cod] || 'Sin descripción técnica', r, [r.de_punto], `${CRIMP_PATHS.terminales}${encodeURIComponent(cod)}.jpg`);
+           addCrimpTool(cod, r, r.de_punto);
        }
        if (esDestino && r.para_terminal && r.para_terminal !== 'S/T' && !isKN(r.para_terminal)) {
            const cod = r.para_terminal.toString().trim();
-           addMaterial(cod, masterMap.terminals[cod] || 'Sin descripción técnica', r);
-           addCrimpTool(cod, r);
+           addMaterial(cod, masterMap.terminals[cod] || 'Sin descripción técnica', r, [r.para_punto], `${CRIMP_PATHS.terminales}${encodeURIComponent(cod)}.jpg`);
+           addCrimpTool(cod, r, r.para_punto);
        }
  
        // 2. Procesar Manguitos (Basado estrictamente en r.de_manguito por cable)
@@ -2155,35 +2219,54 @@ function renderMaterialPanel(elementName) {
            const cod = r.de_manguito.toString().trim();
            // Control estricto anti-cruce: Si coincide con la marca del cable por desfase, se ignora
            if (cod !== getCableDisplayLabel(r)) {
-               addMaterial(cod, masterMap.sleeves[cod] || r.desc_manguito || 'Sin descripción técnica', r);
+               const pins = [];
+               if (esOrigen) pins.push(r.de_punto);
+               if (esDestino) pins.push(r.para_punto);
+               addMaterial(cod, masterMap.sleeves[cod] || r.desc_manguito || 'Sin descripción técnica', r, pins, `Manguitos/${encodeURIComponent(cod)}.jpg`, 'sleeve');
            }
        }
    });
  
-   const items = Object.entries(materialCounts);
+   const sharesSelectionScope = (item, selection) => {
+       const sharesPosition = [...item.positions].some(position => selection.positions.has(position));
+       const sharesPin = !item.pins.size || !selection.pins.size || [...item.pins].some(pin => selection.pins.has(pin));
+       return sharesPosition && sharesPin;
+   };
+   const selectedToolData = selectedGraphTool ? crimpTools.get(selectedGraphTool) : null;
+   const selectedMaterialData = selectedGraphMaterial ? materialCounts[selectedGraphMaterial] : null;
+   const items = Object.entries(materialCounts).filter(([, data]) =>
+       !selectedToolData || (data.kinds.has('terminal') && sharesSelectionScope(data, selectedToolData))
+   );
    list.innerHTML = items.length ? items.map(([name, data]) => {
        const encodedName = encodeURIComponent(name);
        const encodedPositions = encodeURIComponent(JSON.stringify(Array.from(data.positions)));
+    const encodedPins = encodeURIComponent(JSON.stringify(Array.from(data.pins)));
        const isSelected = selectedGraphMaterial === name;
        return `
-       <button type="button" data-material="${encodedName}" onclick="selectGraphMaterial('${encodedName}', '${encodedPositions}')" class="w-full p-2 border-b dark:border-slate-700 last:border-0 flex justify-between items-center text-xs text-left cursor-pointer ${isSelected ? 'bg-amber-100 dark:bg-blue-600/30 ring-1 ring-amber-400' : 'hover:bg-sap-blue/5 dark:hover:bg-slate-700/50'}">
+    <button type="button" data-material="${encodedName}" onclick="selectGraphMaterial('${encodedName}', '${encodedPositions}', '${encodedPins}')" class="w-full p-2 border-b dark:border-slate-700 last:border-0 flex justify-between items-center text-xs text-left cursor-pointer ${isSelected ? 'bg-amber-100 dark:bg-blue-600/30 ring-1 ring-amber-400' : 'hover:bg-sap-blue/5 dark:hover:bg-slate-700/50'}">
            <div class="min-w-0 flex-1">
                <p class="font-bold text-sap-blue truncate">${name}</p>
                <p class="text-[10px] text-sap-secondaryText truncate">${data.desc}</p>
            </div>
-           <span class="ml-3 px-2 py-0.5 bg-sap-blue/10 text-sap-blue font-black rounded-full text-[10px]">${data.qty} uds</span>
+           <div class="ml-3 flex shrink-0 items-center gap-2">
+               <img src="${data.imageSrc}" alt="Material ${name}" loading="lazy" class="w-12 h-8 shrink-0 rounded border border-sap-border bg-white object-contain p-0.5" onerror="this.classList.add('hidden')">
+               <span class="px-2 py-0.5 bg-sap-blue/10 text-sap-blue font-black rounded-full text-[10px]">${data.qty} uds</span>
+           </div>
        </button>`;
    }).join('') : '<p class="p-3 text-[11px] text-sap-secondaryText">No hay materiales registrados para este elemento.</p>';
 
    const crimpToolsContainer = document.getElementById('materialCrimpTools');
-   const tools = Array.from(crimpTools.values());
+   const tools = Array.from(crimpTools.values()).filter(tool =>
+       !selectedMaterialData || (selectedMaterialData.kinds.has('terminal') && sharesSelectionScope(tool, selectedMaterialData))
+   );
    crimpToolsContainer.innerHTML = tools.length
        ? tools.map(tool => {
            const encodedImage = encodeURIComponent(tool.image);
            const encodedPositions = encodeURIComponent(JSON.stringify(Array.from(tool.positions)));
+           const encodedPins = encodeURIComponent(JSON.stringify(Array.from(tool.pins)));
            const isSelected = selectedGraphTool === tool.image;
            return `
-           <button type="button" onclick="selectGraphTool('${encodedImage}', '${encodedPositions}')" class="w-full flex items-center gap-3 p-2 border-b dark:border-slate-700 last:border-0 text-left cursor-pointer ${isSelected ? 'bg-emerald-100 dark:bg-emerald-900/40 ring-1 ring-emerald-500' : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}">
+           <button type="button" onclick="selectGraphTool('${encodedImage}', '${encodedPositions}', '${encodedPins}')" class="w-full flex items-center gap-3 p-2 border-b dark:border-slate-700 last:border-0 text-left cursor-pointer ${isSelected ? 'bg-emerald-100 dark:bg-emerald-900/40 ring-1 ring-emerald-500' : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}">
                <div class="w-28 h-20 shrink-0 bg-white rounded border border-slate-200 flex items-center justify-center p-1">
                    <img src="${CRIMP_PATHS.crimpadoras}${encodeURIComponent(tool.image)}.jpg" alt="Tenaza ${tool.name}" class="max-h-full max-w-full object-contain" onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden')">
                    <span class="hidden text-[10px] text-slate-500 text-center">Foto no disponible</span>
@@ -2195,18 +2278,22 @@ function renderMaterialPanel(elementName) {
    if (window.lucide) lucide.createIcons();
 }
 
-function selectGraphMaterial(encodedName, encodedPositions) {
+function selectGraphMaterial(encodedName, encodedPositions, encodedPins) {
    const name = decodeURIComponent(encodedName);
+    const currentPin = getVisibleDetailPinSequence()[currentDetailIndex];
    if (selectedGraphMaterial === name) {
        selectedGraphMaterial = null;
        selectedGraphTool = null;
        selectedGraphPositions.clear();
+       selectedGraphPins.clear();
        showOnlyGraphSelection = false;
    } else {
        selectedGraphMaterial = name;
        selectedGraphTool = null;
        selectedGraphPositions = new Set(JSON.parse(decodeURIComponent(encodedPositions)));
+       selectedGraphPins = new Set(JSON.parse(decodeURIComponent(encodedPins)));
    }
+   syncCurrentDetailIndex(currentPin);
    updateGraphSelectionFilterControl();
    updateGraphMaterialHighlight();
     const elementName = getGraphPanelElementName();
@@ -2214,18 +2301,22 @@ function selectGraphMaterial(encodedName, encodedPositions) {
         if (!document.getElementById('detailModal').classList.contains('hidden')) { renderDetailStep(); renderProgressList(); }
 }
 
-function selectGraphTool(encodedImage, encodedPositions) {
+function selectGraphTool(encodedImage, encodedPositions, encodedPins) {
    const image = decodeURIComponent(encodedImage);
+    const currentPin = getVisibleDetailPinSequence()[currentDetailIndex];
    if (selectedGraphTool === image) {
        selectedGraphMaterial = null;
        selectedGraphTool = null;
        selectedGraphPositions.clear();
+       selectedGraphPins.clear();
        showOnlyGraphSelection = false;
    } else {
        selectedGraphMaterial = null;
        selectedGraphTool = image;
        selectedGraphPositions = new Set(JSON.parse(decodeURIComponent(encodedPositions)));
+       selectedGraphPins = new Set(JSON.parse(decodeURIComponent(encodedPins)));
    }
+   syncCurrentDetailIndex(currentPin);
    updateGraphSelectionFilterControl();
    updateGraphMaterialHighlight();
     renderMaterialPanel(getGraphPanelElementName());
@@ -2250,15 +2341,22 @@ function updateGraphSelectionFilterControl() {
 
 function toggleGraphSelectionFilter(isEnabled) {
     if (!selectedGraphMaterial && !selectedGraphTool) return;
+    const currentPin = getVisibleDetailPinSequence()[currentDetailIndex];
     showOnlyGraphSelection = isEnabled;
+    syncCurrentDetailIndex(currentPin);
     updateGraphMaterialHighlight();
-    if (!document.getElementById('detailModal').classList.contains('hidden')) renderDetailStep();
+    if (!document.getElementById('detailModal').classList.contains('hidden')) { renderDetailStep(); renderProgressList(); }
 }
 
 function updateGraphMaterialHighlight() {
+   const hasSelection = !!(selectedGraphMaterial || selectedGraphTool);
    document.querySelectorAll('#diagramSvg .diag-connection').forEach(connection => {
        const positions = connection.dataset.positions.split('|').map(decodeURIComponent);
-       connection.classList.toggle('material-highlight', positions.some(position => selectedGraphPositions.has(position)));
+       const isPin = connection.classList.contains('diag-pin-connection');
+       const isSelected = hasSelection && (isPin
+           ? selectedGraphPins.has(decodeURIComponent(connection.dataset.pin || ''))
+           : positions.some(position => selectedGraphPositions.has(position)));
+       connection.classList.toggle('material-highlight', isSelected);
    });
     const diagram = document.getElementById('diagramSvg');
     if (diagram) diagram.classList.toggle('show-only-selection', showOnlyGraphSelection && !!(selectedGraphMaterial || selectedGraphTool));
@@ -2270,6 +2368,7 @@ function openGraphicalView() {
     selectedGraphMaterial = null;
     selectedGraphTool = null;
     selectedGraphPositions.clear();
+    selectedGraphPins.clear();
     showOnlyGraphSelection = false;
     updateGraphSelectionFilterControl();
    
@@ -2337,7 +2436,7 @@ function closeGraphicalView() {
 }
   
        
-    function navigateToElement(t) { const panel = document.getElementById('materialPanel'); const toolPanel = document.getElementById('crimpToolPanel'); const refreshPanels = !panel.classList.contains('hidden') || !toolPanel.classList.contains('hidden'); selectedGraphMaterial = null; selectedGraphTool = null; selectedGraphPositions.clear(); showOnlyGraphSelection = false; updateGraphSelectionFilterControl(); filterText = t; document.getElementById('filterInput').value = t; document.getElementById('elementQuickActions').classList.remove('hidden'); updateView(); drawDiagram(t); document.getElementById('graphElementName').innerText = t.toUpperCase(); if (refreshPanels) renderMaterialPanel(t); }
+    function navigateToElement(t) { const panel = document.getElementById('materialPanel'); const toolPanel = document.getElementById('crimpToolPanel'); const refreshPanels = !panel.classList.contains('hidden') || !toolPanel.classList.contains('hidden'); selectedGraphMaterial = null; selectedGraphTool = null; selectedGraphPositions.clear(); selectedGraphPins.clear(); showOnlyGraphSelection = false; updateGraphSelectionFilterControl(); filterText = t; document.getElementById('filterInput').value = t; document.getElementById('elementQuickActions').classList.remove('hidden'); updateView(); drawDiagram(t); document.getElementById('graphElementName').innerText = t.toUpperCase(); if (refreshPanels) renderMaterialPanel(t); }
        function markCurrentElementAsFinished() {
            const search = filterText.trim().toLowerCase();
            if (!search || rawData.length === 0) return;
@@ -2454,8 +2553,8 @@ internalBridges.forEach((b, idx) => {
        ];
        _schemaPinDataCache[pin] = pCs;
        
-         const cablesConMarcaIn  = pD.in.filter(c => getCableDisplayLabel(c) !== '' && (c.de_elemento||'').toLowerCase() !== search);
-         const cablesConMarcaOut = pD.out.filter(c => getCableDisplayLabel(c) !== '' && (c.para_elemento||'').toLowerCase() !== search);
+         const cablesConMarcaIn  = pD.in.filter(c => getCableDisplayLabel(c) !== '');
+         const cablesConMarcaOut = pD.out.filter(c => getCableDisplayLabel(c) !== '');
        const totalPin    = cablesConMarcaIn.length + cablesConMarcaOut.length;
        const completadosPin = cablesConMarcaIn.filter(c => (progressMap[c.posicion]||{}).para === true).length
                             + cablesConMarcaOut.filter(c => (progressMap[c.posicion]||{}).de === true).length;
@@ -2467,7 +2566,7 @@ internalBridges.forEach((b, idx) => {
            ? '#ffffff'
            : (completadosPin === totalPin && totalPin > 0 ? '#ffffff' : '#0064d1');
        const pinPositions = [...new Set([...pD.in, ...pD.out].map(connection => String(connection.posicion)))].map(encodeURIComponent).join('|');
-       svg.innerHTML += `<g class="diag-connection diag-pin-connection" data-positions="${pinPositions}"><rect x="${mX}" y="${y-15}" width="${mainW}" height="30" rx="2" class="diag-block diag-block-pin" style="${pinColor}" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'pin', pin, connections: pCs}))}')"/><text x="${mX+mainW/2}" y="${y+5}" text-anchor="middle" class="diag-text-main" style="fill:${pinTextColor}; pointer-events:none;">${pin}</text></g>`;
+    svg.innerHTML += `<g class="diag-connection diag-pin-connection" data-pin="${encodeURIComponent(String(pin))}" data-positions="${pinPositions}"><rect x="${mX}" y="${y-15}" width="${mainW}" height="30" rx="2" class="diag-block diag-block-pin" style="${pinColor}" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'pin', pin, connections: pCs}))}')"/><text x="${mX+mainW/2}" y="${y+5}" text-anchor="middle" class="diag-text-main" style="fill:${pinTextColor}; pointer-events:none;">${pin}</text></g>`;
  
        const extIn = pD.in.filter(c => (c.de_elemento||'').toLowerCase() !== search);
        if (extIn.length > 0) {
