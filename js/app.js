@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.10.4';
+    const VERSION = '0.11.0';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -113,6 +113,7 @@
         let currentSortCol = null, sortAsc = true;
        let rawData = [], reportMetadata = {}, masterMap = { cables: {}, terminals: {}, sleeves: {} };
     let currentView = 'table', filterText = '', filterMarcaText = '', filterTerminalError = null, selectedMaterial = null, selectedConnectionPosition = null, currentLang = 'es';
+    let selectedGraphMaterial = null, selectedGraphPositions = new Set(), showOnlyGraphSelection = false;
        let summaryViewMode = 'cards'; 
        let currentZoom = 1, panX = 0, panY = 0, isPanning = false, resizingCol = null, startX, startWidth, thDragIdx = null, baseViewBox = { x: 0, y: 0, w: 0, h: 0 };
        let lastTouchX = 0, lastTouchY = 0, lastTouchDist = 0; 
@@ -2111,6 +2112,11 @@ function renderMaterialPanel(elementName) {
    );
    
    const materialCounts = {};
+   const addMaterial = (code, description, row) => {
+       if (!materialCounts[code]) materialCounts[code] = { qty: 0, desc: description, positions: new Set() };
+       materialCounts[code].qty += 1;
+       materialCounts[code].positions.add(String(row.posicion));
+   };
  
    rows.forEach(r => {
        const esOrigen = (r.de_elemento || '').toLowerCase() === search;
@@ -2119,17 +2125,11 @@ function renderMaterialPanel(elementName) {
        // 1. Procesar Terminales (Mismo criterio que la barra lateral de conexiones)
        if (esOrigen && r.de_terminal && r.de_terminal !== 'S/T' && !isKN(r.de_terminal)) {
            const cod = r.de_terminal.toString().trim();
-           if (!materialCounts[cod]) {
-               materialCounts[cod] = { qty: 0, desc: masterMap.terminals[cod] || 'Sin descripción técnica' };
-           }
-           materialCounts[cod].qty += 1;
+           addMaterial(cod, masterMap.terminals[cod] || 'Sin descripción técnica', r);
        }
        if (esDestino && r.para_terminal && r.para_terminal !== 'S/T' && !isKN(r.para_terminal)) {
            const cod = r.para_terminal.toString().trim();
-           if (!materialCounts[cod]) {
-               materialCounts[cod] = { qty: 0, desc: masterMap.terminals[cod] || 'Sin descripción técnica' };
-           }
-           materialCounts[cod].qty += 1;
+           addMaterial(cod, masterMap.terminals[cod] || 'Sin descripción técnica', r);
        }
  
        // 2. Procesar Manguitos (Basado estrictamente en r.de_manguito por cable)
@@ -2138,10 +2138,7 @@ function renderMaterialPanel(elementName) {
            const cod = r.de_manguito.toString().trim();
            // Control estricto anti-cruce: Si coincide con la marca del cable por desfase, se ignora
            if (cod !== getCableDisplayLabel(r)) {
-               if (!materialCounts[cod]) {
-                   materialCounts[cod] = { qty: 0, desc: masterMap.sleeves[cod] || r.desc_manguito || 'Sin descripción técnica' };
-               }
-               materialCounts[cod].qty += 1;
+               addMaterial(cod, masterMap.sleeves[cod] || r.desc_manguito || 'Sin descripción técnica', r);
            }
        }
    });
@@ -2152,23 +2149,69 @@ function renderMaterialPanel(elementName) {
        return;
    }
  
-   list.innerHTML = items.map(([name, data]) => `
-       <div class="p-2 border-b dark:border-slate-700 last:border-0 flex justify-between items-center text-xs">
+   list.innerHTML = items.map(([name, data]) => {
+       const encodedName = encodeURIComponent(name);
+       const encodedPositions = encodeURIComponent(JSON.stringify(Array.from(data.positions)));
+       const isSelected = selectedGraphMaterial === name;
+       return `
+       <button type="button" data-material="${encodedName}" onclick="selectGraphMaterial('${encodedName}', '${encodedPositions}')" class="w-full p-2 border-b dark:border-slate-700 last:border-0 flex justify-between items-center text-xs text-left cursor-pointer ${isSelected ? 'bg-amber-100 dark:bg-blue-600/30 ring-1 ring-amber-400' : 'hover:bg-sap-blue/5 dark:hover:bg-slate-700/50'}">
            <div class="min-w-0 flex-1">
                <p class="font-bold text-sap-blue truncate">${name}</p>
                <p class="text-[10px] text-sap-secondaryText truncate">${data.desc}</p>
            </div>
            <span class="ml-3 px-2 py-0.5 bg-sap-blue/10 text-sap-blue font-black rounded-full text-[10px]">${data.qty} uds</span>
-       </div>
-   `).join('');
+       </button>`;
+   }).join('');
    
    panel.classList.remove('hidden');
    if (window.lucide) lucide.createIcons();
+}
+
+function selectGraphMaterial(encodedName, encodedPositions) {
+   const name = decodeURIComponent(encodedName);
+   if (selectedGraphMaterial === name) {
+       selectedGraphMaterial = null;
+       selectedGraphPositions.clear();
+       showOnlyGraphSelection = false;
+   } else {
+       selectedGraphMaterial = name;
+       selectedGraphPositions = new Set(JSON.parse(decodeURIComponent(encodedPositions)));
+   }
+   updateGraphSelectionFilterControl();
+   updateGraphMaterialHighlight();
+   const elementName = document.getElementById('graphElementName').innerText;
+   renderMaterialPanel(elementName);
+}
+
+function updateGraphSelectionFilterControl() {
+    const checkbox = document.getElementById('showOnlyGraphSelection');
+    if (!checkbox) return;
+    checkbox.disabled = !selectedGraphMaterial;
+    checkbox.checked = !!selectedGraphMaterial && showOnlyGraphSelection;
+}
+
+function toggleGraphSelectionFilter(isEnabled) {
+    if (!selectedGraphMaterial) return;
+    showOnlyGraphSelection = isEnabled;
+    updateGraphMaterialHighlight();
+}
+
+function updateGraphMaterialHighlight() {
+   document.querySelectorAll('#diagramSvg .diag-connection').forEach(connection => {
+       const positions = connection.dataset.positions.split('|').map(decodeURIComponent);
+       connection.classList.toggle('material-highlight', positions.some(position => selectedGraphPositions.has(position)));
+   });
+    const diagram = document.getElementById('diagramSvg');
+    if (diagram) diagram.classList.toggle('show-only-selection', showOnlyGraphSelection && !!selectedGraphMaterial);
 }
  
 function openGraphicalView() { 
    const s = filterText.trim(); 
    if (!s) return; 
+    selectedGraphMaterial = null;
+    selectedGraphPositions.clear();
+    showOnlyGraphSelection = false;
+    updateGraphSelectionFilterControl();
    
    // Obtener el elemento y asignar el texto
    const headerElement = document.getElementById('graphElementName');
@@ -2215,7 +2258,7 @@ function closeGraphicalView() {
 }
   
        
-       function navigateToElement(t) { filterText = t; document.getElementById('filterInput').value = t; document.getElementById('elementQuickActions').classList.remove('hidden'); updateView(); drawDiagram(t); document.getElementById('graphElementName').innerText = t.toUpperCase(); }
+    function navigateToElement(t) { const panel = document.getElementById('materialPanel'); const refreshPanel = !panel.classList.contains('hidden'); selectedGraphMaterial = null; selectedGraphPositions.clear(); showOnlyGraphSelection = false; updateGraphSelectionFilterControl(); filterText = t; document.getElementById('filterInput').value = t; document.getElementById('elementQuickActions').classList.remove('hidden'); updateView(); drawDiagram(t); document.getElementById('graphElementName').innerText = t.toUpperCase(); if (refreshPanel) renderMaterialPanel(t); }
        function markCurrentElementAsFinished() {
            const search = filterText.trim().toLowerCase();
            if (!search || rawData.length === 0) return;
@@ -2295,6 +2338,7 @@ internalBridges.forEach((b, idx) => {
     const arcX = mX + mainW + 40 + (idx * 20);
     const prog = progressMap[b.posicion] || { de: false, para: false };
     const bridgeColor = (prog.de && prog.para) ? '#10b981' : '#f97316';
+    svg.innerHTML += `<g class="diag-connection" data-positions="${encodeURIComponent(String(b.posicion))}">`;
     
     // Dibuja la manguera física del puente (Línea discontinua)
     svg.innerHTML += `<path d="M ${mX + mainW} ${y1} L ${arcX} ${y1} L ${arcX} ${y2} L ${mX + mainW} ${y2}" fill="none" stroke="${bridgeColor}" stroke-width="3" stroke-dasharray="6 3" opacity="0.8" />`;
@@ -2305,7 +2349,7 @@ internalBridges.forEach((b, idx) => {
     
     // Dibuja la etiqueta de texto con la marca del cable puente
     const bridgeLabel = getCableDisplayLabel(b);
-    svg.innerHTML += ` <text x="${arcX + 14}" y="${(y1 + y2) / 2}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: bridgeLabel, posicion: b.posicion}))}')" transform="rotate(-90, ${arcX + 14}, ${(y1 + y2) / 2})" style="fill:${bridgeColor}; font-size:10px; font-weight:900; letter-spacing: 0.5px;"> ${bridgeLabel} </text>`;
+    svg.innerHTML += ` <text x="${arcX + 14}" y="${(y1 + y2) / 2}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: bridgeLabel, posicion: b.posicion}))}')" transform="rotate(-90, ${arcX + 14}, ${(y1 + y2) / 2})" style="fill:${bridgeColor}; font-size:10px; font-weight:900; letter-spacing: 0.5px;"> ${bridgeLabel} </text></g>`;
 });
  
       // 2. PINES Y CONEXIONES EXTERNAS
@@ -2343,7 +2387,8 @@ internalBridges.forEach((b, idx) => {
        const pinTextColor = document.documentElement.classList.contains('dark')
            ? '#ffffff'
            : (completadosPin === totalPin && totalPin > 0 ? '#ffffff' : '#0064d1');
-       svg.innerHTML += `<rect x="${mX}" y="${y-15}" width="${mainW}" height="30" rx="2" class="diag-block diag-block-pin" style="${pinColor}" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'pin', pin, connections: pCs}))}')"/><text x="${mX+mainW/2}" y="${y+5}" text-anchor="middle" class="diag-text-main" style="fill:${pinTextColor}; pointer-events:none;">${pin}</text>`;
+       const pinPositions = [...new Set([...pD.in, ...pD.out].map(connection => String(connection.posicion)))].map(encodeURIComponent).join('|');
+       svg.innerHTML += `<g class="diag-connection diag-pin-connection" data-positions="${pinPositions}"><rect x="${mX}" y="${y-15}" width="${mainW}" height="30" rx="2" class="diag-block diag-block-pin" style="${pinColor}" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'pin', pin, connections: pCs}))}')"/><text x="${mX+mainW/2}" y="${y+5}" text-anchor="middle" class="diag-text-main" style="fill:${pinTextColor}; pointer-events:none;">${pin}</text></g>`;
  
        const extIn = pD.in.filter(c => (c.de_elemento||'').toLowerCase() !== search);
        if (extIn.length > 0) {
@@ -2357,7 +2402,7 @@ internalBridges.forEach((b, idx) => {
                if (!tieneCable && !tieneObturador && !isBusbar) return;
                if (isBusbar) return; // Renderizado en bloque BUSBAR post-loop
                if (tieneObturador) {
-                   svg.innerHTML += `<circle cx="${mX + mainW - 8}" cy="${y + 8}" r="4" fill="#64748b" opacity="0.8" pointer-events="none"/>`;
+                   svg.innerHTML += `<g class="diag-connection" data-positions="${encodeURIComponent(String(c.posicion))}"><circle class="diag-obturador" cx="${mX + mainW - 8}" cy="${y + 8}" r="4" fill="#64748b" opacity="0.8" pointer-events="none"/></g>`;
                    return;
                }
                const idx = extInConCable.indexOf(c);
@@ -2367,15 +2412,16 @@ internalBridges.forEach((b, idx) => {
                const lineStyle = isBusbar ? `stroke:#a855f7; stroke-dasharray:4 3;` : `${isLocalOk?'stroke:#10b981;':''}`;
                const wireLabel = isBusbar ? 'BUSBAR' : getCableDisplayLabel(c);
                const wireColor = isBusbar ? '#a855f7' : `${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}`;
-               svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockRightEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
+                    svg.innerHTML += `<g class="diag-connection" data-positions="${encodeURIComponent(String(c.posicion))}"><line x1="${xInicio}" y1="${lY}" x2="${blockRightEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
                    <rect x="${blockRightEdge - 160}" y="${lY-12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${c.de_elemento}')"/>
                    <text x="${document.dir === 'rtl' ? blockRightEdge - 8 : blockRightEdge - 152}" y="${lY+4}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${c.de_elemento.toUpperCase()}</text>
                    <text x="${document.dir === 'rtl' ? blockRightEdge - 150 : blockRightEdge - 10}" y="${lY+4}" text-anchor="${document.dir === 'rtl' ? 'start' : 'end'}" class="diag-text-label" style="font-weight:900; pointer-events:none;">${c.de_punto}</text>
-                  <text x="${(xInicio + blockRightEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: wireLabel, posicion: c.posicion}))}')" style="${wireColor}">${wireLabel}</text>`;
+                        <text x="${(xInicio + blockRightEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: wireLabel, posicion: c.posicion}))}')" style="${wireColor}">${wireLabel}</text></g>`;
            });
            if (extInConCable.length > 1) {
-               svg.innerHTML += `<line x1="${mX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>
-                                 <line x1="${stubX}" y1="${y+(-(extInConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extInConCable.length-1)/2)*32}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>`;
+               const branchPositions = extInConCable.map(connection => encodeURIComponent(String(connection.posicion))).join('|');
+               svg.innerHTML += `<g class="diag-connection" data-positions="${branchPositions}"><line x1="${mX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>
+                                 <line x1="${stubX}" y1="${y+(-(extInConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extInConCable.length-1)/2)*32}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/></g>`;
            }
        }
  
@@ -2391,7 +2437,7 @@ internalBridges.forEach((b, idx) => {
                if (!tieneCable && !tieneObturador && !isBusbar) return;
                if (isBusbar) return; // Renderizado en bloque BUSBAR post-loop
                if (tieneObturador) {
-                   svg.innerHTML += `<circle cx="${mX + mainW - 8}" cy="${y + 8}" r="4" fill="#64748b" opacity="0.8" pointer-events="none"/>`;
+                   svg.innerHTML += `<g class="diag-connection" data-positions="${encodeURIComponent(String(c.posicion))}"><circle class="diag-obturador" cx="${mX + mainW - 8}" cy="${y + 8}" r="4" fill="#64748b" opacity="0.8" pointer-events="none"/></g>`;
                    return;
                }
                const idx = extOutConCable.indexOf(c);
@@ -2401,15 +2447,16 @@ internalBridges.forEach((b, idx) => {
                const lineStyle = isBusbar ? `stroke:#a855f7; stroke-dasharray:4 3;` : `${isLocalOk?'stroke:#10b981;':''}`;
                const wireLabel = isBusbar ? 'BUSBAR' : getCableDisplayLabel(c);
                const wireColor = isBusbar ? '#a855f7' : `${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}`;
-               svg.innerHTML += `<line x1="${xInicio}" y1="${lY}" x2="${blockLeftEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
+                    svg.innerHTML += `<g class="diag-connection" data-positions="${encodeURIComponent(String(c.posicion))}"><line x1="${xInicio}" y1="${lY}" x2="${blockLeftEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
                    <rect x="${blockLeftEdge}" y="${lY-12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${c.para_elemento}')"/>
                    <text x="${document.dir === 'rtl' ? blockLeftEdge + 10 : blockLeftEdge + 152}" y="${lY+4}" text-anchor="${document.dir === 'rtl' ? 'start' : 'end'}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${c.para_elemento.toUpperCase()}</text>
                    <text x="${document.dir === 'rtl' ? blockLeftEdge + 150 : blockLeftEdge + 10}" y="${lY+4}" class="diag-text-label" style="font-weight:900; pointer-events:none;">${c.para_punto}</text>
-                  <text x="${(xInicio + blockLeftEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: wireLabel, posicion: c.posicion}))}')" style="${wireColor}">${wireLabel}</text>`;
+                        <text x="${(xInicio + blockLeftEdge) / 2}" y="${lY-8}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: wireLabel, posicion: c.posicion}))}')" style="${wireColor}">${wireLabel}</text></g>`;
            });
            if (extOutConCable.length > 1) {
-               svg.innerHTML += `<line x1="${origX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>
-                                 <line x1="${stubX}" y1="${y+(-(extOutConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extOutConCable.length-1)/2)*32}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>`;
+               const branchPositions = extOutConCable.map(connection => encodeURIComponent(String(connection.posicion))).join('|');
+               svg.innerHTML += `<g class="diag-connection" data-positions="${branchPositions}"><line x1="${origX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>
+                                 <line x1="${stubX}" y1="${y+(-(extOutConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extOutConCable.length-1)/2)*32}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/></g>`;
            }
        }
    });
@@ -2438,6 +2485,7 @@ internalBridges.forEach((b, idx) => {
        const minY = Math.min(...ys), maxY = Math.max(...ys);
        const midY = (minY + maxY) / 2;
        const barX = origX_bb + 8;
+    svg.innerHTML += `<g class="diag-connection" data-positions="${conns.map(c => encodeURIComponent(String(c.posicion))).join('|')}">`;
 
        // Líneas cortas de cada pin al barX
        conns.forEach(c => {
@@ -2464,6 +2512,7 @@ internalBridges.forEach((b, idx) => {
        svg.innerHTML += `<text x="${destX_bb + 8}" y="${bbRouteY + 4}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${para_elem.toUpperCase()}</text>`;
        const ptsOut = conns.map(c => c.para_punto).join(', ');
        svg.innerHTML += `<text x="${destX_bb + 152}" y="${bbRouteY + 4}" text-anchor="end" class="diag-text-label" style="font-weight:900; font-size:9px; pointer-events:none;">${ptsOut}</text>`;
+    svg.innerHTML += `</g>`;
    });
 
    // b) BUSBAR ENTRANTES (para_elemento = elemento actual)
@@ -2486,6 +2535,7 @@ internalBridges.forEach((b, idx) => {
        const minY = Math.min(...ys), maxY = Math.max(...ys);
        const midY = (minY + maxY) / 2;
        const barX = mXLeft_bb - 8;
+    svg.innerHTML += `<g class="diag-connection" data-positions="${conns.map(c => encodeURIComponent(String(c.posicion))).join('|')}">`;
 
        // Líneas cortas de cada pin al barX
        conns.forEach(c => {
@@ -2512,9 +2562,11 @@ internalBridges.forEach((b, idx) => {
        svg.innerHTML += `<text x="${destXLeft_bb + 8}" y="${bbRouteY + 4}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${de_elem.toUpperCase()}</text>`;
        const ptsIn = conns.map(c => c.de_punto).join(', ');
        svg.innerHTML += `<text x="${destXLeft_bb + 152}" y="${bbRouteY + 4}" text-anchor="end" class="diag-text-label" style="font-weight:900; font-size:9px; pointer-events:none;">${ptsIn}</text>`;
+    svg.innerHTML += `</g>`;
    });
 
-   if (window.lucide) lucide.createIcons();
+    updateGraphMaterialHighlight();
+    if (window.lucide) lucide.createIcons();
 }
  
        function globalSearchNext() { 

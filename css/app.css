@@ -188,9 +188,18 @@ tr:hover td { background-color: rgba(0, 100, 209, 0.05) !important; }
 .dark .diag-text-label { fill: var(--color-dark-text-sidebar); }
 .diag-text-wire { font-size: 10px; fill: var(--color-sap-blue); font-weight: 800; font-style: italic; cursor: pointer; }
 .dark .diag-text-wire { fill: #38bdf8; }
+.diag-connection.material-highlight { filter: drop-shadow(0 0 5px rgba(234, 179, 8, 0.9)); }
+.diag-connection.material-highlight .diag-line { stroke: #eab308 !important; stroke-width: 5 !important; }
+.diag-connection.material-highlight path { stroke: #eab308 !important; stroke-width: 5 !important; }
+.diag-connection.material-highlight .diag-block-pin { stroke: #eab308 !important; stroke-width: 3 !important; filter: drop-shadow(0 0 4px rgba(234, 179, 8, 0.75)); }
+.diag-connection.material-highlight .diag-block-side { stroke: #eab308 !important; stroke-width: 3 !important; }
+.diag-connection.material-highlight .diag-obturador { fill: #facc15 !important; stroke: #a16207; stroke-width: 2; opacity: 1; filter: drop-shadow(0 0 5px rgba(234, 179, 8, 0.95)); }
+.diag-connection.material-highlight .diag-text-wire { fill: #a16207 !important; font-size: 12px; font-weight: 900; }
+.dark .diag-connection.material-highlight .diag-text-wire { fill: #fde047 !important; }
 
 #diagramSvg { cursor: grab; transition: opacity 0.3s ease; }
 #diagramSvg:active { cursor: grabbing; }
+#diagramSvg.show-only-selection > :not(.material-highlight) { display: none; }
 
 .resizer { position: absolute; right: 0; top: 0; height: 100%; width: 4px; cursor: col-resize; user-select: none; z-index: 20; }
 .resizer:hover { background: var(--color-warning); }

@@ -159,13 +159,13 @@
            <div class="flex items-center gap-1 ml-auto shrink-0">
                <button id="btnSave" onclick="saveDataToFile()" class="p-1.5 rounded transition-all cursor-not-allowed opacity-40" title="GUARDAR CAMBIOS" disabled><i data-lucide="save" class="w-6 h-6 text-slate-400"></i></button>
                <button onclick="loadDataFromFile()" class="p-1.5 rounded transition-all" title="CARGAR CAMBIOS GUARDADOS"><i data-lucide="folder-open" class="w-6 h-6 text-amber-300"></i></button>
+               <button onclick="openProgressMap()" class="p-1.5 text-amber-500 hover:bg-amber-500/10 rounded transition-all" title="VER MAPA DE PROGRESO"><i data-lucide="map" class="w-6 h-6"></i></button>
                <button onclick="exportConnectionListToTxt()" class="p-1.5 rounded transition-all" style="color:#a304ed" onmouseover="this.style.background='#a304ed1a'" onmouseout="this.style.background=''" title="EXPORTAR LISTA CONEXIONES (.TXT)"><i data-lucide="file-down" class="w-6 h-6"></i></button>
            </div>
  
            <div id="elementQuickActions" class="hidden items-center gap-1 md:ml-0 justify-end shrink-0">
                <button onclick="openGraphicalView()" class="p-1.5 text-sap-blue rounded transition-all" title="ACCEDER A ESQUEMA GRÁFICO"><i data-lucide="circuit-board" class="w-6 h-6"></i></button>
                <button onclick="openDetailMode()" class="p-1.5 text-[#27BFC3] hover:bg-[#27BFC3]/10 rounded transition-all" title="ACTIVAR MODO VISION"><i data-lucide="eye" class="w-6 h-6"></i></button>
-               <button onclick="openProgressMap()" class="p-1.5 text-amber-500 hover:bg-amber-500/10 rounded transition-all" title="VER MAPA DE PROGRESO"><i data-lucide="map" class="w-6 h-6"></i></button>
                <div class="relative" id="incidenciasMenuContainer">
                    <button onclick="toggleIncidenciasMenu()" id="btnIncidencias" class="p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-all relative" title="INCIDENCIAS"><i data-lucide="triangle-alert" class="w-6 h-6"></i><span id="errorBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center"></span></button>
                    <div id="incidenciasDropdown" class="hidden absolute right-0 top-10 w-64 bg-white dark:bg-slate-800 border border-sap-border rounded-xl shadow-2xl z-[200] overflow-hidden">
@@ -689,6 +689,7 @@
        </div>
        <div id="materialPanel" class="hidden absolute top-20 right-6 w-80 bg-white dark:bg-sap-darkCard border border-sap-border rounded-lg shadow-2xl z-[170] overflow-hidden">
            <div class="bg-sap-shell px-4 py-2 flex justify-between items-center text-white"><span class="text-[10px] font-black uppercase tracking-widest">Material Necesario</span><button onclick="document.getElementById('materialPanel').classList.add('hidden')"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+           <label class="flex items-center gap-2 px-3 py-2 border-b border-sap-border text-xs text-sap-text dark:text-slate-200"><input id="showOnlyGraphSelection" type="checkbox" class="accent-amber-500" disabled onchange="toggleGraphSelectionFilter(this.checked)"><span>Mostrar sólo selección</span></label>
            <div id="materialPanelList" class="p-2 max-h-[50vh] overflow-y-auto custom-scrollbar"></div>
        </div>
    </div>

@@ -1,3 +1,73 @@
+2026-09-25 13:50:42 (mantener visible el punto de conexión en vista filtrada)
+PROMPT:
+En el modo "Mostrar sólo selección", el recorrido del material debe mostrarse
+completo hasta el punto de conexión.
+
+SOLUCIÓN:
+- js/app.js: los bloques de pin y las derivaciones compartidas se asocian a las
+  posiciones de conexión que los utilizan, para que permanezcan visibles al
+  filtrar un material relacionado.
+- css/app.css: se resalta también el bloque del pin asociado para señalar el
+  extremo completo de la conexión.
+================================================================================
+
+2026-09-25 13:46:28 (filtrar el esquema por material seleccionado)
+PROMPT:
+En la ventana de materiales, al seleccionar uno, activar la casilla "Mostrar sólo
+selección" para mostrar únicamente en pantalla los elementos iluminados por ese
+material.
+
+SOLUCIÓN:
+- index.html: se añade el checkbox "Mostrar sólo selección" en el panel de
+  materiales; permanece deshabilitado hasta seleccionar un material.
+- js/app.js: la casilla filtra el esquema a los grupos resaltados; se limpia y
+  desactiva al quitar la selección o navegar a otro elemento.
+- css/app.css: los nodos del esquema no asociados a la selección se ocultan al
+  activar el filtro.
+================================================================================
+
+2026-09-25 13:42:11 (resaltar excepciones, obturadores, puentes y BUSBAR en modo gráfico)
+PROMPT:
+El 641M10295 y otros materiales de excepción no son cables, pero también debe
+iluminarse el punto donde montan. Aplicarlo a obturadores, puentes, BUSBAR y todos
+los materiales del mismo tipo.
+
+SOLUCIÓN:
+- js/app.js: los símbolos de obturador ahora se asocian a la posición de conexión
+  que los monta, por lo que la selección del material ilumina el símbolo.
+- Los puentes y BUSBAR conservan la asociación de sus elementos gráficos con las
+  posiciones de conexión, de modo que se resaltan junto con la selección.
+- css/app.css: se añade un resaltado amarillo luminoso específico para el símbolo
+  del obturador, manteniendo el mismo feedback para conexiones y barras.
+================================================================================
+
+2026-09-25 13:36:36 (resaltar el cable asociado al material en modo gráfico)
+PROMPT:
+En el modo gráfico, cuando seleccione algún material del cuadro que se muestra a
+la derecha con el resumen de materiales, se debe iluminar el cable al que va ese
+material.
+
+SOLUCIÓN:
+- js/app.js: cada material del panel acumula las posiciones de conexión donde se
+  utiliza y pasa a ser seleccionable; el cable correspondiente queda resaltado al
+  seleccionar el material, y el clic de nuevo elimina la selección.
+- Los grupos SVG de conexiones normales, puentes internos y BUSBAR se asocian a
+  sus posiciones para poder iluminarlos conjuntamente.
+- css/app.css: se añade el resaltado amarillo visible en modo claro y oscuro para
+  el trazado, la etiqueta del cable y el bloque de conexión.
+================================================================================
+
+2026-09-25 13:30:03 (mapa de progreso disponible en lista de conexiones)
+PROMPT:
+El icono de "VER MAPA DE PROGRESO" tiene que estar disponible también en la vista
+de "lista de conexiones".
+
+SOLUCIÓN:
+- index.html: se traslada el botón del mapa de progreso al grupo permanente de la
+  barra de herramientas, para que aparezca también en la lista de conexiones y en
+  las demás vistas, sin depender de las acciones contextuales del filtro de elemento.
+================================================================================
+
 2026-09-25 09:54:14 (columna De Marca y visualización de cables en esquema)
 PROMPT:
 Que todo quede alineado y se muestren siempre los cables cuando en la columna L
