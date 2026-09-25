@@ -1,3 +1,75 @@
+2026-09-25 19:17:35 (abrir especificaciones desde las tenazas laterales)
+PROMPT:
+Junto a cada tenaza de crimpado en Lista de conexiones, mostrar el icono que
+abre las especificaciones técnicas de crimpado, con el mismo funcionamiento
+que en Esquema gráfico y VISION.
+
+SOLUCIÓN:
+- js/app.js: se añade el icono de llave junto a cada tenaza y se reutiliza
+  openCrimpingModal. Si una tenaza agrupa varios terminales/secciones, el icono
+  muestra un selector en el mismo modal antes de abrir la ficha correspondiente.
+================================================================================
+
+2026-09-25 19:13:11 (deseleccionar línea y filtrar desde celdas de elemento)
+PROMPT:
+Al volver a hacer clic sobre una línea seleccionada, desmarcarla y mostrar todos
+los materiales y tenazas del elemento filtrado. Al pulsar De Elemento o Para
+Elemento, aplicar el filtro del elemento sin dejar seleccionada la línea, para
+mostrar inicialmente todos sus materiales y tenazas.
+
+SOLUCIÓN:
+- js/app.js: la selección de fila funciona como alternancia; repetir el clic
+  limpia la posición seleccionada. applyTableFilter limpia la fila activa y las
+  celdas De/Para detienen la propagación del clic para no seleccionar la fila.
+================================================================================
+
+2026-09-25 19:07:00 (respetar el filtro de elemento al seleccionar una conexión)
+PROMPT:
+Con el elemento F14 filtrado, los materiales muestran también el terminal del
+extremo Q12 de la conexión seleccionada. Debe mostrarse solo el material que
+corresponde al elemento filtrado.
+
+SOLUCIÓN:
+- js/app.js: el filtro de elemento activo tiene prioridad al construir las
+  listas laterales; la selección de fila solo aporta ambos extremos cuando no
+  hay un filtro de elemento. Materiales y tenazas siguen limitados a la posición
+  seleccionada.
+================================================================================
+
+2026-09-25 18:59:28 (filtrar materiales y tenazas por la línea seleccionada)
+PROMPT:
+En la vista Lista de conexiones, al seleccionar una línea de la ventana principal,
+filtrar las ventanas de materiales y tenazas por los elementos necesarios para
+esa línea.
+
+SOLUCIÓN:
+- js/app.js: seleccionar una fila abre los paneles si estaban ocultos y limita
+  materiales y tenazas a esa posición, usando los dos elementos de la conexión.
+  Se conserva el filtrado cruzado si luego se elige un material o una tenaza.
+  Si otros filtros ocultan la fila, los paneles vuelven al ámbito visible.
+================================================================================
+
+2026-09-25 18:54:53 (filtrar tenazas y materiales en el lateral de conexiones)
+PROMPT:
+En Lista de conexiones, las ventanas de materiales y tenazas deben filtrarse entre sí: material filtra tenazas y tenaza filtra materiales.
+
+SOLUCIÓN:
+- js/app.js: la tarjeta de tenazas lateral pasa a ser interactiva y ambas listas
+  filtran por posición y pin. Los manguitos no ofrecen tenazas; cambiar o quitar
+  la selección restaura el filtrado correspondiente.
+================================================================================
+
+2026-09-25 18:49:17 (añadir imágenes y ventana de tenazas a la lista de conexiones)
+PROMPT:
+En Lista de conexiones, mostrar imágenes de materiales en la ventana Materiales y añadir una ventana de tenazas justo debajo.
+
+SOLUCIÓN:
+- index.html: se añade la tarjeta lateral Tenazas de crimpado debajo de Materiales.
+- js/app.js: Materiales muestra miniaturas locales de terminales y manguitos; la
+  nueva tarjeta lista, sin duplicados, las tenazas asociadas a los terminales
+  del elemento filtrado, con imagen y scroll propio.
+================================================================================
+
 2026-09-25 18:16:16 (excluir manguitos del filtrado de tenazas)
 PROMPT:
 Al seleccionar una tenaza, aparece también el manguito H0598681, que no necesita tenaza para su montaje.

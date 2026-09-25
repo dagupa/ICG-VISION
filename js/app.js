@@ -112,7 +112,7 @@
  
         let currentSortCol = null, sortAsc = true;
        let rawData = [], reportMetadata = {}, masterMap = { cables: {}, terminals: {}, sleeves: {} };
-    let currentView = 'table', filterText = '', filterMarcaText = '', filterTerminalError = null, selectedMaterial = null, selectedConnectionPosition = null, currentLang = 'es';
+    let currentView = 'table', filterText = '', filterMarcaText = '', filterTerminalError = null, selectedMaterial = null, selectedSidebarCrimpTool = null, selectedConnectionPosition = null, currentLang = 'es';
     let selectedGraphMaterial = null, selectedGraphTool = null, selectedGraphPositions = new Set(), selectedGraphPins = new Set(), showOnlyGraphSelection = false;
        let summaryViewMode = 'cards'; 
        let currentZoom = 1, panX = 0, panY = 0, isPanning = false, resizingCol = null, startX, startWidth, thDragIdx = null, baseViewBox = { x: 0, y: 0, w: 0, h: 0 };
@@ -1753,7 +1753,7 @@ function nextDetailStep() {
     function goToDetailStep(idx) { currentDetailIndex = idx; renderDetailStep(); renderProgressList(); }
  
        function updateMetadataUI() { document.getElementById('meta-equipo').innerText = reportMetadata.equipo || '---'; document.getElementById('meta-desc').innerText = reportMetadata.desc || '---'; document.getElementById('meta-lista').innerText = reportMetadata.lista || '---'; document.getElementById('meta-edicion').innerText = reportMetadata.edicion || '---'; document.getElementById('meta-fecha').innerText = reportMetadata.fecha || '---'; document.getElementById('meta-plano').innerText = reportMetadata.plano || '---'; }
-    function clearAllFilters() { document.getElementById('filterInput').value = ''; document.getElementById('filterMarcaInput').value = ''; document.getElementById('globalSearchInput').value = ''; filterText = ''; filterMarcaText = ''; filterTerminalError = null; selectedMaterial = null; currentMatchIdx = -1; document.getElementById('searchCounter').innerText = ''; document.getElementById('elementQuickActions').classList.add('hidden'); updateView(); }
+    function clearAllFilters() { document.getElementById('filterInput').value = ''; document.getElementById('filterMarcaInput').value = ''; document.getElementById('globalSearchInput').value = ''; filterText = ''; filterMarcaText = ''; filterTerminalError = null; selectedMaterial = null; selectedSidebarCrimpTool = null; currentMatchIdx = -1; document.getElementById('searchCounter').innerText = ''; document.getElementById('elementQuickActions').classList.add('hidden'); updateView(); }
        function toggleTerminalErrorFilter(key) {
            filterTerminalError = (filterTerminalError === key) ? null : key;
            renderTable();
@@ -1762,7 +1762,9 @@ function nextDetailStep() {
 
        function applyTableFilter(v) { 
    filterText = v; 
+        selectedConnectionPosition = null;
    selectedMaterial = null; 
+        selectedSidebarCrimpTool = null;
    document.getElementById('filterInput').value = v;
    const qa = document.getElementById('elementQuickActions');
    const isSingle = !!v.trim() && !v.includes('+');
@@ -1773,7 +1775,14 @@ function nextDetailStep() {
 function selectMaterial(name) {
     // Si pulsamos el mismo material, deseleccionamos. Si es distinto, lo asignamos.
     selectedMaterial = (selectedMaterial === name) ? null : name;
+    selectedSidebarCrimpTool = null;
     // Forzamos el repintado de la tabla para aplicar las clases de color 'isSelected'
+    renderTable();
+}
+function selectSidebarCrimpTool(encodedImage) {
+    const image = decodeURIComponent(encodedImage);
+    selectedSidebarCrimpTool = selectedSidebarCrimpTool === image ? null : image;
+    selectedMaterial = null;
     renderTable();
 }
         function _checkDuplicateColumns(data) {
@@ -2757,9 +2766,11 @@ internalBridges.forEach((b, idx) => {
        }
        function selectConnectionRow(event, row) {
            if (event.target.closest('button, input, i')) return;
-           selectedConnectionPosition = decodeURIComponent(row.dataset.position);
-           document.querySelectorAll('#tableBody tr.row-selected').forEach(selectedRow => selectedRow.classList.remove('row-selected'));
-           row.classList.add('row-selected');
+           const position = decodeURIComponent(row.dataset.position);
+           selectedConnectionPosition = selectedConnectionPosition === position ? null : position;
+           selectedMaterial = null;
+           selectedSidebarCrimpTool = null;
+           renderTable();
        }
        function startResize(e, col) { resizingCol = col; startX = e.clientX; startWidth = col.width; e.preventDefault(); }
        function hTHDragStart(e, i) { thDragIdx = i; }
@@ -2974,6 +2985,38 @@ internalBridges.forEach((b, idx) => {
            modal.classList.add('hidden');
            modal.classList.remove('flex');
        }
+           function openSidebarCrimpingSpecs(encodedSpecs) {
+               let specs;
+               try {
+                   specs = JSON.parse(decodeURIComponent(encodedSpecs)).filter(spec => getCrimpingInfo(spec.terminal, spec.section));
+               } catch (error) {
+                   console.error('No se pudieron cargar las especificaciones de crimpado.', error);
+                   return;
+               }
+               if (specs.length === 0) return;
+               if (specs.length === 1) {
+                   openCrimpingModal(specs[0].terminal, specs[0].section);
+                   return;
+               }
+
+               const modal = document.getElementById('crimpingModal');
+               const content = document.getElementById('crimpingModalContent');
+               content.innerHTML = `
+                   <div class="max-w-2xl mx-auto space-y-3">
+                       <p class="text-sm font-bold text-sap-text dark:text-white">Selecciona el terminal y la sección para consultar su ficha de crimpado.</p>
+                       <div class="divide-y divide-sap-border rounded border border-sap-border bg-white dark:bg-sap-darkCard">
+                           ${specs.map(spec => `
+                               <button type="button" onclick="openCrimpingModal('${spec.terminal}', '${spec.section}')" class="w-full px-3 py-2 flex items-center justify-between gap-3 text-left hover:bg-sap-blue/5 dark:hover:bg-slate-700/50">
+                                   <span class="font-bold text-sap-blue">${spec.terminal}</span>
+                                   <span class="text-xs text-sap-secondaryText">${spec.section} mm²</span>
+                                   <i data-lucide="chevron-right" class="w-4 h-4 shrink-0 text-sap-secondaryText"></i>
+                               </button>`).join('')}
+                       </div>
+                   </div>`;
+               modal.classList.remove('hidden');
+               modal.classList.add('flex');
+               if (window.lucide) lucide.createIcons();
+           }
 function handleHelpEasterEgg() {
    const msgBox = document.getElementById('easterEggMessage');
    if (!msgBox) return;
@@ -3179,7 +3222,7 @@ function handleHelpEasterEgg() {
                        const hasNonNumLong = c.key === 'longitud' && _nonNumericLongitud.has((r.posicion||'').toString().trim());
                        return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'cell-incompat-blink':''} ${hasTermNotFound?'cell-notfound-blink':''} ${hasCableNotFound?'cell-cable-notfound-blink':''} ${hasSleeveNotFound?'cell-sleeve-notfound-blink':''} ${isDupCell?'cell-dup-blink':''} ${hasMissingSeccion?'cell-seccion-missing':''} ${hasNonNumLong?'cell-nonnum-blink':''}"
                                    style="width: ${c.width}px;" 
-                                   ${isElementCol ? `onclick="applyTableFilter('${v}')"` : ''}>
+                                   ${isElementCol ? `onclick="event.stopPropagation(); applyTableFilter('${v}')"` : ''}>
                                    <div class="flex items-center gap-1 min-w-0 ${hasIncompat?'text-red-600 dark:text-red-400':''} ${hasTermNotFound?'text-pink-600 dark:text-pink-400':''} ${hasCableNotFound?'text-emerald-600 dark:text-emerald-400':''} ${hasSleeveNotFound?'text-[#a67c52] dark:text-[#d2ad82]':''} ${hasNonNumLong?'text-purple-600 dark:text-purple-400':''} ${isDupCell?'text-orange-600 dark:text-orange-400':''} ${hasMissingSeccion?'justify-center':''}">
                                        <span class="truncate">${v}</span>
                                        ${hasCableNotFound ? `<i data-lucide="triangle-alert" class="w-3 h-3 shrink-0 text-emerald-500 cursor-help" onmouseenter="showCellErrorTip(this,'emerald','ID CABLE NO EXISTE','El código de cable no está dado de alta en la base de datos.')" onmouseleave="hideCellErrorTip()" ontouchstart="showCellErrorTip(this,&quot;emerald&quot;,&quot;ID CABLE NO EXISTE&quot;,&quot;El código de cable no está dado de alta en la base de datos.&quot;); event.stopPropagation()"></i>` : ''}
@@ -3208,26 +3251,108 @@ function handleHelpEasterEgg() {
            }).join('');
  
            // 5. Sidebar Materiales
-           const sFilterTerms = filterText.trim() ? filterText.split('+').map(t => t.trim().toLowerCase()).filter(t => t) : [], matC = document.getElementById('elementMaterialsContainer');
+           const selectedConnectionRow = selectedConnectionPosition
+               ? d.find(row => String(row.posicion) === selectedConnectionPosition)
+               : null;
+           const sFilterTerms = filterText.trim()
+               ? filterText.split('+').map(t => t.trim().toLowerCase()).filter(t => t)
+               : selectedConnectionRow
+                   ? [...new Set([selectedConnectionRow.de_elemento, selectedConnectionRow.para_elemento].filter(Boolean).map(element => element.trim().toLowerCase()))]
+                   : [];
+           const matC = document.getElementById('elementMaterialsContainer'), crimpC = document.getElementById('elementCrimpToolsContainer');
            if (sFilterTerms.length > 0 && rawData.length > 0) {
                matC.classList.remove('hidden'); 
                const mats = {};
+               const tools = new Map();
+               const addSidebarMaterial = (name, description, imageSrc, row, pins, kind) => {
+                   if (!mats[name]) mats[name] = { qty: 0, description, imageSrc, positions: new Set(), pins: new Set(), kinds: new Set() };
+                   mats[name].qty++;
+                   mats[name].positions.add(String(row.posicion));
+                   (Array.isArray(pins) ? pins : [pins]).forEach(pin => {
+                       if (pin != null && String(pin).trim()) mats[name].pins.add(String(pin));
+                   });
+                   mats[name].kinds.add(kind);
+               };
+               const addSidebarCrimpTool = (terminal, row, pin) => {
+                   const crimpData = getCrimpingInfo(terminal, row.seccion);
+                   if (!crimpData?.img_tenaza) return;
+                   const image = crimpData.img_tenaza.trim();
+                   if (!image) return;
+                   if (!tools.has(image)) tools.set(image, { image, name: crimpData.txt_tenaza || image, positions: new Set(), pins: new Set(), specs: new Map() });
+                   const tool = tools.get(image);
+                   tool.positions.add(String(row.posicion));
+                   if (pin != null && String(pin).trim()) tool.pins.add(String(pin));
+                   const section = String(row.seccion).trim();
+                   tool.specs.set(`${terminal.trim().toUpperCase()}|${section}`, { terminal: terminal.trim(), section });
+               };
                rawData.forEach(r => { 
-                   if (sFilterTerms.some(s => (r.de_elemento||'').toLowerCase() === s) && r.de_terminal && r.de_terminal !== 'S/T' && !isKN(r.de_terminal)) mats[r.de_terminal] = (mats[r.de_terminal]||0)+1; 
-                   if (sFilterTerms.some(s => (r.para_elemento||'').toLowerCase() === s) && r.para_terminal && r.para_terminal !== 'S/T' && !isKN(r.para_terminal)) mats[r.para_terminal] = (mats[r.para_terminal]||0)+1; 
-                   if (sFilterTerms.some(s => (r.de_elemento||'').toLowerCase() === s || (r.para_elemento||'').toLowerCase() === s) && r.de_manguito && r.de_manguito !== 'S/M') mats[r.de_manguito] = (mats[r.de_manguito] || 0) + 1; 
+                   const isFromElement = sFilterTerms.some(s => (r.de_elemento||'').toLowerCase() === s);
+                   const isToElement = sFilterTerms.some(s => (r.para_elemento||'').toLowerCase() === s);
+                   if (isFromElement && r.de_terminal && r.de_terminal !== 'S/T' && !isKN(r.de_terminal)) {
+                       const terminal = r.de_terminal.trim();
+                       addSidebarMaterial(terminal, masterMap.terminals[terminal] || '', `${CRIMP_PATHS.terminales}${encodeURIComponent(terminal)}.jpg`, r, [r.de_punto], 'terminal');
+                       addSidebarCrimpTool(terminal, r, r.de_punto);
+                   }
+                   if (isToElement && r.para_terminal && r.para_terminal !== 'S/T' && !isKN(r.para_terminal)) {
+                       const terminal = r.para_terminal.trim();
+                       addSidebarMaterial(terminal, masterMap.terminals[terminal] || '', `${CRIMP_PATHS.terminales}${encodeURIComponent(terminal)}.jpg`, r, [r.para_punto], 'terminal');
+                       addSidebarCrimpTool(terminal, r, r.para_punto);
+                   }
+                   if ((isFromElement || isToElement) && r.de_manguito && r.de_manguito !== 'S/M') {
+                       const sleeve = r.de_manguito.trim();
+                       const pins = [];
+                       if (isFromElement) pins.push(r.de_punto);
+                       if (isToElement) pins.push(r.para_punto);
+                       addSidebarMaterial(sleeve, masterMap.sleeves[sleeve] || r.desc_manguito || '', `Manguitos/${encodeURIComponent(sleeve)}.jpg`, r, pins, 'sleeve');
+                   }
                });
-              document.getElementById('terminalsBody').innerHTML = Object.entries(mats).map(([name, qty]) => `
+               const sharesSelectionScope = (item, selection) => {
+                   const sharesPosition = [...item.positions].some(position => selection.positions.has(position));
+                   const sharesPin = !item.pins.size || !selection.pins.size || [...item.pins].some(pin => selection.pins.has(pin));
+                   return sharesPosition && sharesPin;
+               };
+               const selectedMaterialData = selectedMaterial ? mats[selectedMaterial] : null;
+               const selectedToolData = selectedSidebarCrimpTool ? tools.get(selectedSidebarCrimpTool) : null;
+               const selectedConnectionIsVisible = !!selectedConnectionRow;
+               const visibleMaterials = Object.entries(mats).filter(([, material]) =>
+                   (!selectedConnectionIsVisible || material.positions.has(selectedConnectionPosition)) &&
+                   (!selectedToolData || (material.kinds.has('terminal') && sharesSelectionScope(material, selectedToolData)))
+               );
+               const visibleTools = Array.from(tools.values()).filter(tool =>
+                   (!selectedConnectionIsVisible || tool.positions.has(selectedConnectionPosition)) &&
+                   (!selectedMaterialData || (selectedMaterialData.kinds.has('terminal') && sharesSelectionScope(tool, selectedMaterialData)))
+               );
+              document.getElementById('terminalsBody').innerHTML = visibleMaterials.map(([name, material]) => `
     <div onclick="selectMaterial('${name}')" 
          class="px-2 py-1.5 border-b dark:border-slate-700 flex justify-between items-center cursor-pointer 
          ${selectedMaterial === name ? 'bg-amber-100 dark:bg-blue-600/30' : 'hover:bg-sap-blue/5 dark:hover:bg-slate-700/50'}">
         <div class="flex flex-col min-w-0 flex-1">
             <span class="text-[10px] font-bold text-sap-text dark:text-slate-100">${name}</span>
-            <span class="text-[9px] text-sap-blue italic truncate">${masterMap.terminals[name]||masterMap.sleeves[name]||''}</span>
+            <span class="text-[9px] text-sap-blue italic truncate">${material.description || masterMap.terminals[name] || masterMap.sleeves[name] || ''}</span>
         </div>
-        <span class="text-[10px] font-black bg-sap-blue/10 px-2 rounded-full text-sap-blue">${qty}</span>
+        <div class="ml-2 flex shrink-0 items-center gap-1.5">
+            <img src="${material.imageSrc}" alt="Material ${name}" loading="lazy" class="w-12 h-8 rounded border border-sap-border bg-white object-contain p-0.5" onerror="this.classList.add('hidden')">
+            <span class="text-[10px] font-black bg-sap-blue/10 px-2 rounded-full text-sap-blue">${material.qty}</span>
+        </div>
     </div>`).join('');
-           } else { matC.classList.add('hidden'); }
+               crimpC.classList.remove('hidden');
+               document.getElementById('elementCrimpToolsBody').innerHTML = visibleTools.length
+                   ? visibleTools.map(tool => {
+                       const encodedSpecs = encodeURIComponent(JSON.stringify(Array.from(tool.specs.values())));
+                       return `
+                       <div class="w-full px-2 py-1.5 border-b dark:border-slate-700 flex items-center gap-1 ${selectedSidebarCrimpTool === tool.image ? 'bg-emerald-100 dark:bg-emerald-900/40 ring-1 ring-emerald-500' : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}">
+                           <button type="button" onclick="selectSidebarCrimpTool('${encodeURIComponent(tool.image)}')" class="min-w-0 flex flex-1 items-center gap-2 text-left cursor-pointer">
+                               <img src="${CRIMP_PATHS.crimpadoras}${encodeURIComponent(tool.image)}.jpg" alt="" loading="lazy" class="w-14 h-9 shrink-0 rounded border border-sap-border bg-white object-contain p-0.5" onerror="this.classList.add('hidden')">
+                               <span class="min-w-0 text-[10px] font-bold text-sap-text dark:text-slate-100">${tool.name}</span>
+                           </button>
+                           ${tool.specs.size ? `<button type="button" onclick="openSidebarCrimpingSpecs('${encodedSpecs}')" title="Ver especificaciones técnicas de crimpado" aria-label="Ver especificaciones técnicas de crimpado para ${tool.name}" class="w-8 h-8 shrink-0 flex items-center justify-center rounded text-sap-blue hover:bg-sap-blue/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sap-blue"><i data-lucide="wrench" class="w-4 h-4"></i></button>` : ''}
+                       </div>`;
+                   }).join('')
+                   : '<p class="p-2 text-[10px] text-sap-secondaryText">No hay tenazas registradas para los terminales de este elemento.</p>';
+           } else {
+               matC.classList.add('hidden');
+               crimpC.classList.add('hidden');
+           }
            lucide.createIcons();
        }
        window.onload = () => {
