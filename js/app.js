@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.13.2';
+    const VERSION = '0.13.3';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -3188,9 +3188,24 @@ function handleHelpEasterEgg() {
            }
  
            // 4. Renderizado
+           const selectedConnectionRow = selectedConnectionPosition
+               ? d.find(row => String(row.posicion) === selectedConnectionPosition)
+               : null;
+           const sFilterTerms = filterText.trim()
+               ? filterText.split('+').map(t => t.trim().toLowerCase()).filter(t => t)
+               : selectedConnectionRow
+                   ? [...new Set([selectedConnectionRow.de_elemento, selectedConnectionRow.para_elemento].filter(Boolean).map(element => element.trim().toLowerCase()))]
+                   : [];
            b.innerHTML = d.map(r => {
                const isFinished = isCableFinished(r.posicion);
-               const isSelected = selectedMaterial && (r.de_terminal === selectedMaterial || r.para_terminal === selectedMaterial || r.de_manguito === selectedMaterial);
+               const usesSelectedTool = selectedSidebarCrimpTool && ['de', 'para'].some(side => {
+                   if (!sFilterTerms.includes((r[`${side}_elemento`] || '').toLowerCase())) return false;
+                   const terminal = (r[`${side}_terminal`] || '').trim();
+                   if (!terminal || terminal === 'S/T' || isKN(terminal)) return false;
+                   const crimpData = getCrimpingInfo(terminal, r.seccion);
+                   return crimpData?.img_tenaza?.trim() === selectedSidebarCrimpTool;
+               });
+               const isSelected = usesSelectedTool || (selectedMaterial && (r.de_terminal === selectedMaterial || r.para_terminal === selectedMaterial || r.de_manguito === selectedMaterial));
                const hasError = errorsMap[r.posicion] !== undefined;
                const rowClass = r.deleted ? 'row-deleted' : r.added ? 'row-added' : '';
                const isConnectionSelected = selectedConnectionPosition === String(r.posicion);
@@ -3251,14 +3266,6 @@ function handleHelpEasterEgg() {
            }).join('');
  
            // 5. Sidebar Materiales
-           const selectedConnectionRow = selectedConnectionPosition
-               ? d.find(row => String(row.posicion) === selectedConnectionPosition)
-               : null;
-           const sFilterTerms = filterText.trim()
-               ? filterText.split('+').map(t => t.trim().toLowerCase()).filter(t => t)
-               : selectedConnectionRow
-                   ? [...new Set([selectedConnectionRow.de_elemento, selectedConnectionRow.para_elemento].filter(Boolean).map(element => element.trim().toLowerCase()))]
-                   : [];
            const matC = document.getElementById('elementMaterialsContainer'), crimpC = document.getElementById('elementCrimpToolsContainer');
            if (sFilterTerms.length > 0 && rawData.length > 0) {
                matC.classList.remove('hidden'); 

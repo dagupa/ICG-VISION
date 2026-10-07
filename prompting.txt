@@ -1,3 +1,18 @@
+2026-10-07 12:58:27 (resaltar conexiones al seleccionar una tenaza)
+PROMPT:
+Actualmente en la lista de conexiones, cuando filtro por un elemento se muestran las ventanas con los materiales y las tenazas a utilizar. Cuando selecciono un terminal, en la lista de conexiones se marcan de otro color las filas en las que se utiliza dicho terminal. Quiero que cuando se seleccione una tenaza actúe de la misma manera y te marquen de otro color la filas en las que se usa esa tenaza.
+
+SOLUCIÓN:
+- js/app.js: el resaltado de filas incluye la tenaza seleccionada, consultando
+  los datos de crimpado del terminal y la sección en el extremo correspondiente
+  al elemento filtrado. Se reutilizan los colores de la selección de materiales
+  y al pulsar de nuevo la tenaza se elimina el resaltado.
+- Verificado en navegador con datos de prueba y tenazas de los datos maestros:
+  selección y deselección, ambos extremos, exclusión del elemento opuesto,
+  otras tenazas, manguitos y terminales desconocidos, selección de materiales,
+  filtro de varios elementos y ámbito de la conexión seleccionada.
+================================================================================
+
 2026-10-06 15:00:37 (corregir entradas de terminal en master-data)
 PROMPT:
 Corrige las líneas que están mal en master-data (MAL).js.
