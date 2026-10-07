@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.13.0';
+    const VERSION = '0.13.1';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -700,7 +700,7 @@ function markConnectionDone(posicion) {
            '641M960', '641M964', '641M993', 'H0014682', '641M10294', '641M072', '641M073', '641M080',
            '641M10026', '641M10027', '641M10112', '641M10172', '641M10174', '641M10263', '641M115', '641M184',
            '641M267', '641M294', '641M295', '641M298', '641M302', '641M331', '641M351', '641M597', '641M598',
-           '641M744', '641M830', '641M855', '695000', 'H0656683',
+           '641M744', '641M830', '641M855', '695000', 'H0657678' , 'H0656683',
        ]);
        function isKnownTerminalException(code) {
            if (!code) return false;

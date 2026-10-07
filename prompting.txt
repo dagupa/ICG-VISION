@@ -1,3 +1,13 @@
+2026-10-06 15:00:37 (corregir entradas de terminal en master-data)
+PROMPT:
+Corrige las líneas que están mal en master-data (MAL).js.
+
+SOLUCIÓN:
+- js/master-data (MAL).js: se corrige en las dos entradas 641M10078 la propiedad
+  txt_tenaza, que estaba escrita como texto sin nombre de campo y causaba un error
+  de sintaxis al cargar el archivo.
+================================================================================
+
 2026-09-25 19:17:35 (abrir especificaciones desde las tenazas laterales)
 PROMPT:
 Junto a cada tenaza de crimpado en Lista de conexiones, mostrar el icono que
