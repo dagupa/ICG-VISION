@@ -234,3 +234,14 @@ Si el archivo no exite lo crearás.
 
 # Contexto
 Añadirás al contexto de cada sesión lo registrado en el archivo prompting.txt
+
+# Cambio de versión
+Cada cambio que realices lo registrarás en la constante VERSION de la siguiente manera: 
+
+     // Formato MAYOR.MEJORA.CORRECCIÓN
+    // · MAYOR      : cambio de versión principal
+    // · MEJORA     : nueva funcionalidad
+    // · CORRECCIÓN : fix de errores
+
+    Ejemplo: Versión 0.15.2
+    Esto indica que estamos en la versión 0, funcionalidad 15 y que sobre esta funcionalidad se ha realizado una segunda corrección.

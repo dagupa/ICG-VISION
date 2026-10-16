@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.15.0';
+    const VERSION = '0.15.2';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -3393,7 +3393,9 @@ function handleHelpEasterEgg() {
            document.getElementById('filterInput').addEventListener('input', (e) => { 
                filterText = e.target.value; 
                const isSingle = !!filterText.trim() && !filterText.includes('+');
-               document.getElementById('elementQuickActions').classList.toggle('hidden', !isSingle); 
+               const quickActions = document.getElementById('elementQuickActions');
+               quickActions.classList.toggle('hidden', !isSingle);
+               quickActions.classList.toggle('flex', isSingle);
                updateView(); 
            });
            

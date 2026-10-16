@@ -83,9 +83,9 @@
  
    <!-- Header Principal -->
    <header class="bg-sap-shell text-white h-12 flex items-center justify-between px-4 shrink-0 shadow-lg z-50">
-       <div class="flex items-center gap-4">
-           <div class="flex items-center gap-3">
-               <div class="w-8 h-10 flex items-center justify-center">
+       <div class="flex items-center gap-4 shrink-0">
+           <div class="flex items-center gap-3 shrink-0">
+               <div class="w-8 h-10 shrink-0 flex items-center justify-center">
                    <svg viewBox="0 0 120 140" class="w-full h-full is-on">
                        <path d="M40,20 L80,20 L80,40 L90,40 L90,100 L80,100 L80,120 L40,120 L40,100 L30,100 L30,40 L40,40 Z" fill="none" stroke="white" stroke-width="6"/>
                        <g class="toggle-handle-group">
@@ -95,18 +95,18 @@
                        <path d="M60,120 L60,140" fill="none" stroke="#38bdf8" stroke-width="8" stroke-linecap="round" class="electron-stream" style="animation-delay: 0.15s;"/>
                    </svg>
                </div>
-               <span class="font-bold text-sm tracking-tight flex items-baseline gap-1">
+               <span class="hidden sm:flex font-bold text-sm tracking-tight items-baseline gap-1">
                    ICG <span class="font-light opacity-80 italic flex items-baseline ml-0.5">Visi<svg class="logo-eye w-5 h-5 inline-block ml-0.5 -mr-0.5 translate-y-[15%]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M7 6.5l-1-2M12 4.5V2M17 6.5l1-2M8 17.5l-0.5 2M16 17.5l0.5 2"/></svg><span>n</span></span>
                </span>
            </div>
        </div>
-       <div class="flex items-center gap-1">
-           <button onclick="toggleSidebar()" class="p-2 hover:bg-white/10 rounded-fiori transition-colors" title="Mostrar u ocultar panel lateral"><i data-lucide="panel-left" class="w-4 h-4"></i></button>
-           <button onclick="toggleHelp()" class="p-2 hover:bg-white/10 rounded-fiori transition-colors" title="Ver manual de ayuda"><i data-lucide="help-circle" class="w-4 h-4"></i></button>
-           <button onclick="toggleSettings()" id="btnSettings" class="p-2 hover:bg-white/10 rounded-fiori transition-colors" title="Abrir configuración del programa"><i data-lucide="settings" class="w-4 h-4"></i></button>
-           <button onclick="toggleFullScreen()" class="p-2 hover:bg-white/10 rounded-fiori transition-colors" title="Alternar modo pantalla completa"><i data-lucide="maximize" class="w-4 h-4"></i></button>
-           <div class="w-px h-4 bg-white/20 mx-2"></div>
-           <button onclick="showLanding()" class="p-2 bg-sap-blue hover:bg-sap-darkBlue rounded-fiori transition-all flex items-center justify-center" title="Cargar un nuevo informe Excel"><i data-lucide="file-up" class="w-4 h-4"></i></button>
+       <div class="flex flex-nowrap items-center gap-1 shrink-0">
+           <button onclick="toggleSidebar()" class="shrink-0 p-2 hover:bg-white/10 rounded-fiori transition-colors" title="Mostrar u ocultar panel lateral"><i data-lucide="panel-left" class="w-4 h-4"></i></button>
+           <button onclick="toggleHelp()" class="shrink-0 p-2 hover:bg-white/10 rounded-fiori transition-colors" title="Ver manual de ayuda"><i data-lucide="help-circle" class="w-4 h-4"></i></button>
+           <button onclick="toggleSettings()" id="btnSettings" class="shrink-0 p-2 hover:bg-white/10 rounded-fiori transition-colors" title="Abrir configuración del programa"><i data-lucide="settings" class="w-4 h-4"></i></button>
+           <button onclick="toggleFullScreen()" class="shrink-0 p-2 hover:bg-white/10 rounded-fiori transition-colors" title="Alternar modo pantalla completa"><i data-lucide="maximize" class="w-4 h-4"></i></button>
+           <div class="w-px h-4 shrink-0 bg-white/20 mx-2"></div>
+           <button onclick="showLanding()" class="shrink-0 p-2 bg-sap-blue hover:bg-sap-darkBlue rounded-fiori transition-all flex items-center justify-center" title="Cargar un nuevo informe Excel"><i data-lucide="file-up" class="w-4 h-4"></i></button>
        </div>
    </header>
  

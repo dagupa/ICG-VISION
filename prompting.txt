@@ -1,3 +1,44 @@
+2026-10-16 09:41:15 (actualizar versión del programa según AGENTS.md)
+PROMPT:
+actualiza la versión del programa según AGENTES.MD
+
+SOLUCIÓN:
+- AGENTS.md define el formato MAYOR.MEJORA.CORRECCIÓN; como las dos últimas
+  modificaciones fueron correcciones, js/app.js actualiza VERSION de 0.15.0 a
+  0.15.2.
+- El título de la página y las etiquetas de versión usan VERSION, por lo que se
+  actualizan automáticamente.
+================================================================================
+
+2026-10-16 09:30:27 (corregir acciones del filtro que se apilan en varias líneas)
+PROMPT:
+como ves, te rodeo en rojo los iconos que se montan.
+
+SOLUCIÓN:
+- La captura muestra las acciones del elemento en la barra de herramientas.
+  El manejador del filtro de escritorio quitaba `hidden` sin añadir `flex`, así
+  que los dos primeros botones quedaban en línea y el menú de incidencias saltaba
+  a otra línea.
+- js/app.js: el manejador alterna las clases `hidden` y `flex` según el filtro,
+  igual que las otras rutas que muestran estas acciones.
+- Reproducido y verificado en navegador: al filtrar, los tres iconos quedan
+  alineados; al limpiar el filtro vuelven a ocultarse.
+================================================================================
+
+2026-10-16 08:41:31 (evitar solapamiento de iconos en encabezado al redimensionar)
+PROMPT:
+analiza el código que muestra los iconos del encabezado porque cuando se redimensionan las ventanas, en ocasiones, se montan unos encima de otros.
+
+SOLUCIÓN:
+- index.html: se impide que se contraigan los botones y el contenedor de acciones
+  del encabezado; también se oculta el texto de marca por debajo del breakpoint
+  sm para reservar espacio en pantallas estrechas.
+- La causa estaba en la distribución flex del encabezado, no en app.js ni en la
+  inicialización de Lucide.
+- Verificado en navegador redimensionando entre 312 y 1600 px: los cinco botones
+  mantienen 32 px, no se solapan y permanecen dentro del encabezado.
+================================================================================
+
 2026-10-07 12:58:27 (resaltar conexiones al seleccionar una tenaza)
 PROMPT:
 Actualmente en la lista de conexiones, cuando filtro por un elemento se muestran las ventanas con los materiales y las tenazas a utilizar. Cuando selecciono un terminal, en la lista de conexiones se marcan de otro color las filas en las que se utiliza dicho terminal. Quiero que cuando se seleccione una tenaza actúe de la misma manera y te marquen de otro color la filas en las que se usa esa tenaza.
