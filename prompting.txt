@@ -1,3 +1,56 @@
+2026-10-20 14:29:38 (mostrar imagen del diodo en el popover de terminales)
+PROMPT:
+Cuando en "De Elemento" o en "Para Elemento" aparezcan las palabras "diodo",
+"cátodo" o "ánodo", en la ventana que muestra los terminales sustituir
+"TERMINAL" por "DIODO" y mostrar como foto diodo.jpg.
+
+SOLUCIÓN:
+- js/app.js, showInfoPopover(): se normalizan mayúsculas y tildes en ambos
+  campos del elemento y se detectan las palabras completas DIODO, CÁTODO y
+  ÁNODO. En esos casos se muestra la etiqueta DIODO y la imagen
+  Terminales/diodo.jpg; los terminales normales conservan su presentación.
+- Verificado en navegador con variantes mayúsculas, minúsculas, con tilde y
+  sin tilde en ambos extremos; también se comprobó la carga de la imagen y que
+  las conexiones normales sigan mostrando TERMINAL.
+- VERSION se actualiza a 0.17.0 por tratarse de una mejora.
+================================================================================
+
+2026-10-20 13:29:20 (evitar solapamientos del diodo con otros cables)
+PROMPT:
+El diodo queda oculto con las líneas de otros cables. Desplazar un poco su
+trazo para que no se sobreponga ningún cable.
+
+SOLUCIÓN:
+- js/app.js: los ramales del diodo hacen un pequeño quiebro hacia el interior
+  entre el punto de conexión y el símbolo, evitando compartir el tramo
+  horizontal de los cables externos.
+- Las etiquetas CÁTODO (K) y ÁNODO (A) se acercan al símbolo y quedan entre
+  ambos puntos, separadas de las etiquetas de los cables.
+- Verificado visualmente en navegador con cables externos conectados a ambos
+  puntos, y funcionalmente con las dos orientaciones del diodo.
+- VERSION se actualiza de 0.16.0 a 0.16.1.
+================================================================================
+
+2026-10-20 13:13:13 (representar diodos en el esquema gráfico)
+PROMPT:
+Cuando en la lista de conexiones aparece un DIODO en "De Elemento" o en
+"Para Elemento", representarlo en el esquema uniendo los puntos de conexión,
+con un símbolo eléctrico que permita distinguir el cátodo del ánodo.
+
+SOLUCIÓN:
+- js/app.js: las conexiones etiquetadas CATODO/CÁTODO y ANODO/ÁNODO se agrupan
+  cuando identifican un único par del mismo DIODO; se dibujan los cables, el
+  símbolo convencional orientado según la polaridad y las etiquetas CÁTODO (K)
+  y ÁNODO (A). Se admiten ambas direcciones de conexión.
+- Los cables del par se excluyen de las conexiones externas individuales para
+  evitar duplicar el dibujo. Si falta una polaridad o el emparejamiento es
+  ambiguo, se conserva la representación externa anterior.
+- Verificado en navegador con DIODO en Para Elemento y De Elemento, polaridad
+  invertida y datos incompletos; se comprobó el símbolo, su orientación, las
+  etiquetas, la agrupación de posiciones y la alternativa anterior.
+- La constante VERSION se actualiza a 0.16.0 por tratarse de una mejora.
+================================================================================
+
 2026-10-16 09:41:15 (actualizar versión del programa según AGENTS.md)
 PROMPT:
 actualiza la versión del programa según AGENTES.MD

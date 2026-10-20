@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.15.2';
+    const VERSION = '0.17.0';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -2062,6 +2062,11 @@ function selectSidebarCrimpTool(encodedImage) {
            // confusión cuando varios cables comparten el mismo nombre/marca.
            const cableData = (cn.posicion ? rawData.find(wire => wire.posicion === cn.posicion) : null)
                || rawData.find(wire => getCableDisplayLabel(wire) === cn.label);
+           const isDiodeConnection = [cableData?.de_elemento, cableData?.para_elemento].some(element =>
+               /\b(DIODO|CATODO|ANODO)\b/.test(
+                   String(element || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+               )
+           );
            const section = cableData ? cableData.seccion : "";
            const crimpData = getCrimpingInfo(cn.term, section);
            const sectionCheck = !isPseudoTerminal ? checkSectionCompatibility(cn.term, section) : null;
@@ -2083,14 +2088,16 @@ function selectSidebarCrimpTool(encodedImage) {
                     <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-600">
                         <div class="flex items-center gap-2 text-sap-blue dark:text-sky-400 mb-1">
                             <div class="w-12 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-500 overflow-hidden shrink-0">
-                                ${!isPseudoTerminal && cn.term ? 
+                                ${isDiodeConnection ?
+                                    `<img src="${CRIMP_PATHS.terminales}diodo.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)">`
+                                    : (!isPseudoTerminal && cn.term ?
                                     `<img src="${CRIMP_PATHS.terminales}${cn.term.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)">`
                                     : (isPseudoTerminal ? '' : `<i data-lucide="pin" class="w-3.5 h-3.5"></i>`)
-                                }
+                                )}
                             </div>
-                            <span class="font-bold uppercase tracking-tighter text-[10px]">${isPseudoTerminal ? 'Instrucción' : 'Terminal'}</span>
+                            <span class="font-bold uppercase tracking-tighter text-[10px]">${isDiodeConnection ? 'Diodo' : (isPseudoTerminal ? 'Instrucción' : 'Terminal')}</span>
                         </div>
-                        <div class="${!isPseudoTerminal ? 'pl-14' : ''}">
+                        <div class="${!isPseudoTerminal || isDiodeConnection ? 'pl-14' : ''}">
                             <div class="font-black text-xs text-slate-800 dark:text-slate-100">${isPseudoTerminal ? cn.term.substring(3) : cn.term || 'S/T'}</div>
                             <div class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-tight">${tDesc}</div>
                         </div>
@@ -2492,7 +2499,26 @@ function closeGraphicalView() {
    
    const allRelated = rawData.filter(r => (r.de_elemento||'').toLowerCase() === search || (r.para_elemento||'').toLowerCase() === search);
    const internalBridges = allRelated.filter(r => (r.de_elemento||'').toLowerCase() === search && (r.para_elemento||'').toLowerCase() === search);
- 
+   const isDiodeElement = value => /\bDIODO\b/.test(String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase());
+   const diodeGroups = new Map();
+   allRelated.forEach(connection => {
+       const deElement = String(connection.de_elemento || '');
+       const paraElement = String(connection.para_elemento || '');
+       const isDiodeAtDe = isDiodeElement(deElement) && paraElement.toLowerCase() === search;
+       const isDiodeAtPara = isDiodeElement(paraElement) && deElement.toLowerCase() === search;
+       if (!isDiodeAtDe && !isDiodeAtPara) return;
+
+       const label = getCableDisplayLabel(connection).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+       const isCathode = label === 'K' || /(^|[^A-Z])(CATODO|CATHODE)(?=$|[^A-Z])/.test(label);
+       const isAnode = label === 'A' || /(^|[^A-Z])(ANODO|ANODE)(?=$|[^A-Z])/.test(label);
+       if (isCathode === isAnode) return;
+
+       const diodeName = (isDiodeAtDe ? deElement : paraElement).trim().toUpperCase();
+       if (!diodeGroups.has(diodeName)) diodeGroups.set(diodeName, { cathodes: [], anodes: [] });
+       const pin = isDiodeAtDe ? connection.para_punto : connection.de_punto;
+       diodeGroups.get(diodeName)[isCathode ? 'cathodes' : 'anodes'].push({ connection, pin });
+   });
+
    const pinMap = new Map(); 
    allRelated.forEach(c => {
        if ((c.de_elemento||'').toLowerCase() === search) {
@@ -2514,6 +2540,18 @@ function closeGraphicalView() {
    const pinYMap = {}; const mX = 50 + colW, sY = 80; 
    
    sortedPins.forEach((pin, i) => { pinYMap[pin] = sY + (i * rowH); });
+    const diodePairs = [];
+    const diodePositions = new Set();
+    diodeGroups.forEach(group => {
+        if (group.cathodes.length !== 1 || group.anodes.length !== 1) return;
+        const cathode = group.cathodes[0], anode = group.anodes[0];
+        const cathodePosition = String(cathode.connection.posicion);
+        const anodePosition = String(anode.connection.posicion);
+        if (cathodePosition === anodePosition || pinYMap[cathode.pin] === undefined || pinYMap[anode.pin] === undefined) return;
+        diodePairs.push({ cathode, anode });
+        diodePositions.add(cathodePosition);
+        diodePositions.add(anodePosition);
+    });
     baseViewBox = { x: 0, y: 0, w: totalW, h: totalH }; updateViewBox();
    
    svg.innerHTML += `<rect x="${mX}" y="${sY-50}" width="${mainW}" height="35" rx="2" class="diag-header"/><text x="${mX+mainW/2}" y="${sY-28}" text-anchor="middle" fill="white" style="font-size:14px; font-weight:900">${elementName.toUpperCase()}</text>`;
@@ -2538,6 +2576,52 @@ internalBridges.forEach((b, idx) => {
     const bridgeLabel = getCableDisplayLabel(b);
     svg.innerHTML += ` <text x="${arcX + 14}" y="${(y1 + y2) / 2}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: bridgeLabel, posicion: b.posicion}))}')" transform="rotate(-90, ${arcX + 14}, ${(y1 + y2) / 2})" style="fill:${bridgeColor}; font-size:10px; font-weight:900; letter-spacing: 0.5px;"> ${bridgeLabel} </text></g>`;
 });
+
+   diodePairs.forEach(({ cathode, anode }, idx) => {
+       const yCathode = pinYMap[cathode.pin], yAnode = pinYMap[anode.pin];
+       const edgeX = mX + mainW;
+       const diodeX = edgeX + 40 + (internalBridges.length + idx) * 20;
+       const centerY = (yCathode + yAnode) / 2;
+       const cathodeIsAbove = yCathode < yAnode;
+       const leadOffset = 14;
+       const cathodeLeadY = yCathode + (cathodeIsAbove ? leadOffset : -leadOffset);
+       const anodeLeadY = yAnode + (cathodeIsAbove ? -leadOffset : leadOffset);
+       const cathodeLabelY = centerY + (cathodeIsAbove ? -4 : 16);
+       const anodeLabelY = centerY + (cathodeIsAbove ? 16 : -4);
+       const upperSymbolY = centerY + (cathodeIsAbove ? -10 : -8);
+       const lowerSymbolY = centerY + (cathodeIsAbove ? 8 : 10);
+       const cathodeBarY = centerY + (cathodeIsAbove ? -10 : 10);
+       const trianglePoints = cathodeIsAbove
+           ? `${diodeX - 10},${centerY + 8} ${diodeX + 10},${centerY + 8} ${diodeX},${centerY - 5}`
+           : `${diodeX - 10},${centerY - 8} ${diodeX + 10},${centerY - 8} ${diodeX},${centerY + 5}`;
+       const diodeColor = [cathode.connection, anode.connection].every(connection => {
+           const progress = progressMap[connection.posicion] || {};
+           return progress.de === true && progress.para === true;
+       }) ? '#10b981' : '#f97316';
+       const topY = Math.min(cathodeLeadY, anodeLeadY), bottomY = Math.max(cathodeLeadY, anodeLeadY);
+       const cathodeInfo = encodeURIComponent(JSON.stringify({
+           type: 'cable', label: 'CÁTODO', posicion: cathode.connection.posicion
+       }));
+       const anodeInfo = encodeURIComponent(JSON.stringify({
+           type: 'cable', label: 'ÁNODO', posicion: anode.connection.posicion
+       }));
+       const positions = [cathode.connection.posicion, anode.connection.posicion]
+           .map(position => encodeURIComponent(String(position))).join('|');
+
+       svg.innerHTML += `<g class="diag-connection" data-positions="${positions}">
+           <title>DIODO: CÁTODO (K), ÁNODO (A)</title>
+           <path d="M ${edgeX} ${yCathode} L ${edgeX} ${cathodeLeadY} L ${diodeX} ${cathodeLeadY}" class="diag-line" style="stroke:${diodeColor};"/>
+           <path d="M ${edgeX} ${yAnode} L ${edgeX} ${anodeLeadY} L ${diodeX} ${anodeLeadY}" class="diag-line" style="stroke:${diodeColor};"/>
+           <line x1="${diodeX}" y1="${topY}" x2="${diodeX}" y2="${upperSymbolY}" class="diag-line" style="stroke:${diodeColor};"/>
+           <line x1="${diodeX}" y1="${lowerSymbolY}" x2="${diodeX}" y2="${bottomY}" class="diag-line" style="stroke:${diodeColor};"/>
+           <polygon points="${trianglePoints}" fill="${diodeColor}" stroke="${diodeColor}" stroke-width="1.5"/>
+           <line x1="${diodeX - 11}" y1="${cathodeBarY}" x2="${diodeX + 11}" y2="${cathodeBarY}" stroke="${diodeColor}" stroke-width="3"/>
+           <circle cx="${edgeX}" cy="${yCathode}" r="4" fill="${diodeColor}" pointer-events="none"/>
+           <circle cx="${edgeX}" cy="${yAnode}" r="4" fill="${diodeColor}" pointer-events="none"/>
+           <text x="${diodeX + 15}" y="${cathodeLabelY}" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${cathodeInfo}')" style="fill:${diodeColor}; font-size:9px; font-weight:900;">CÁTODO (K)</text>
+           <text x="${diodeX + 15}" y="${anodeLabelY}" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${anodeInfo}')" style="fill:${diodeColor}; font-size:9px; font-weight:900;">ÁNODO (A)</text>
+       </g>`;
+   });
  
       // 2. PINES Y CONEXIONES EXTERNAS
    sortedPins.forEach((pin) => {
@@ -2577,7 +2661,7 @@ internalBridges.forEach((b, idx) => {
        const pinPositions = [...new Set([...pD.in, ...pD.out].map(connection => String(connection.posicion)))].map(encodeURIComponent).join('|');
     svg.innerHTML += `<g class="diag-connection diag-pin-connection" data-pin="${encodeURIComponent(String(pin))}" data-positions="${pinPositions}"><rect x="${mX}" y="${y-15}" width="${mainW}" height="30" rx="2" class="diag-block diag-block-pin" style="${pinColor}" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'pin', pin, connections: pCs}))}')"/><text x="${mX+mainW/2}" y="${y+5}" text-anchor="middle" class="diag-text-main" style="fill:${pinTextColor}; pointer-events:none;">${pin}</text></g>`;
  
-       const extIn = pD.in.filter(c => (c.de_elemento||'').toLowerCase() !== search);
+       const extIn = pD.in.filter(c => (c.de_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)));
        if (extIn.length > 0) {
            const stubX = mX - 100, blockRightEdge = stubX - 100;
            const anyLocalOk = extIn.some(c => (progressMap[c.posicion] || {}).para === true && getCableDisplayLabel(c) !== '');
@@ -2612,7 +2696,7 @@ internalBridges.forEach((b, idx) => {
            }
        }
  
-       const extOut = pD.out.filter(c => (c.para_elemento||'').toLowerCase() !== search);
+       const extOut = pD.out.filter(c => (c.para_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)));
        if (extOut.length > 0) {
            const origX = mX + mainW, stubX = origX + 100, blockLeftEdge = stubX + 100;
            const anyLocalOk = extOut.some(c => (progressMap[c.posicion] || {}).de === true && getCableDisplayLabel(c) !== '');
