@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.17.0';
+    const VERSION = '0.17.2';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -1599,6 +1599,11 @@ function renderDetailStep() {
        const isOut = c.type === 'out';
        const termOrig = isOut ? c.de_terminal : c.para_terminal;
        const isPseudo = isKN(termOrig);
+       const isDiodeConnection = [c.de_elemento, c.para_elemento].some(element =>
+           /\b(DIODO|CATODO|ANODO)\b/.test(
+               String(element || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+           )
+       );
        
        // --- CONTROL ANTICRUZADO ESTRICTO PARA MANGUITOS EN MODO VISION ---
        // La única columna fiable de manguito es de_manguito (K).
@@ -1623,9 +1628,11 @@ function renderDetailStep() {
            <div class="grid grid-cols-2 gap-4"><div><p class="text-[9px] font-bold uppercase opacity-60">ID</p><p class="text-sm font-bold truncate">${c.cod_cable}</p></div><div><p class="text-[9px] font-bold uppercase opacity-60">Secc.</p><p class="text-sm font-bold">${c.seccion} mm²</p></div></div>
            <div class="p-3 bg-sap-shell/5 rounded-xl flex items-center gap-3"><div class="w-10 h-10 bg-sap-blue/10 flex items-center justify-center rounded-lg text-sap-blue"><i data-lucide="arrow-right-left" class="w-5 h-5"></i></div><div class="min-w-0"><p class="text-[9px] font-bold uppercase opacity-60">${isOut?'Destino':'Origen'}</p><p class="text-base font-black truncate text-sap-blue">${peer}</p></div></div>
            <div class="p-3 bg-sap-bg dark:bg-slate-900 rounded-xl flex items-center gap-3">
-               ${!isPseudo ? `<div class="w-12 h-10 flex items-center justify-center shrink-0"><img src="${CRIMP_PATHS.terminales}${termOrig.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)"></div>` : ''}
+               ${isDiodeConnection
+                   ? `<div class="w-12 h-10 flex items-center justify-center shrink-0"><img src="${CRIMP_PATHS.terminales}diodo.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)"></div>`
+                   : (!isPseudo ? `<div class="w-12 h-10 flex items-center justify-center shrink-0"><img src="${CRIMP_PATHS.terminales}${termOrig.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)"></div>` : '')}
                <div class="min-w-0 flex-1">
-                   <p class="text-[9px] font-bold uppercase opacity-60">${isPseudo?'Instrucción':'Terminal'}</p>
+                   <p class="text-[9px] font-bold uppercase opacity-60">${isDiodeConnection ? 'Diodo' : (isPseudo ? 'Instrucción' : 'Terminal')}</p>
                    <p class="text-base font-black truncate">${isPseudo?termOrig.substring(3):termOrig}</p>
                    <p class="text-[10px] text-sap-blue italic truncate">${masterMap.terminals[termOrig?.trim()]||""}</p>
                </div>

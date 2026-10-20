@@ -1,3 +1,18 @@
+2026-10-20 14:50:33 (mostrar el diodo también en Modo VISION)
+PROMPT:
+En el modo VISION también se mostrará la imagen del diodo en lugar de
+TERMINAL cuando corresponda.
+
+SOLUCIÓN:
+- js/app.js, renderDetailStep(): aplica en Modo VISION la misma detección por
+  De Elemento y Para Elemento; al encontrar DIODO, CÁTODO o ÁNODO, muestra la
+  imagen Terminales/diodo.jpg y cambia la etiqueta Terminal por Diodo.
+- Verificado en navegador con variantes mayúsculas, minúsculas y con/sin tilde
+  en ambos extremos; se confirmó que la imagen carga y que los terminales
+  ordinarios mantienen la etiqueta Terminal.
+- VERSION se actualiza a 0.17.2 como corrección de la mejora anterior.
+================================================================================
+
 2026-10-20 14:29:38 (mostrar imagen del diodo en el popover de terminales)
 PROMPT:
 Cuando en "De Elemento" o en "Para Elemento" aparezcan las palabras "diodo",
