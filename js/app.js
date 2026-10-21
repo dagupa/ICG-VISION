@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.17.2';
+    const VERSION = '0.21.1';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -119,6 +119,7 @@
        let lastTouchX = 0, lastTouchY = 0, lastTouchDist = 0; 
        let detailPinSequence = [], detailPinDataMap = new Map(), currentDetailIndex = 0;
        let progressMap = {};
+       let lineCategoryDisplayEnabled = false;
        let _dupPosicions = new Set(), _dupOrdenes = new Set(), _nonNumericLongitud = new Set();
     let _seccionMissingSet = new Set(), _termIncompatSet = new Set(), _termNotFoundSet = new Set();
     let _cableNotFoundSet = new Set(), _sleeveNotFoundSet = new Set();
@@ -147,15 +148,78 @@
            { id: 'N', key: 'para_punto', visible: true, width: 80, es: 'PARA PUNTO', en: 'TO POINT' },
            { id: 'O', key: 'para_terminal', visible: true, width: 100, es: 'PARA TERMINAL', en: 'TO TERM.' },
            { id: 'P', key: 'observaciones', visible: true, width: 150, es: 'OBSERVACIONES', en: 'REMARKS' },
+           { id: 'Q', key: 'lineas', visible: true, width: 125, es: 'TIPO LÍNEA', en: 'LINE TYPE' },
            { id: 'X', key: 'desc_cable', visible: false, width: 200, es: 'DESCRIPCIÓN CABLE', en: 'WIRE DESC' },
            { id: 'Y', key: 'desc_manguito', visible: false, width: 180, es: 'DESC. MANGUITO', en: 'SLEEVE DESC' },
            { id: 'Z', key: 'desc_terminal_de', visible: false, width: 180, es: 'DESC. TERM. DE', en: 'FROM TERM DESC' },
            { id: 'AA', key: 'desc_terminal_para', visible: false, width: 180, es: 'DESC. TERM. PARA', en: 'TO TERM DESC' }
        ];
 
+       const LINE_CATEGORY_STYLES = {
+           ALTERNA: {
+               label: 'AC',
+               symbol: '~',
+               lightColor: '#dc2626',
+               darkColor: '#f87171',
+               badgeClass: 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300',
+               dashArray: ''
+           },
+           CONTINUA: {
+               label: 'DC',
+               symbol: '=',
+               lightColor: '#a16207',
+               darkColor: '#facc15',
+               badgeClass: 'border-amber-300 bg-amber-50 text-amber-800 dark:border-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-300',
+               dashArray: '10 5'
+           },
+           SENALES: {
+               label: 'SIG',
+               symbol: '≋',
+               lightColor: '#0284c7',
+               darkColor: '#38bdf8',
+               badgeClass: 'border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300',
+               dashArray: '2 4',
+               lineCap: 'round'
+           }
+       };
+
+       function normalizeLineCategory(value) {
+           return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+       }
+
+       function getLineCategoryConfig(value) {
+           const category = normalizeLineCategory(value);
+           return Object.prototype.hasOwnProperty.call(LINE_CATEGORY_STYLES, category)
+               ? LINE_CATEGORY_STYLES[category]
+               : null;
+       }
+
+       function getLineCategoryColor(value, isDarkTheme = document.documentElement.classList.contains('dark')) {
+           const category = getLineCategoryConfig(value);
+           return category ? (isDarkTheme ? category.darkColor : category.lightColor) : '';
+       }
+
+       function getLineCategoryPatternStyle(value) {
+           const category = getLineCategoryConfig(value);
+           if (!category) return '';
+           const styles = [];
+           if (category.dashArray) styles.push(`stroke-dasharray:${category.dashArray}`);
+           if (category.lineCap) styles.push(`stroke-linecap:${category.lineCap}`);
+           return styles.length ? `${styles.join(';')};` : '';
+       }
+
        function getCableDisplayLabel(connection) {
            const cableMark = String(connection?.cable_marca || '').trim();
            return cableMark || String(connection?.de_marca || '').trim();
+       }
+
+       function getTerminalComponentType(...elements) {
+           const normalized = elements
+               .map(element => String(element || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase())
+               .join(' ');
+           if (/\bVARISTOR\b/.test(normalized)) return 'VARISTOR';
+           if (/\b(DIODO|CATODO|ANODO)\b/.test(normalized)) return 'DIODO';
+           return '';
        }
 
        function normalizeDeMarcaAlias(record) {
@@ -1287,6 +1351,7 @@ function saveIncidencia() {
         longitud: longitud || '',
         marcado: marcado || '',
         cable_marca: cable_marca || '',
+        lineas: '',
         de_elemento: de_elemento || '',
         de_punto: de_punto || '',
         de_terminal: de_terminal || '',
@@ -1430,6 +1495,11 @@ function clearAllFiltersMobile() {
            localStorage.setItem('ICGVision_Theme', isDark ? 'dark' : 'light');
 		   // Ocultamos el menú de ajustes inmediatamente tras conmutar el tema visual
 		   document.getElementById('settingsDropdown')?.classList.add('hidden');
+           const graphModal = document.getElementById('graphModal');
+           const graphElement = document.getElementById('graphElementName')?.innerText?.trim();
+           if (graphModal && !graphModal.classList.contains('hidden') && graphElement) {
+               drawDiagram(graphElement);
+           }
        }
 	  
        function toggleFullScreen() { const d = document, el = d.documentElement; if (!d.fullscreenElement) { (el.requestFullscreen || el.webkitRequestFullscreen).call(el); } else { d.exitFullscreen(); } }
@@ -1599,11 +1669,7 @@ function renderDetailStep() {
        const isOut = c.type === 'out';
        const termOrig = isOut ? c.de_terminal : c.para_terminal;
        const isPseudo = isKN(termOrig);
-       const isDiodeConnection = [c.de_elemento, c.para_elemento].some(element =>
-           /\b(DIODO|CATODO|ANODO)\b/.test(
-               String(element || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
-           )
-       );
+       const terminalComponentType = getTerminalComponentType(c.de_elemento, c.para_elemento);
        
        // --- CONTROL ANTICRUZADO ESTRICTO PARA MANGUITOS EN MODO VISION ---
        // La única columna fiable de manguito es de_manguito (K).
@@ -1628,11 +1694,11 @@ function renderDetailStep() {
            <div class="grid grid-cols-2 gap-4"><div><p class="text-[9px] font-bold uppercase opacity-60">ID</p><p class="text-sm font-bold truncate">${c.cod_cable}</p></div><div><p class="text-[9px] font-bold uppercase opacity-60">Secc.</p><p class="text-sm font-bold">${c.seccion} mm²</p></div></div>
            <div class="p-3 bg-sap-shell/5 rounded-xl flex items-center gap-3"><div class="w-10 h-10 bg-sap-blue/10 flex items-center justify-center rounded-lg text-sap-blue"><i data-lucide="arrow-right-left" class="w-5 h-5"></i></div><div class="min-w-0"><p class="text-[9px] font-bold uppercase opacity-60">${isOut?'Destino':'Origen'}</p><p class="text-base font-black truncate text-sap-blue">${peer}</p></div></div>
            <div class="p-3 bg-sap-bg dark:bg-slate-900 rounded-xl flex items-center gap-3">
-               ${isDiodeConnection
-                   ? `<div class="w-12 h-10 flex items-center justify-center shrink-0"><img src="${CRIMP_PATHS.terminales}diodo.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)"></div>`
+               ${terminalComponentType
+                   ? `<div class="w-12 h-10 flex items-center justify-center shrink-0"><img src="${CRIMP_PATHS.terminales}${terminalComponentType.toLowerCase()}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)"></div>`
                    : (!isPseudo ? `<div class="w-12 h-10 flex items-center justify-center shrink-0"><img src="${CRIMP_PATHS.terminales}${termOrig.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)"></div>` : '')}
                <div class="min-w-0 flex-1">
-                   <p class="text-[9px] font-bold uppercase opacity-60">${isDiodeConnection ? 'Diodo' : (isPseudo ? 'Instrucción' : 'Terminal')}</p>
+                   <p class="text-[9px] font-bold uppercase opacity-60">${terminalComponentType === 'VARISTOR' ? 'VARISTOR' : (terminalComponentType === 'DIODO' ? 'Diodo' : (isPseudo ? 'Instrucción' : 'Terminal'))}</p>
                    <p class="text-base font-black truncate">${isPseudo?termOrig.substring(3):termOrig}</p>
                    <p class="text-[10px] text-sap-blue italic truncate">${masterMap.terminals[termOrig?.trim()]||""}</p>
                </div>
@@ -1964,7 +2030,7 @@ function selectSidebarCrimpTool(encodedImage) {
                }
                // Mapeo de datos (igual en ambos formatos): A=posicion B=orden C=cod_cable D=seccion
                // E=longitud F=marcado G=cable_marca H=de_elemento I=de_punto J=de_terminal
-               // K=de_manguito L=de_marca M=para_elemento N=para_punto O=para_terminal P=observaciones
+               // K=de_manguito L=de_marca M=para_elemento N=para_punto O=para_terminal P=observaciones Q=lineas
                rawData = json.map(row => ({
                    posicion:       _sv(row['A']), orden:          _sv(row['B']),
                    cod_cable:      _sv(row['C']), seccion:        _sv(row['D']),
@@ -1974,12 +2040,13 @@ function selectSidebarCrimpTool(encodedImage) {
                    de_manguito:    _sv(row['K']), de_marca:       _sv(row['L']),
                    para_elemento:  _sv(row['M']), para_punto:     _sv(row['N']),
                    para_terminal:  _sv(row['O']), observaciones:  _sv(row['P']),
+                   lineas:         _sv(row['Q']),
                    desc_cable:         _sv(row['X']), desc_manguito:      _sv(row['Y']),
                    desc_terminal_de:   _sv(row['Z']), desc_terminal_para: _sv(row['AA'])
                })).filter(r => {
                    if (!_isNumPos(r.posicion)) return false;
-                   // Descartar filas donde solo A y/o B tienen dato y el resto (C-P) están vacías
-                   const DATA_KEYS = ['cod_cable','seccion','longitud','marcado','cable_marca',
+                   // Descartar filas donde solo A y/o B tienen dato y el resto (C-Q) están vacías
+                   const DATA_KEYS = ['cod_cable','seccion','longitud','marcado','cable_marca','lineas',
                        'de_elemento','de_punto','de_terminal','de_manguito','de_marca',
                        'para_elemento','para_punto','para_terminal','observaciones'];
                    return DATA_KEYS.some(k => (r[k]||'').trim() !== '');
@@ -2069,11 +2136,7 @@ function selectSidebarCrimpTool(encodedImage) {
            // confusión cuando varios cables comparten el mismo nombre/marca.
            const cableData = (cn.posicion ? rawData.find(wire => wire.posicion === cn.posicion) : null)
                || rawData.find(wire => getCableDisplayLabel(wire) === cn.label);
-           const isDiodeConnection = [cableData?.de_elemento, cableData?.para_elemento].some(element =>
-               /\b(DIODO|CATODO|ANODO)\b/.test(
-                   String(element || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
-               )
-           );
+           const terminalComponentType = getTerminalComponentType(cableData?.de_elemento, cableData?.para_elemento);
            const section = cableData ? cableData.seccion : "";
            const crimpData = getCrimpingInfo(cn.term, section);
            const sectionCheck = !isPseudoTerminal ? checkSectionCompatibility(cn.term, section) : null;
@@ -2095,16 +2158,16 @@ function selectSidebarCrimpTool(encodedImage) {
                     <div class="bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-600">
                         <div class="flex items-center gap-2 text-sap-blue dark:text-sky-400 mb-1">
                             <div class="w-12 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-500 overflow-hidden shrink-0">
-                                ${isDiodeConnection ?
-                                    `<img src="${CRIMP_PATHS.terminales}diodo.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)">`
+                                ${terminalComponentType ?
+                                    `<img src="${CRIMP_PATHS.terminales}${terminalComponentType.toLowerCase()}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)">`
                                     : (!isPseudoTerminal && cn.term ?
                                     `<img src="${CRIMP_PATHS.terminales}${cn.term.trim()}.jpg" class="max-h-full max-w-full object-contain" onerror="handlePinError(this)">`
                                     : (isPseudoTerminal ? '' : `<i data-lucide="pin" class="w-3.5 h-3.5"></i>`)
                                 )}
                             </div>
-                            <span class="font-bold uppercase tracking-tighter text-[10px]">${isDiodeConnection ? 'Diodo' : (isPseudoTerminal ? 'Instrucción' : 'Terminal')}</span>
+                            <span class="font-bold uppercase tracking-tighter text-[10px]">${terminalComponentType === 'VARISTOR' ? 'VARISTOR' : (terminalComponentType === 'DIODO' ? 'Diodo' : (isPseudoTerminal ? 'Instrucción' : 'Terminal'))}</span>
                         </div>
-                        <div class="${!isPseudoTerminal || isDiodeConnection ? 'pl-14' : ''}">
+                        <div class="${!isPseudoTerminal || terminalComponentType ? 'pl-14' : ''}">
                             <div class="font-black text-xs text-slate-800 dark:text-slate-100">${isPseudoTerminal ? cn.term.substring(3) : cn.term || 'S/T'}</div>
                             <div class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-tight">${tDesc}</div>
                         </div>
@@ -2413,7 +2476,29 @@ function openGraphicalView() {
    drawDiagram(s);
   requestAnimationFrame(() => { fitDiagramToScreen(); });
 }
- 
+
+function toggleLineCategoryDisplay() {
+   lineCategoryDisplayEnabled = !lineCategoryDisplayEnabled;
+   const button = document.getElementById('lineCategoryToggle');
+   const label = document.getElementById('lineCategoryToggleLabel');
+   if (button) {
+       const isEnabled = lineCategoryDisplayEnabled;
+       button.setAttribute('aria-pressed', String(isEnabled));
+       button.setAttribute('aria-label', `${isEnabled ? 'Desactivar' : 'Activar'} representación por tipo de línea`);
+       button.title = `${isEnabled ? 'Desactivar' : 'Activar'} colores y patrones según LINEAS`;
+       button.classList.toggle('bg-emerald-500', isEnabled);
+       button.classList.toggle('hover:bg-emerald-600', isEnabled);
+       button.classList.toggle('bg-sap-blue', !isEnabled);
+       button.classList.toggle('hover:bg-sap-darkBlue', !isEnabled);
+   }
+   if (label) label.textContent = `LINEAS: ${lineCategoryDisplayEnabled ? 'ON' : 'OFF'}`;
+
+   const elementName = document.getElementById('graphElementName')?.innerText?.trim();
+   if (elementName && !document.getElementById('graphModal')?.classList.contains('hidden')) {
+       drawDiagram(elementName);
+   }
+}
+
 function toggleMaterialPanel() {
    const s = filterText.trim();
    if (!s) return;
@@ -2503,27 +2588,63 @@ function closeGraphicalView() {
        function drawDiagram(elementName) {
    const svg = document.getElementById('diagramSvg'); if (!svg) return; svg.innerHTML = ''; 
    const search = elementName.toLowerCase();
+          const isDarkTheme = document.documentElement.classList.contains('dark');
+          const getLineasColor = connection => lineCategoryDisplayEnabled
+              ? getLineCategoryColor(connection?.lineas, isDarkTheme)
+              : '';
+          const getLineCategoryPattern = value => lineCategoryDisplayEnabled
+              ? getLineCategoryPatternStyle(value)
+              : '';
+          const getSharedLineCategory = connections => {
+              if (!lineCategoryDisplayEnabled) return '';
+              const categories = connections.map(connection => normalizeLineCategory(connection.lineas));
+              return categories.length && getLineCategoryConfig(categories[0]) &&
+                  categories.every(category => category === categories[0])
+                  ? categories[0]
+                  : '';
+          };
+          const getSharedLineasColor = connections => {
+              const category = getSharedLineCategory(connections);
+              return category ? getLineCategoryColor(category, isDarkTheme) : '';
+          };
    
    const allRelated = rawData.filter(r => (r.de_elemento||'').toLowerCase() === search || (r.para_elemento||'').toLowerCase() === search);
    const internalBridges = allRelated.filter(r => (r.de_elemento||'').toLowerCase() === search && (r.para_elemento||'').toLowerCase() === search);
    const isDiodeElement = value => /\bDIODO\b/.test(String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase());
+   const isVaristorElement = value => /\bVARISTOR\b/.test(String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase());
    const diodeGroups = new Map();
+   const varistorGroups = new Map();
    allRelated.forEach(connection => {
        const deElement = String(connection.de_elemento || '');
        const paraElement = String(connection.para_elemento || '');
        const isDiodeAtDe = isDiodeElement(deElement) && paraElement.toLowerCase() === search;
        const isDiodeAtPara = isDiodeElement(paraElement) && deElement.toLowerCase() === search;
-       if (!isDiodeAtDe && !isDiodeAtPara) return;
+       if (isDiodeAtDe || isDiodeAtPara) {
+           const label = getCableDisplayLabel(connection).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+           const isCathode = label === 'K' || /(^|[^A-Z])(CATODO|CATHODE)(?=$|[^A-Z])/.test(label);
+           const isAnode = label === 'A' || /(^|[^A-Z])(ANODO|ANODE)(?=$|[^A-Z])/.test(label);
+           if (isCathode !== isAnode) {
+               const diodeName = (isDiodeAtDe ? deElement : paraElement).trim().toUpperCase();
+               if (!diodeGroups.has(diodeName)) diodeGroups.set(diodeName, { cathodes: [], anodes: [] });
+               const pin = isDiodeAtDe ? connection.para_punto : connection.de_punto;
+               diodeGroups.get(diodeName)[isCathode ? 'cathodes' : 'anodes'].push({
+                   connection,
+                   pin,
+                   progressSide: isDiodeAtDe ? 'para' : 'de'
+               });
+           }
+       }
 
-       const label = getCableDisplayLabel(connection).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
-       const isCathode = label === 'K' || /(^|[^A-Z])(CATODO|CATHODE)(?=$|[^A-Z])/.test(label);
-       const isAnode = label === 'A' || /(^|[^A-Z])(ANODO|ANODE)(?=$|[^A-Z])/.test(label);
-       if (isCathode === isAnode) return;
-
-       const diodeName = (isDiodeAtDe ? deElement : paraElement).trim().toUpperCase();
-       if (!diodeGroups.has(diodeName)) diodeGroups.set(diodeName, { cathodes: [], anodes: [] });
-       const pin = isDiodeAtDe ? connection.para_punto : connection.de_punto;
-       diodeGroups.get(diodeName)[isCathode ? 'cathodes' : 'anodes'].push({ connection, pin });
+       const isVaristorAtDe = isVaristorElement(deElement) && paraElement.toLowerCase() === search;
+       const isVaristorAtPara = isVaristorElement(paraElement) && deElement.toLowerCase() === search;
+       if (!isVaristorAtDe && !isVaristorAtPara) return;
+       const varistorName = (isVaristorAtDe ? deElement : paraElement).trim().replace(/\s+/g, ' ').toUpperCase();
+       if (!varistorGroups.has(varistorName)) varistorGroups.set(varistorName, []);
+       varistorGroups.get(varistorName).push({
+           connection,
+           pin: isVaristorAtDe ? connection.para_punto : connection.de_punto,
+           progressSide: isVaristorAtDe ? 'para' : 'de'
+       });
    });
 
    const pinMap = new Map(); 
@@ -2546,9 +2667,11 @@ function closeGraphicalView() {
    const totalW = (colW * 2) + mainW + 100, totalH = (sortedPins.length * rowH) + 150;
    const pinYMap = {}; const mX = 50 + colW, sY = 80; 
    
-   sortedPins.forEach((pin, i) => { pinYMap[pin] = sY + (i * rowH); });
+    sortedPins.forEach((pin, i) => { pinYMap[pin] = sY + (i * rowH); });
     const diodePairs = [];
     const diodePositions = new Set();
+    const varistorPairs = [];
+    const varistorPositions = new Set();
     diodeGroups.forEach(group => {
         if (group.cathodes.length !== 1 || group.anodes.length !== 1) return;
         const cathode = group.cathodes[0], anode = group.anodes[0];
@@ -2559,21 +2682,55 @@ function closeGraphicalView() {
         diodePositions.add(cathodePosition);
         diodePositions.add(anodePosition);
     });
+    varistorGroups.forEach(group => {
+        if (group.length !== 2) return;
+        const [first, second] = group;
+        const firstPosition = String(first.connection.posicion);
+        const secondPosition = String(second.connection.posicion);
+        if (firstPosition === secondPosition || String(first.pin) === String(second.pin)
+            || pinYMap[first.pin] === undefined || pinYMap[second.pin] === undefined) return;
+        const [upper, lower] = pinYMap[first.pin] < pinYMap[second.pin] ? [first, second] : [second, first];
+        varistorPairs.push({ upper, lower });
+        varistorPositions.add(firstPosition);
+        varistorPositions.add(secondPosition);
+    });
     baseViewBox = { x: 0, y: 0, w: totalW, h: totalH }; updateViewBox();
    
    svg.innerHTML += `<rect x="${mX}" y="${sY-50}" width="${mainW}" height="35" rx="2" class="diag-header"/><text x="${mX+mainW/2}" y="${sY-28}" text-anchor="middle" fill="white" style="font-size:14px; font-weight:900">${elementName.toUpperCase()}</text>`;
+
+   const lineCategoriesInDiagram = lineCategoryDisplayEnabled ? [...new Set(allRelated
+       .map(connection => normalizeLineCategory(connection.lineas))
+       .filter(category => getLineCategoryConfig(category)))] : [];
+   if (lineCategoriesInDiagram.length) {
+       svg.innerHTML += `<g class="diag-line-legend" aria-label="Leyenda de tipos de línea">${lineCategoriesInDiagram.map((category, index) => {
+           const style = LINE_CATEGORY_STYLES[category];
+           const color = getLineCategoryColor(category, isDarkTheme);
+           const patternStyle = getLineCategoryPatternStyle(category);
+           return `<g><title>${style.label}</title><line x1="${10 + index * 125}" y1="26" x2="${34 + index * 125}" y2="26" class="diag-line" style="stroke:${color}; ${patternStyle}"/><text x="${40 + index * 125}" y="30" class="diag-text-label" style="font-size:9px; font-weight:800; pointer-events:none;">${style.symbol} ${style.label}</text></g>`;
+       }).join('')}</g>`;
+   }
    
    // 1. PUENTES INTERNOS
 internalBridges.forEach((b, idx) => {
     const y1 = pinYMap[b.de_punto], y2 = pinYMap[b.para_punto];
     if (y1 === undefined || y2 === undefined) return;
     const arcX = mX + mainW + 40 + (idx * 20);
+    const bridgeLeadOffset = 14;
+    const bridgeDirection = y1 <= y2 ? 1 : -1;
+    const bridgeY1 = y1 + bridgeDirection * bridgeLeadOffset;
+    const bridgeY2 = y2 - bridgeDirection * bridgeLeadOffset;
     const prog = progressMap[b.posicion] || { de: false, para: false };
-    const bridgeColor = (prog.de && prog.para) ? '#10b981' : '#f97316';
+    const bridgeCategory = lineCategoryDisplayEnabled ? getLineCategoryConfig(b.lineas) : null;
+    const isBridgeComplete = prog.de === true && prog.para === true;
+    const bridgeColor = isBridgeComplete ? '#10b981' : (getLineasColor(b) || '#f97316');
+    const bridgeDash = bridgeCategory ? bridgeCategory.dashArray : '6 3';
+    const bridgeDashAttribute = bridgeDash ? `stroke-dasharray="${bridgeDash}"` : '';
+    const bridgeLineCapStyle = bridgeCategory?.lineCap ? `stroke-linecap:${bridgeCategory.lineCap};` : '';
+    const bridgeLabelColor = isBridgeComplete ? '#10b981' : (bridgeCategory ? getLineasColor(b) : bridgeColor);
     svg.innerHTML += `<g class="diag-connection" data-positions="${encodeURIComponent(String(b.posicion))}">`;
     
     // Dibuja la manguera física del puente (Línea discontinua)
-    svg.innerHTML += `<path d="M ${mX + mainW} ${y1} L ${arcX} ${y1} L ${arcX} ${y2} L ${mX + mainW} ${y2}" fill="none" stroke="${bridgeColor}" stroke-width="3" stroke-dasharray="6 3" opacity="0.8" />`;
+    svg.innerHTML += `<path d="M ${mX + mainW} ${y1} L ${mX + mainW} ${bridgeY1} L ${arcX} ${bridgeY1} L ${arcX} ${bridgeY2} L ${mX + mainW} ${bridgeY2} L ${mX + mainW} ${y2}" fill="none" stroke="${bridgeColor}" stroke-width="3" ${bridgeDashAttribute} style="${bridgeLineCapStyle}" opacity="0.8" />`;
     
     // [NUEVO] Dibuja los bornes o puntos de conexión del puente sobre el borde de la caja del elemento
     svg.innerHTML += `<circle cx="${mX + mainW}" cy="${y1}" r="4" fill="${bridgeColor}" stroke="${bridgeColor === '#10b981' ? '#059669' : '#ea580c'}" stroke-width="1" opacity="0.9" pointer-events="none" />`;
@@ -2581,7 +2738,7 @@ internalBridges.forEach((b, idx) => {
     
     // Dibuja la etiqueta de texto con la marca del cable puente
     const bridgeLabel = getCableDisplayLabel(b);
-    svg.innerHTML += ` <text x="${arcX + 14}" y="${(y1 + y2) / 2}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: bridgeLabel, posicion: b.posicion}))}')" transform="rotate(-90, ${arcX + 14}, ${(y1 + y2) / 2})" style="fill:${bridgeColor}; font-size:10px; font-weight:900; letter-spacing: 0.5px;"> ${bridgeLabel} </text></g>`;
+    svg.innerHTML += ` <text x="${arcX + 14}" y="${(y1 + y2) / 2}" text-anchor="middle" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'cable', label: bridgeLabel, posicion: b.posicion}))}')" transform="rotate(-90, ${arcX + 14}, ${(y1 + y2) / 2})" style="fill:${bridgeLabelColor}; font-size:10px; font-weight:900; letter-spacing: 0.5px;"> ${bridgeLabel} </text></g>`;
 });
 
    diodePairs.forEach(({ cathode, anode }, idx) => {
@@ -2601,10 +2758,18 @@ internalBridges.forEach((b, idx) => {
        const trianglePoints = cathodeIsAbove
            ? `${diodeX - 10},${centerY + 8} ${diodeX + 10},${centerY + 8} ${diodeX},${centerY - 5}`
            : `${diodeX - 10},${centerY - 8} ${diodeX + 10},${centerY - 8} ${diodeX},${centerY + 5}`;
-       const diodeColor = [cathode.connection, anode.connection].every(connection => {
-           const progress = progressMap[connection.posicion] || {};
-           return progress.de === true && progress.para === true;
-       }) ? '#10b981' : '#f97316';
+       const cathodeConnected = (progressMap[cathode.connection.posicion] || {})[cathode.progressSide] === true;
+       const anodeConnected = (progressMap[anode.connection.posicion] || {})[anode.progressSide] === true;
+       const diodeCompletionColor = cathodeConnected && anodeConnected ? '#10b981' : '#f97316';
+       const cathodeLineColor = getLineasColor(cathode.connection);
+       const anodeLineColor = getLineasColor(anode.connection);
+       const diodeColor = diodeCompletionColor;
+       const cathodeWireColor = cathodeConnected ? '#10b981' : (cathodeLineColor || diodeColor);
+       const anodeWireColor = anodeConnected ? '#10b981' : (anodeLineColor || diodeColor);
+       const cathodeLabelColor = cathodeConnected ? '#10b981' : (cathodeLineColor || cathodeWireColor);
+       const anodeLabelColor = anodeConnected ? '#10b981' : (anodeLineColor || anodeWireColor);
+       const cathodePatternStyle = getLineCategoryPattern(cathode.connection.lineas);
+       const anodePatternStyle = getLineCategoryPattern(anode.connection.lineas);
        const topY = Math.min(cathodeLeadY, anodeLeadY), bottomY = Math.max(cathodeLeadY, anodeLeadY);
        const cathodeInfo = encodeURIComponent(JSON.stringify({
            type: 'cable', label: 'CÁTODO', posicion: cathode.connection.posicion
@@ -2617,16 +2782,49 @@ internalBridges.forEach((b, idx) => {
 
        svg.innerHTML += `<g class="diag-connection" data-positions="${positions}">
            <title>DIODO: CÁTODO (K), ÁNODO (A)</title>
-           <path d="M ${edgeX} ${yCathode} L ${edgeX} ${cathodeLeadY} L ${diodeX} ${cathodeLeadY}" class="diag-line" style="stroke:${diodeColor};"/>
-           <path d="M ${edgeX} ${yAnode} L ${edgeX} ${anodeLeadY} L ${diodeX} ${anodeLeadY}" class="diag-line" style="stroke:${diodeColor};"/>
+           <path d="M ${edgeX} ${yCathode} L ${edgeX} ${cathodeLeadY} L ${diodeX} ${cathodeLeadY}" class="diag-line" style="stroke:${cathodeWireColor}; ${cathodePatternStyle}"/>
+           <path d="M ${edgeX} ${yAnode} L ${edgeX} ${anodeLeadY} L ${diodeX} ${anodeLeadY}" class="diag-line" style="stroke:${anodeWireColor}; ${anodePatternStyle}"/>
            <line x1="${diodeX}" y1="${topY}" x2="${diodeX}" y2="${upperSymbolY}" class="diag-line" style="stroke:${diodeColor};"/>
            <line x1="${diodeX}" y1="${lowerSymbolY}" x2="${diodeX}" y2="${bottomY}" class="diag-line" style="stroke:${diodeColor};"/>
            <polygon points="${trianglePoints}" fill="${diodeColor}" stroke="${diodeColor}" stroke-width="1.5"/>
            <line x1="${diodeX - 11}" y1="${cathodeBarY}" x2="${diodeX + 11}" y2="${cathodeBarY}" stroke="${diodeColor}" stroke-width="3"/>
-           <circle cx="${edgeX}" cy="${yCathode}" r="4" fill="${diodeColor}" pointer-events="none"/>
-           <circle cx="${edgeX}" cy="${yAnode}" r="4" fill="${diodeColor}" pointer-events="none"/>
-           <text x="${diodeX + 15}" y="${cathodeLabelY}" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${cathodeInfo}')" style="fill:${diodeColor}; font-size:9px; font-weight:900;">CÁTODO (K)</text>
-           <text x="${diodeX + 15}" y="${anodeLabelY}" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${anodeInfo}')" style="fill:${diodeColor}; font-size:9px; font-weight:900;">ÁNODO (A)</text>
+           <circle cx="${edgeX}" cy="${yCathode}" r="4" fill="${cathodeWireColor}" pointer-events="none"/>
+           <circle cx="${edgeX}" cy="${yAnode}" r="4" fill="${anodeWireColor}" pointer-events="none"/>
+           <text x="${diodeX + 15}" y="${cathodeLabelY}" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${cathodeInfo}')" style="fill:${cathodeLabelColor}; font-size:9px; font-weight:900;">CÁTODO (K)</text>
+           <text x="${diodeX + 15}" y="${anodeLabelY}" class="diag-text-wire cursor-pointer" onclick="showInfoPopover(event, '${anodeInfo}')" style="fill:${anodeLabelColor}; font-size:9px; font-weight:900;">ÁNODO (A)</text>
+       </g>`;
+   });
+
+   varistorPairs.forEach(({ upper, lower }, idx) => {
+       const upperY = pinYMap[upper.pin], lowerY = pinYMap[lower.pin];
+       const edgeX = mX + mainW;
+       const varistorX = edgeX + 40 + (internalBridges.length + diodePairs.length + idx) * 20;
+       const centerY = (upperY + lowerY) / 2;
+       const upperLeadY = upperY + 14;
+       const lowerLeadY = lowerY - 14;
+       const symbolTopY = centerY - 12;
+       const symbolBottomY = centerY + 12;
+       const upperConnected = (progressMap[upper.connection.posicion] || {})[upper.progressSide] === true;
+       const lowerConnected = (progressMap[lower.connection.posicion] || {})[lower.progressSide] === true;
+       const symbolColor = upperConnected && lowerConnected ? '#10b981' : '#f97316';
+       const upperCategoryColor = getLineasColor(upper.connection);
+       const lowerCategoryColor = getLineasColor(lower.connection);
+       const upperWireColor = upperConnected ? '#10b981' : (upperCategoryColor || symbolColor);
+       const lowerWireColor = lowerConnected ? '#10b981' : (lowerCategoryColor || symbolColor);
+       const upperPatternStyle = getLineCategoryPattern(upper.connection.lineas);
+       const lowerPatternStyle = getLineCategoryPattern(lower.connection.lineas);
+       const positions = [upper.connection.posicion, lower.connection.posicion]
+           .map(position => encodeURIComponent(String(position))).join('|');
+       svg.innerHTML += `<g class="diag-connection" data-positions="${positions}">
+           <title>VARISTOR</title>
+           <path d="M ${edgeX} ${upperY} L ${edgeX} ${upperLeadY} L ${varistorX} ${upperLeadY}" class="diag-line" style="stroke:${upperWireColor}; ${upperPatternStyle}"/>
+           <path d="M ${edgeX} ${lowerY} L ${edgeX} ${lowerLeadY} L ${varistorX} ${lowerLeadY}" class="diag-line" style="stroke:${lowerWireColor}; ${lowerPatternStyle}"/>
+           <line x1="${varistorX}" y1="${upperLeadY}" x2="${varistorX}" y2="${symbolTopY}" class="diag-line" style="stroke:${upperWireColor};"/>
+           <line x1="${varistorX}" y1="${symbolBottomY}" x2="${varistorX}" y2="${lowerLeadY}" class="diag-line" style="stroke:${lowerWireColor};"/>
+           <rect x="${varistorX - 8}" y="${symbolTopY}" width="16" height="24" fill="${isDarkTheme ? '#1e293b' : '#ffffff'}" stroke="${symbolColor}" stroke-width="2"/>
+           <line x1="${varistorX - 12}" y1="${centerY + 16}" x2="${varistorX + 12}" y2="${centerY - 16}" stroke="${symbolColor}" stroke-width="2.5"/>
+           <circle cx="${edgeX}" cy="${upperY}" r="4" fill="${upperWireColor}" pointer-events="none"/>
+           <circle cx="${edgeX}" cy="${lowerY}" r="4" fill="${lowerWireColor}" pointer-events="none"/>
        </g>`;
    });
  
@@ -2668,7 +2866,7 @@ internalBridges.forEach((b, idx) => {
        const pinPositions = [...new Set([...pD.in, ...pD.out].map(connection => String(connection.posicion)))].map(encodeURIComponent).join('|');
     svg.innerHTML += `<g class="diag-connection diag-pin-connection" data-pin="${encodeURIComponent(String(pin))}" data-positions="${pinPositions}"><rect x="${mX}" y="${y-15}" width="${mainW}" height="30" rx="2" class="diag-block diag-block-pin" style="${pinColor}" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'pin', pin, connections: pCs}))}')"/><text x="${mX+mainW/2}" y="${y+5}" text-anchor="middle" class="diag-text-main" style="fill:${pinTextColor}; pointer-events:none;">${pin}</text></g>`;
  
-       const extIn = pD.in.filter(c => (c.de_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)));
+       const extIn = pD.in.filter(c => (c.de_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)) && !varistorPositions.has(String(c.posicion)));
        if (extIn.length > 0) {
            const stubX = mX - 100, blockRightEdge = stubX - 100;
            const anyLocalOk = extIn.some(c => (progressMap[c.posicion] || {}).para === true && getCableDisplayLabel(c) !== '');
@@ -2687,9 +2885,11 @@ internalBridges.forEach((b, idx) => {
                const isLocalOk = (progressMap[c.posicion] || {}).para === true;
                const lY = extInConCable.length > 1 ? y+(idx-(extInConCable.length-1)/2)*32 : y;
                const xInicio = extInConCable.length > 1 ? stubX : mX;
-               const lineStyle = isBusbar ? `stroke:#a855f7; stroke-dasharray:4 3;` : `${isLocalOk?'stroke:#10b981;':''}`;
+               const lineTypeColor = getLineasColor(c);
+               const lineColor = isLocalOk ? '#10b981' : lineTypeColor;
+               const lineStyle = `${lineColor ? `stroke:${lineColor};` : ''}${getLineCategoryPattern(c.lineas)}`;
                const wireLabel = isBusbar ? 'BUSBAR' : getCableDisplayLabel(c);
-               const wireColor = isBusbar ? '#a855f7' : `${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}`;
+               const wireColor = isBusbar ? '#a855f7' : (lineTypeColor || lineColor) ? `fill:${lineTypeColor || lineColor}; font-weight:900;` : 'font-size: 9px;';
                     svg.innerHTML += `<g class="diag-connection" data-positions="${encodeURIComponent(String(c.posicion))}"><line x1="${xInicio}" y1="${lY}" x2="${blockRightEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
                    <rect x="${blockRightEdge - 160}" y="${lY-12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${c.de_elemento}')"/>
                    <text x="${document.dir === 'rtl' ? blockRightEdge - 8 : blockRightEdge - 152}" y="${lY+4}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${c.de_elemento.toUpperCase()}</text>
@@ -2698,12 +2898,15 @@ internalBridges.forEach((b, idx) => {
            });
            if (extInConCable.length > 1) {
                const branchPositions = extInConCable.map(connection => encodeURIComponent(String(connection.posicion))).join('|');
-               svg.innerHTML += `<g class="diag-connection" data-positions="${branchPositions}"><line x1="${mX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>
-                                 <line x1="${stubX}" y1="${y+(-(extInConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extInConCable.length-1)/2)*32}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/></g>`;
+               const sharedCategory = getSharedLineCategory(extInConCable);
+               const branchColor = anyLocalOk ? '#10b981' : getSharedLineasColor(extInConCable);
+               const branchStyle = `${branchColor ? `stroke:${branchColor};` : ''}${sharedCategory ? getLineCategoryPatternStyle(sharedCategory) : ''}`;
+               svg.innerHTML += `<g class="diag-connection" data-positions="${branchPositions}"><line x1="${mX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${branchStyle}"/>
+                                 <line x1="${stubX}" y1="${y+(-(extInConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extInConCable.length-1)/2)*32}" class="diag-line" style="${branchStyle}"/></g>`;
            }
        }
  
-       const extOut = pD.out.filter(c => (c.para_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)));
+       const extOut = pD.out.filter(c => (c.para_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)) && !varistorPositions.has(String(c.posicion)));
        if (extOut.length > 0) {
            const origX = mX + mainW, stubX = origX + 100, blockLeftEdge = stubX + 100;
            const anyLocalOk = extOut.some(c => (progressMap[c.posicion] || {}).de === true && getCableDisplayLabel(c) !== '');
@@ -2722,9 +2925,11 @@ internalBridges.forEach((b, idx) => {
                const isLocalOk = (progressMap[c.posicion] || {}).de === true;
                const lY = extOutConCable.length > 1 ? y+(idx-(extOutConCable.length-1)/2)*32 : y;
                const xInicio = extOutConCable.length > 1 ? stubX : origX;
-               const lineStyle = isBusbar ? `stroke:#a855f7; stroke-dasharray:4 3;` : `${isLocalOk?'stroke:#10b981;':''}`;
+               const lineTypeColor = getLineasColor(c);
+               const lineColor = isLocalOk ? '#10b981' : lineTypeColor;
+               const lineStyle = `${lineColor ? `stroke:${lineColor};` : ''}${getLineCategoryPattern(c.lineas)}`;
                const wireLabel = isBusbar ? 'BUSBAR' : getCableDisplayLabel(c);
-               const wireColor = isBusbar ? '#a855f7' : `${isLocalOk?'fill:#10b981; font-weight:900;':'font-size: 9px;'}`;
+               const wireColor = isBusbar ? '#a855f7' : (lineTypeColor || lineColor) ? `fill:${lineTypeColor || lineColor}; font-weight:900;` : 'font-size: 9px;';
                     svg.innerHTML += `<g class="diag-connection" data-positions="${encodeURIComponent(String(c.posicion))}"><line x1="${xInicio}" y1="${lY}" x2="${blockLeftEdge}" y2="${lY}" class="diag-line" style="${lineStyle}"/>
                    <rect x="${blockLeftEdge}" y="${lY-12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${c.para_elemento}')"/>
                    <text x="${document.dir === 'rtl' ? blockLeftEdge + 10 : blockLeftEdge + 152}" y="${lY+4}" text-anchor="${document.dir === 'rtl' ? 'start' : 'end'}" class="diag-text-main" style="font-size:11px; pointer-events:none;">${c.para_elemento.toUpperCase()}</text>
@@ -2733,8 +2938,11 @@ internalBridges.forEach((b, idx) => {
            });
            if (extOutConCable.length > 1) {
                const branchPositions = extOutConCable.map(connection => encodeURIComponent(String(connection.posicion))).join('|');
-               svg.innerHTML += `<g class="diag-connection" data-positions="${branchPositions}"><line x1="${origX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/>
-                                 <line x1="${stubX}" y1="${y+(-(extOutConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extOutConCable.length-1)/2)*32}" class="diag-line" style="${anyLocalOk?'stroke:#10b981;':''}"/></g>`;
+               const sharedCategory = getSharedLineCategory(extOutConCable);
+               const branchColor = anyLocalOk ? '#10b981' : getSharedLineasColor(extOutConCable);
+               const branchStyle = `${branchColor ? `stroke:${branchColor};` : ''}${sharedCategory ? getLineCategoryPatternStyle(sharedCategory) : ''}`;
+               svg.innerHTML += `<g class="diag-connection" data-positions="${branchPositions}"><line x1="${origX}" y1="${y}" x2="${stubX}" y2="${y}" class="diag-line" style="${branchStyle}"/>
+                                 <line x1="${stubX}" y1="${y+(-(extOutConCable.length-1)/2)*32}" x2="${stubX}" y2="${y+((extOutConCable.length-1)/2)*32}" class="diag-line" style="${branchStyle}"/></g>`;
            }
        }
    });
@@ -2762,28 +2970,37 @@ internalBridges.forEach((b, idx) => {
        const ys = conns.map(c => pinYMap[c.de_punto]);
        const minY = Math.min(...ys), maxY = Math.max(...ys);
        const midY = (minY + maxY) / 2;
+       const busbarColor = getSharedLineasColor(conns) || '#a855f7';
        const barX = origX_bb + 8;
     svg.innerHTML += `<g class="diag-connection" data-positions="${conns.map(c => encodeURIComponent(String(c.posicion))).join('|')}">`;
 
        // Líneas cortas de cada pin al barX
        conns.forEach(c => {
            const py = pinYMap[c.de_punto];
-           svg.innerHTML += `<line x1="${origX_bb}" y1="${py}" x2="${barX}" y2="${py}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:3 2;"/>`;
+           const isLocalOk = (progressMap[c.posicion] || {}).de === true;
+           const connectionColor = lineCategoryDisplayEnabled && isLocalOk
+               ? '#10b981'
+               : (getLineasColor(c) || '#a855f7');
+           const connectionPattern = lineCategoryDisplayEnabled && getLineCategoryConfig(c.lineas)
+               ? getLineCategoryPattern(c.lineas)
+               : 'stroke-dasharray:3 2;';
+           svg.innerHTML += `<line x1="${origX_bb}" y1="${py}" x2="${barX}" y2="${py}" class="diag-line" style="stroke:${connectionColor}; ${connectionPattern}"/>`;
        });
        // Barra vertical (el busbar físico)
-       svg.innerHTML += `<line x1="${barX}" y1="${minY - 14}" x2="${barX}" y2="${maxY + 14}" class="diag-line" style="stroke:#a855f7; stroke-width:5; stroke-linecap:round;" pointer-events="none"/>`;
+       svg.innerHTML += `<line x1="${barX}" y1="${minY - 14}" x2="${barX}" y2="${maxY + 14}" class="diag-line" style="stroke:${busbarColor}; stroke-width:5; stroke-linecap:round;" pointer-events="none"/>`;
        // Círculos en cada punto de conexión
        conns.forEach(c => {
-           svg.innerHTML += `<circle cx="${barX}" cy="${pinYMap[c.de_punto]}" r="5" fill="#a855f7" stroke="#7c3aed" stroke-width="1.5" pointer-events="none"/>`;
+           const connectionColor = getLineasColor(c) || '#a855f7';
+           svg.innerHTML += `<circle cx="${barX}" cy="${pinYMap[c.de_punto]}" r="5" fill="${connectionColor}" stroke="${connectionColor}" stroke-width="1.5" pointer-events="none"/>`;
        });
        // Etiqueta BUSBAR rotada
        if (conns.length > 1) {
-           svg.innerHTML += `<text x="${barX + 15}" y="${midY}" text-anchor="middle" transform="rotate(-90, ${barX + 15}, ${midY})" style="fill:#a855f7; font-size:9px; font-weight:900; letter-spacing:0.5px;" pointer-events="none">BUSBAR</text>`;
+           svg.innerHTML += `<text x="${barX + 15}" y="${midY}" text-anchor="middle" transform="rotate(-90, ${barX + 15}, ${midY})" style="fill:${busbarColor}; font-size:9px; font-weight:900; letter-spacing:0.5px;" pointer-events="none">BUSBAR</text>`;
        }
        // Ruta punteada por debajo de los pines BUSBAR → evita superposición con cables
        const bbRouteY = maxY + 35;
-       svg.innerHTML += `<line x1="${barX}" y1="${maxY + 14}" x2="${barX}" y2="${bbRouteY}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:4 3;"/>`;
-       svg.innerHTML += `<line x1="${barX}" y1="${bbRouteY}" x2="${destX_bb}" y2="${bbRouteY}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:4 3;"/>`;
+       svg.innerHTML += `<line x1="${barX}" y1="${maxY + 14}" x2="${barX}" y2="${bbRouteY}" class="diag-line" style="stroke:${busbarColor}; stroke-dasharray:4 3;"/>`;
+       svg.innerHTML += `<line x1="${barX}" y1="${bbRouteY}" x2="${destX_bb}" y2="${bbRouteY}" class="diag-line" style="stroke:${busbarColor}; stroke-dasharray:4 3;"/>`;
        // Bloque destino
        const para_elem = conns[0].para_elemento;
        svg.innerHTML += `<rect x="${destX_bb}" y="${bbRouteY - 12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${para_elem}')"/>`;
@@ -2812,28 +3029,37 @@ internalBridges.forEach((b, idx) => {
        const ys = conns.map(c => pinYMap[c.para_punto]);
        const minY = Math.min(...ys), maxY = Math.max(...ys);
        const midY = (minY + maxY) / 2;
+       const busbarColor = getSharedLineasColor(conns) || '#a855f7';
        const barX = mXLeft_bb - 8;
     svg.innerHTML += `<g class="diag-connection" data-positions="${conns.map(c => encodeURIComponent(String(c.posicion))).join('|')}">`;
 
        // Líneas cortas de cada pin al barX
        conns.forEach(c => {
            const py = pinYMap[c.para_punto];
-           svg.innerHTML += `<line x1="${barX}" y1="${py}" x2="${mXLeft_bb}" y2="${py}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:3 2;"/>`;
+           const isLocalOk = (progressMap[c.posicion] || {}).para === true;
+           const connectionColor = lineCategoryDisplayEnabled && isLocalOk
+               ? '#10b981'
+               : (getLineasColor(c) || '#a855f7');
+           const connectionPattern = lineCategoryDisplayEnabled && getLineCategoryConfig(c.lineas)
+               ? getLineCategoryPattern(c.lineas)
+               : 'stroke-dasharray:3 2;';
+           svg.innerHTML += `<line x1="${barX}" y1="${py}" x2="${mXLeft_bb}" y2="${py}" class="diag-line" style="stroke:${connectionColor}; ${connectionPattern}"/>`;
        });
        // Barra vertical
-       svg.innerHTML += `<line x1="${barX}" y1="${minY - 14}" x2="${barX}" y2="${maxY + 14}" class="diag-line" style="stroke:#a855f7; stroke-width:5; stroke-linecap:round;" pointer-events="none"/>`;
+       svg.innerHTML += `<line x1="${barX}" y1="${minY - 14}" x2="${barX}" y2="${maxY + 14}" class="diag-line" style="stroke:${busbarColor}; stroke-width:5; stroke-linecap:round;" pointer-events="none"/>`;
        // Círculos
        conns.forEach(c => {
-           svg.innerHTML += `<circle cx="${barX}" cy="${pinYMap[c.para_punto]}" r="5" fill="#a855f7" stroke="#7c3aed" stroke-width="1.5" pointer-events="none"/>`;
+           const connectionColor = getLineasColor(c) || '#a855f7';
+           svg.innerHTML += `<circle cx="${barX}" cy="${pinYMap[c.para_punto]}" r="5" fill="${connectionColor}" stroke="${connectionColor}" stroke-width="1.5" pointer-events="none"/>`;
        });
        // Etiqueta
        if (conns.length > 1) {
-           svg.innerHTML += `<text x="${barX - 15}" y="${midY}" text-anchor="middle" transform="rotate(-90, ${barX - 15}, ${midY})" style="fill:#a855f7; font-size:9px; font-weight:900; letter-spacing:0.5px;" pointer-events="none">BUSBAR</text>`;
+           svg.innerHTML += `<text x="${barX - 15}" y="${midY}" text-anchor="middle" transform="rotate(-90, ${barX - 15}, ${midY})" style="fill:${busbarColor}; font-size:9px; font-weight:900; letter-spacing:0.5px;" pointer-events="none">BUSBAR</text>`;
        }
        // Ruta punteada por debajo de los pines BUSBAR → evita superposición con cables
        const bbRouteY = maxY + 35;
-       svg.innerHTML += `<line x1="${barX}" y1="${maxY + 14}" x2="${barX}" y2="${bbRouteY}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:4 3;"/>`;
-       svg.innerHTML += `<line x1="${destXLeft_bb + 160}" y1="${bbRouteY}" x2="${barX}" y2="${bbRouteY}" class="diag-line" style="stroke:#a855f7; stroke-dasharray:4 3;"/>`;
+       svg.innerHTML += `<line x1="${barX}" y1="${maxY + 14}" x2="${barX}" y2="${bbRouteY}" class="diag-line" style="stroke:${busbarColor}; stroke-dasharray:4 3;"/>`;
+       svg.innerHTML += `<line x1="${destXLeft_bb + 160}" y1="${bbRouteY}" x2="${barX}" y2="${bbRouteY}" class="diag-line" style="stroke:${busbarColor}; stroke-dasharray:4 3;"/>`;
        // Bloque origen
        const de_elem = conns[0].de_elemento;
        svg.innerHTML += `<rect x="${destXLeft_bb}" y="${bbRouteY - 12}" width="160" height="24" rx="2" class="diag-block diag-block-side" onclick="navigateToElement('${de_elem}')"/>`;
@@ -3312,6 +3538,13 @@ function handleHelpEasterEgg() {
                        const changes = errorsMap[r.posicion] || {};
                        const changedValue = changes[c.key] !== undefined ? changes[c.key] : undefined;
                        const v = changedValue !== undefined ? changedValue : (r[c.key]||'');
+                       if (c.key === 'lineas') {
+                           const lineCategory = getLineCategoryConfig(v);
+                           const badge = lineCategory
+                               ? `<span class="inline-flex items-center gap-1 rounded border px-2 py-1 text-[10px] font-bold leading-none ${lineCategory.badgeClass}" title="Tipo de línea: ${lineCategory.label}" aria-label="Tipo de línea: ${lineCategory.label}"><span aria-hidden="true">${lineCategory.symbol}</span><span>${lineCategory.label}</span></span>`
+                               : '';
+                           return `<td class="p-3 text-xs border-r border-sap-border/20">${badge}</td>`;
+                       }
                        const isElementCol = v && c.key.includes('_elemento');
                        const isCellModified = changedValue !== undefined || (c.key === 'orden' && r.orderChanged && !r.deleted);
                        const cellClass = isCellModified ? (c.key === 'orden' && r.orderChanged ? 'cell-order-changed' : 'cell-modified') : '';

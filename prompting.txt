@@ -1,3 +1,24 @@
+2026-10-20 14:57:56 (colorear cables según la columna LINEAS)
+PROMPT:
+El Excel puede incluir la columna opcional LINEAS en Q con ALTERNA, CONTINUA
+o SEÑALES, en distintas combinaciones de mayúsculas y tildes. Colorear los
+cables en rojo, amarillo o azul claro según corresponda, usando tonos visibles
+en modo claro y oscuro; sin datos, conservar los colores actuales.
+
+SOLUCIÓN:
+- js/app.js: se importa Q como lineas (vacío en informes antiguos) y se incluye
+  en la validación de filas y en los cables añadidos manualmente.
+- El esquema normaliza mayúsculas y tildes y aplica los colores de ALTERNA,
+  CONTINUA y SEÑALES a cables, puentes, diodos y barras colectoras. Los grupos
+  compartidos solo toman un color de categoría cuando todos sus cables coinciden.
+- Se usan tonos de rojo, amarillo/ámbar y azul claro adaptados al tema. Al
+  cambiar entre modo claro y oscuro se redibuja el esquema; los datos vacíos o
+  no reconocidos conservan el estilo previo y el color de progreso.
+- Verificado importando Excel con Q y sin Q, los tres colores y sus variantes,
+  estados de progreso, puentes, diodos, barras colectoras y cambio de tema.
+- VERSION se actualiza a 0.18.0 por tratarse de una mejora.
+================================================================================
+
 2026-10-20 14:50:33 (mostrar el diodo también en Modo VISION)
 PROMPT:
 En el modo VISION también se mostrará la imagen del diodo en lugar de
@@ -1465,6 +1486,33 @@ SOLUCIÓN:
       las incidencias correspondientes al triángulo pulsado.
     ================================================================================
 
+    2026-10-21 08:47:04 (abreviar categorías de línea)
+    PROMPT:
+    Sustituir ALTERNA por AC, CONTINUA por DC y SEÑALES por SIG en la lista y la
+    leyenda, añadiendo los símbolos de la imagen adjunta. Corrección: usar SIG, no SG.
+
+    SOLUCIÓN:
+    - js/app.js: las etiquetas visibles pasan a `~ AC`, `= DC` y `≋ ○ SIG`.
+    - Se mantienen los valores de origen ALTERNA, CONTINUA y SEÑALES para reconocer
+      los informes existentes. Se actualiza VERSION a 0.19.1.
+    ================================================================================
+
+    2026-10-21 08:26:32 (identificar categorías LINEAS en lista y esquema)
+    PROMPT:
+    Añadir identificación clara de ALTERNA, CONTINUA y SEÑALES en la lista de conexiones
+    y en el esquema. Las filas sin LINEAS deben seguir funcionando como hasta ahora;
+    al completar un cable, debe conservarse el indicador verde de progreso.
+
+    SOLUCIÓN:
+    - js/app.js: se añade la columna configurable TIPO LÍNEA, visible por defecto,
+      con etiquetas textuales y símbolos; los valores vacíos o no reconocidos no generan
+      errores ni muestran una etiqueta.
+    - En el esquema, las categorías se diferencian por patrón de trazo y leyenda; el
+      estado completado vuelve a prevalecer con el color verde, conservando el patrón y
+      el color de categoría en la etiqueta del cable.
+    - Se actualiza VERSION a 0.19.0.
+    ================================================================================
+
     2026-09-04 10:15:38 (limpiar filtros de errores con la papelera)
     PROMPT:
     Al pulsar la papelera, borrar también los filtros activados desde los triángulos
@@ -1474,4 +1522,76 @@ SOLUCIÓN:
     - js/app.js, clearAllFilters(): se añade el reinicio de filterTerminalError junto
       al resto de filtros. La papelera de escritorio y la versión móvil quedan cubiertas
       porque ambas utilizan esta función común.
+    ================================================================================
+
+    2026-10-21 08:52:38 (quitar círculo del símbolo SIG)
+    PROMPT:
+    En señales, eliminar el círculo del símbolo mostrado en la leyenda y la lista.
+
+    SOLUCIÓN:
+    - js/app.js: el símbolo de SIG conserva la onda y elimina el círculo.
+    - Se actualiza VERSION a 0.19.2.
+    ================================================================================
+
+    2026-10-21 09:36:00 (desplazar trazos de puentes)
+    PROMPT:
+    Desplazar un poco los puentes, como los diodos, para evitar que sus trazos se
+    solapen con las líneas de los cables.
+
+    SOLUCIÓN:
+    - js/app.js, drawDiagram(): se añaden quiebros de 14 px hacia el interior del puente
+      en ambos extremos, dejando el tramo principal separado de los cables rectos.
+    - Se actualiza VERSION a 0.20.1.
+    ================================================================================
+
+    2026-10-21 09:24:04 (activar categorías de línea en esquema)
+    PROMPT:
+    Añadir al modo esquema gráfico un botón para activar o desactivar la representación
+    de categorías LINEAS. Desactivado debe conservarse la representación tradicional.
+
+    SOLUCIÓN:
+    - index.html: se añade el botón LINEAS ON/OFF al encabezado del esquema.
+    - js/app.js: el modo empieza desactivado; al activarlo aplica colores, patrones y
+      leyenda por categoría. Al desactivarlo elimina esos estilos y recupera los colores
+      de progreso tradicionales. El estado verde de completado mantiene prioridad.
+    - Se actualiza VERSION a 0.20.0.
+    ================================================================================
+
+    2026-10-21 09:58:36 (soporte visual de varistores)
+    PROMPT:
+    Cuando en las columnas "De Elemento" o "Para Elemento" aparezca la palabra
+    VARISTOR, en mayúsculas o minúsculas, dibujar un puente con el símbolo eléctrico
+    del varistor adjunto. En la ventana donde aparece TERMINAL, mostrar VARISTOR y la
+    imagen varistor.jpg.
+
+    SOLUCIÓN:
+    - js/app.js: se detecta VARISTOR sin distinguir mayúsculas/minúsculas en ambos
+      extremos. En Modo VISION y en el popover se muestra VARISTOR y
+      Terminales/varistor.jpg; se conserva la representación previa del diodo.
+    - drawDiagram(): se agrupan parejas inequívocas de conexiones del varistor, tanto
+      desde "De Elemento" como desde "Para Elemento", y se dibuja el resistor con su
+      trazo diagonal y líneas separadas. Si los datos no permiten formar una pareja
+      inequívoca, se mantienen las conexiones normales.
+    - Se conserva el color verde de conexiones completadas y la representación por
+      categorías. Se actualiza VERSION a 0.21.0.
+    - Validado en navegador: ambas orientaciones, imágenes del varistor, símbolo,
+      colores por categoría y prioridad del verde.
+    ================================================================================
+
+    2026-10-21 10:22:15 (poner símbolos conectados en verde)
+    PROMPT:
+    Cuando un diodo, puente o varistor ya se haya marcado como conectado, cambiar su
+    color a verde, igual que los cables.
+
+    SOLUCIÓN:
+    - js/app.js: diodos y varistores pasan a verde según el progreso del lado del
+      elemento representado en el esquema. Cada línea asociada refleja su propio
+      estado; el símbolo completo se vuelve verde cuando sus conexiones locales
+      están conectadas.
+    - Los puentes conservan el requisito de completar ambos extremos y su etiqueta
+      también cambia a verde, incluso con categorías de línea activadas.
+    - Los colores por categoría se mantienen para conexiones pendientes. Se actualiza
+      VERSION a 0.21.1.
+    - Validado en navegador con conexiones pendientes y completadas, con categorías
+      de línea activadas; git diff --check pasó.
     ================================================================================
