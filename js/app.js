@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.21.1';
+    const VERSION = '0.22.0';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -2612,8 +2612,10 @@ function closeGraphicalView() {
    const internalBridges = allRelated.filter(r => (r.de_elemento||'').toLowerCase() === search && (r.para_elemento||'').toLowerCase() === search);
    const isDiodeElement = value => /\bDIODO\b/.test(String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase());
    const isVaristorElement = value => /\bVARISTOR\b/.test(String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase());
+   const isResistorElement = value => /\bRESISTENCIA\b/.test(String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase());
    const diodeGroups = new Map();
    const varistorGroups = new Map();
+   const resistorGroups = new Map();
    allRelated.forEach(connection => {
        const deElement = String(connection.de_elemento || '');
        const paraElement = String(connection.para_elemento || '');
@@ -2633,6 +2635,18 @@ function closeGraphicalView() {
                    progressSide: isDiodeAtDe ? 'para' : 'de'
                });
            }
+       }
+
+       const isResistorAtDe = isResistorElement(deElement) && paraElement.toLowerCase() === search;
+       const isResistorAtPara = isResistorElement(paraElement) && deElement.toLowerCase() === search;
+       if (isResistorAtDe || isResistorAtPara) {
+           const resistorName = (isResistorAtDe ? deElement : paraElement).trim().replace(/\s+/g, ' ').toUpperCase();
+           if (!resistorGroups.has(resistorName)) resistorGroups.set(resistorName, []);
+           resistorGroups.get(resistorName).push({
+               connection,
+               pin: isResistorAtDe ? connection.para_punto : connection.de_punto,
+               progressSide: isResistorAtDe ? 'para' : 'de'
+           });
        }
 
        const isVaristorAtDe = isVaristorElement(deElement) && paraElement.toLowerCase() === search;
@@ -2672,6 +2686,8 @@ function closeGraphicalView() {
     const diodePositions = new Set();
     const varistorPairs = [];
     const varistorPositions = new Set();
+    const resistorPairs = [];
+    const resistorPositions = new Set();
     diodeGroups.forEach(group => {
         if (group.cathodes.length !== 1 || group.anodes.length !== 1) return;
         const cathode = group.cathodes[0], anode = group.anodes[0];
@@ -2693,6 +2709,18 @@ function closeGraphicalView() {
         varistorPairs.push({ upper, lower });
         varistorPositions.add(firstPosition);
         varistorPositions.add(secondPosition);
+    });
+    resistorGroups.forEach(group => {
+        if (group.length !== 2) return;
+        const [first, second] = group;
+        const firstPosition = String(first.connection.posicion);
+        const secondPosition = String(second.connection.posicion);
+        if (firstPosition === secondPosition || String(first.pin) === String(second.pin)
+            || pinYMap[first.pin] === undefined || pinYMap[second.pin] === undefined) return;
+        const [upper, lower] = pinYMap[first.pin] < pinYMap[second.pin] ? [first, second] : [second, first];
+        resistorPairs.push({ upper, lower });
+        resistorPositions.add(firstPosition);
+        resistorPositions.add(secondPosition);
     });
     baseViewBox = { x: 0, y: 0, w: totalW, h: totalH }; updateViewBox();
    
@@ -2827,6 +2855,36 @@ internalBridges.forEach((b, idx) => {
            <circle cx="${edgeX}" cy="${lowerY}" r="4" fill="${lowerWireColor}" pointer-events="none"/>
        </g>`;
    });
+
+   resistorPairs.forEach(({ upper, lower }, idx) => {
+       const upperY = pinYMap[upper.pin], lowerY = pinYMap[lower.pin];
+       const edgeX = mX + mainW;
+       const resistorX = edgeX + 40 + (internalBridges.length + diodePairs.length + varistorPairs.length + idx) * 20;
+       const centerY = (upperY + lowerY) / 2;
+       const upperLeadY = upperY + 14;
+       const lowerLeadY = lowerY - 14;
+       const upperConnected = (progressMap[upper.connection.posicion] || {})[upper.progressSide] === true;
+       const lowerConnected = (progressMap[lower.connection.posicion] || {})[lower.progressSide] === true;
+       const symbolColor = upperConnected && lowerConnected ? '#10b981' : '#f97316';
+       const upperCategoryColor = getLineasColor(upper.connection);
+       const lowerCategoryColor = getLineasColor(lower.connection);
+       const upperWireColor = upperConnected ? '#10b981' : (upperCategoryColor || symbolColor);
+       const lowerWireColor = lowerConnected ? '#10b981' : (lowerCategoryColor || symbolColor);
+       const upperPatternStyle = getLineCategoryPattern(upper.connection.lineas);
+       const lowerPatternStyle = getLineCategoryPattern(lower.connection.lineas);
+       const positions = [upper.connection.posicion, lower.connection.posicion]
+           .map(position => encodeURIComponent(String(position))).join('|');
+       svg.innerHTML += `<g class="diag-connection" data-positions="${positions}">
+           <title>RESISTENCIA</title>
+           <path d="M ${edgeX} ${upperY} L ${edgeX} ${upperLeadY} L ${resistorX} ${upperLeadY}" class="diag-line" style="stroke:${upperWireColor}; ${upperPatternStyle}"/>
+           <path d="M ${edgeX} ${lowerY} L ${edgeX} ${lowerLeadY} L ${resistorX} ${lowerLeadY}" class="diag-line" style="stroke:${lowerWireColor}; ${lowerPatternStyle}"/>
+           <line x1="${resistorX}" y1="${upperLeadY}" x2="${resistorX}" y2="${centerY - 12}" class="diag-line" style="stroke:${upperWireColor};"/>
+           <line x1="${resistorX}" y1="${centerY + 12}" x2="${resistorX}" y2="${lowerLeadY}" class="diag-line" style="stroke:${lowerWireColor};"/>
+           <rect x="${resistorX - 8}" y="${centerY - 12}" width="16" height="24" fill="${isDarkTheme ? '#1e293b' : '#ffffff'}" stroke="${symbolColor}" stroke-width="2"/>
+           <circle cx="${edgeX}" cy="${upperY}" r="4" fill="${upperWireColor}" pointer-events="none"/>
+           <circle cx="${edgeX}" cy="${lowerY}" r="4" fill="${lowerWireColor}" pointer-events="none"/>
+       </g>`;
+   });
  
       // 2. PINES Y CONEXIONES EXTERNAS
    sortedPins.forEach((pin) => {
@@ -2866,7 +2924,7 @@ internalBridges.forEach((b, idx) => {
        const pinPositions = [...new Set([...pD.in, ...pD.out].map(connection => String(connection.posicion)))].map(encodeURIComponent).join('|');
     svg.innerHTML += `<g class="diag-connection diag-pin-connection" data-pin="${encodeURIComponent(String(pin))}" data-positions="${pinPositions}"><rect x="${mX}" y="${y-15}" width="${mainW}" height="30" rx="2" class="diag-block diag-block-pin" style="${pinColor}" onclick="showInfoPopover(event, '${encodeURIComponent(JSON.stringify({type:'pin', pin, connections: pCs}))}')"/><text x="${mX+mainW/2}" y="${y+5}" text-anchor="middle" class="diag-text-main" style="fill:${pinTextColor}; pointer-events:none;">${pin}</text></g>`;
  
-       const extIn = pD.in.filter(c => (c.de_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)) && !varistorPositions.has(String(c.posicion)));
+       const extIn = pD.in.filter(c => (c.de_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)) && !varistorPositions.has(String(c.posicion)) && !resistorPositions.has(String(c.posicion)));
        if (extIn.length > 0) {
            const stubX = mX - 100, blockRightEdge = stubX - 100;
            const anyLocalOk = extIn.some(c => (progressMap[c.posicion] || {}).para === true && getCableDisplayLabel(c) !== '');
@@ -2906,7 +2964,7 @@ internalBridges.forEach((b, idx) => {
            }
        }
  
-       const extOut = pD.out.filter(c => (c.para_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)) && !varistorPositions.has(String(c.posicion)));
+       const extOut = pD.out.filter(c => (c.para_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)) && !varistorPositions.has(String(c.posicion)) && !resistorPositions.has(String(c.posicion)));
        if (extOut.length > 0) {
            const origX = mX + mainW, stubX = origX + 100, blockLeftEdge = stubX + 100;
            const anyLocalOk = extOut.some(c => (progressMap[c.posicion] || {}).de === true && getCableDisplayLabel(c) !== '');

@@ -1595,3 +1595,22 @@ SOLUCIÓN:
     - Validado en navegador con conexiones pendientes y completadas, con categorías
       de línea activadas; git diff --check pasó.
     ================================================================================
+
+    2026-10-27 10:24:17 (representar resistencias en esquema gráfico)
+    PROMPT:
+    Haz lo mismo que hicimos para diodos y varistores para las resistencias. Si en
+    el campo "De elemento" o "Para Elemento" aparece la palabra "resistencia"
+    escrita en mayúsculas o minúsculas, represéntalo en el modo gráfico de igual
+    manera que ya se hace con los diodos o varistores. La diferencia será el símbolo
+    que se muestre que será el estandarizado para las resistencias según normas de
+    electrónica.
+
+    SOLUCIÓN:
+    - js/app.js: se detecta RESISTENCIA sin distinguir mayúsculas/minúsculas en
+      ambos extremos y se representa cada pareja válida de conexiones con el símbolo
+      rectangular IEC. Se preservan los colores de progreso y categorías de línea,
+      evitando dibujar de nuevo esos cables en el esquema.
+    - Se actualiza VERSION a 0.22.0 y la referencia del script para invalidar caché.
+    - git diff --check pasó. No se pudo validar la ejecución en navegador: Node no
+      está instalado, Playwright no tiene Chromium y Edge headless no terminó.
+    ================================================================================
