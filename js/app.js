@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.22.0';
+    const VERSION = '0.22.1';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -2607,6 +2607,8 @@ function closeGraphicalView() {
               const category = getSharedLineCategory(connections);
               return category ? getLineCategoryColor(category, isDarkTheme) : '';
           };
+          const isCableConnection = connection =>
+              getCableDisplayLabel(connection) !== '' || String(connection?.seccion || '').trim() !== '';
    
    const allRelated = rawData.filter(r => (r.de_elemento||'').toLowerCase() === search || (r.para_elemento||'').toLowerCase() === search);
    const internalBridges = allRelated.filter(r => (r.de_elemento||'').toLowerCase() === search && (r.para_elemento||'').toLowerCase() === search);
@@ -2909,11 +2911,11 @@ internalBridges.forEach((b, idx) => {
        ];
        _schemaPinDataCache[pin] = pCs;
        
-         const cablesConMarcaIn  = pD.in.filter(c => getCableDisplayLabel(c) !== '');
-         const cablesConMarcaOut = pD.out.filter(c => getCableDisplayLabel(c) !== '');
-       const totalPin    = cablesConMarcaIn.length + cablesConMarcaOut.length;
-       const completadosPin = cablesConMarcaIn.filter(c => (progressMap[c.posicion]||{}).para === true).length
-                            + cablesConMarcaOut.filter(c => (progressMap[c.posicion]||{}).de === true).length;
+         const cablesIn = pD.in.filter(isCableConnection);
+         const cablesOut = pD.out.filter(isCableConnection);
+       const totalPin    = cablesIn.length + cablesOut.length;
+       const completadosPin = cablesIn.filter(c => (progressMap[c.posicion]||{}).para === true).length
+                            + cablesOut.filter(c => (progressMap[c.posicion]||{}).de === true).length;
        const pinColor = totalPin === 0 ? '' 
                       : completadosPin === totalPin ? 'fill:#10b981; stroke:#059669;'
                       : completadosPin > 0          ? 'fill:#f97316; stroke:#ea580c;'
@@ -2927,10 +2929,10 @@ internalBridges.forEach((b, idx) => {
        const extIn = pD.in.filter(c => (c.de_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)) && !varistorPositions.has(String(c.posicion)) && !resistorPositions.has(String(c.posicion)));
        if (extIn.length > 0) {
            const stubX = mX - 100, blockRightEdge = stubX - 100;
-           const anyLocalOk = extIn.some(c => (progressMap[c.posicion] || {}).para === true && getCableDisplayLabel(c) !== '');
-           const extInConCable = extIn.filter(c => getCableDisplayLabel(c) !== '');
+           const anyLocalOk = extIn.some(c => (progressMap[c.posicion] || {}).para === true && isCableConnection(c));
+           const extInConCable = extIn.filter(isCableConnection);
            extIn.forEach((c) => {
-               const tieneCable = getCableDisplayLabel(c) !== '';
+               const tieneCable = isCableConnection(c);
                const tieneObturador = !tieneCable && (c.para_terminal || '') !== '' && (c.para_terminal || '').toUpperCase() !== 'S/T' && !isKN(c.para_terminal);
                const isBusbar = (c.observaciones || '').trim().toUpperCase() === 'BUSBAR';
                if (!tieneCable && !tieneObturador && !isBusbar) return;
@@ -2967,10 +2969,10 @@ internalBridges.forEach((b, idx) => {
        const extOut = pD.out.filter(c => (c.para_elemento||'').toLowerCase() !== search && !diodePositions.has(String(c.posicion)) && !varistorPositions.has(String(c.posicion)) && !resistorPositions.has(String(c.posicion)));
        if (extOut.length > 0) {
            const origX = mX + mainW, stubX = origX + 100, blockLeftEdge = stubX + 100;
-           const anyLocalOk = extOut.some(c => (progressMap[c.posicion] || {}).de === true && getCableDisplayLabel(c) !== '');
-           const extOutConCable = extOut.filter(c => getCableDisplayLabel(c) !== '');
+           const anyLocalOk = extOut.some(c => (progressMap[c.posicion] || {}).de === true && isCableConnection(c));
+           const extOutConCable = extOut.filter(isCableConnection);
            extOut.forEach((c) => {
-               const tieneCable = getCableDisplayLabel(c) !== '';
+               const tieneCable = isCableConnection(c);
                const tieneObturador = !tieneCable && (c.de_terminal || '') !== '' && (c.de_terminal || '').toUpperCase() !== 'S/T' && !isKN(c.de_terminal);
                const isBusbar = (c.observaciones || '').trim().toUpperCase() === 'BUSBAR';
                if (!tieneCable && !tieneObturador && !isBusbar) return;

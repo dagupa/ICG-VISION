@@ -1614,3 +1614,33 @@ SOLUCIÓN:
     - git diff --check pasó. No se pudo validar la ejecución en navegador: Node no
       está instalado, Playwright no tiene Chromium y Edge headless no terminó.
     ================================================================================
+
+    2026-11-13 07:51:14 (investigar puntos grises en esquema gráfico)
+    PROMPT:
+    Revisa el motivo por el cual en el modo gráfico no se muestran dibujadas las
+    líneas de los cables y en su lugar aparecen puntos como si se tratara de un
+    obturador. En la imagen 1 puedes ver el listado que se está representando en la
+    imagen 2 del modo gráfico.
+
+    SOLUCIÓN:
+    - Diagnóstico: js/app.js, getCableDisplayLabel() solo obtiene la marca del cable
+      o De Marca; al estar ambas vacías, la fila se clasifica sin cable. En
+      drawDiagram(), si Para Terminal contiene un valor distinto de S/T y KN, esa
+      fila se clasifica como obturador y se dibuja un círculo gris en vez de una
+      línea. Las filas mostradas contienen Para Terminal 641M10292, por lo que
+      ambas siguen esa rama.
+    ================================================================================
+
+    2026-11-13 07:55:33 (considerar sección para identificar cables en el esquema)
+    PROMPT:
+    Vale, pues el programa tendrá que tener en cuenta que si hay datos en la columna
+    sección, eso quiere decir que se trata de un cable y hay que representarlo como
+    tal.
+
+    SOLUCIÓN:
+    - js/app.js, drawDiagram(): una fila se considera cable cuando contiene una
+      sección o una marca de cable. Esta detección se usa al dibujar conexiones,
+      distribuir ramas y calcular el progreso del pin; así una sección informada
+      evita la clasificación como obturador aunque falte la marca.
+    - Se actualiza VERSION a 0.22.1 y la referencia del script para invalidar caché.
+    ================================================================================
