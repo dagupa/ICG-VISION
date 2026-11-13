@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.22.1';
+    const VERSION = '0.23.11';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -1506,6 +1506,7 @@ function clearAllFiltersMobile() {
        function showLanding() { 
            const lp = document.getElementById('landingPage'); lp.classList.remove('hidden'); lp.style.opacity = '1'; 
            const breaker = document.getElementById('landingBreaker'); if (breaker) breaker.classList.remove('is-on'); 
+           const glow = document.querySelector('.landing-machine-glow'); if (glow) glow.classList.remove('is-on');
            const eye = document.getElementById('landingEye'); if (eye) eye.classList.remove('eye-on'); 
            const fileInput = document.getElementById('csvInputLanding'); if (fileInput) fileInput.value = ''; 
        }
@@ -2055,7 +2056,7 @@ function selectSidebarCrimpTool(encodedImage) {
  loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); _checkDuplicateColumns(rawData); currentView = 'table'; clearAllFilters();
            }; reader.readAsArrayBuffer(f);
        }
-       function handleBreakerClick(event) { if (event) event.stopPropagation(); const b = document.getElementById('landingBreaker'), e = document.getElementById('landingEye'); b.classList.add('is-on'); if (e) e.classList.add('eye-on'); setTimeout(() => { const input = document.getElementById('csvInputLanding'); if (input) input.click(); }, 400); }
+       function handleBreakerClick(event) { if (event) event.stopPropagation(); const b = document.getElementById('landingBreaker'), e = document.getElementById('landingEye'), glow = document.querySelector('.landing-machine-glow'); b.classList.add('is-on'); if (glow) glow.classList.add('is-on'); if (e) e.classList.add('eye-on'); setTimeout(() => { const input = document.getElementById('csvInputLanding'); if (input) input.click(); }, 400); }
  
        function renderSummary() {
            const grid = document.getElementById('summaryGrid'), tableC = document.getElementById('summaryTableContainer'), tableB = document.getElementById('summaryTableBody'), title = document.getElementById('summaryTitle'); 

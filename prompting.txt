@@ -1644,3 +1644,158 @@ SOLUCIÓN:
       evita la clasificación como obturador aunque falte la marca.
     - Se actualiza VERSION a 0.22.1 y la referencia del script para invalidar caché.
     ================================================================================
+
+    2026-11-13 11:36:53 (rediseñar la landing en 3D)
+    PROMPT:
+    Esta imagen es de la landing page. Cuando pulso el automático se levanta la
+    palanca y se enciende el ojo. Este efecto está bien, pero la página me parece
+    muy sosa y me gustaría que fuera mucho más espectacular y que fuera en 3D.
+
+    SOLUCIÓN:
+    - Se rediseña toda la landing con estética industrial, perspectiva, relieves,
+      iluminación y un automático SVG con profundidad visual CSS/SVG, sin añadir
+      dependencias. Se mantienen el logotipo, la versión y los textos existentes.
+    - Se conserva la animación de la palanca, el indicador y el ojo, además de la
+      apertura del selector de Excel y el reinicio al volver a la landing. El
+      automático es ahora un botón accesible por teclado.
+    - Se adapta el diseño a distintas pantallas y al movimiento reducido. Se
+      actualiza VERSION a 0.23.0 y las referencias de CSS y JavaScript para caché.
+    - Validado en Edge: activación con ratón y teclado, selector, carga de un Excel
+      sintético, regreso, tamaños de pantalla, tema oscuro y movimiento reducido.
+    ================================================================================
+
+    2026-11-13 12:12:08 (ajustar logotipo y texto de la landing)
+    PROMPT:
+    Elimina la línea azul y centra el ojo que se monta un poco sobre la letra i.
+    También quiero que centres el texto que te rodeo en rojo (justificación centrada).
+
+    SOLUCIÓN:
+    - Se elimina el acento decorativo azul de la landing.
+    - Se centra verticalmente el ojo del logotipo y se separa de las letras
+      adyacentes para evitar solapamientos. Se centra el subtítulo señalado y se
+      conserva su adaptación a pantallas pequeñas.
+    - Se actualiza VERSION a 0.23.1 y la referencia de JavaScript para invalidar
+      caché.
+    ================================================================================
+
+    2026-11-13 15:06:19 (simular remaches en el carril DIN)
+    PROMPT:
+    en la landing page aparece una un carril DIN en el que está montado un automático.
+    Dicho carril lleva dos agujeros que son para poder remachar el carril DIN. Quiero
+    que simules que está remachado añadiendo la cabeza de los remaches.
+
+    SOLUCIÓN:
+    - Se añaden dos cabezas metálicas con relieve CSS sobre los agujeros del carril
+      DIN, sin modificar la interacción del automático.
+    - Se actualiza VERSION a 0.23.2 y las referencias de caché de CSS y JavaScript.
+    - Validado con git diff --check.
+    ================================================================================
+
+    2026-11-13 15:35:38 (restaurar remaches y hacer visible el flujo en los aros)
+    PROMPT:
+    Pues has elminado la cabeza de los remaches y los aros del fondo siguen sin
+    animarse.
+
+    SOLUCIÓN:
+    - Se restauran las dos cabezas metálicas de los remaches, centradas sobre los
+      taladros y mayores que estos.
+    - Se sustituye el giro de los bordes completos por un arco luminoso que recorre
+      cada aro en sentidos y velocidades diferentes. El efecto se limita al fondo;
+      no cambia la silueta del automático.
+    - Se actualiza VERSION a 0.23.6 y las referencias de caché de CSS y JavaScript.
+    ================================================================================
+
+    2026-11-13 15:29:21 (aislar la animación de los aros de fondo)
+    PROMPT:
+    No funcionó según lo esperado. Lo que se iluminó fue la silueta del automático y
+    eso no debías tocarlo. Lo que quería que tocaras era los aros concéntricos que
+    hay al fondo de la imagen.
+
+    SOLUCIÓN:
+    - Se elimina el estado de encendido del contenedor del automático, que activaba
+      también sus reglas de iluminación existentes.
+    - El estado se aplica solo al elemento de los aros y la animación queda limitada
+      a sus pseudo-elementos; la silueta del automático no se modifica.
+    - Se actualiza VERSION a 0.23.5 y las referencias de caché de CSS y JavaScript.
+    - Validado con git diff --check.
+    ================================================================================
+
+    2026-11-13 15:24:05 (animar electricidad en los anillos de la landing)
+    PROMPT:
+    los cículos concentricos que aparecen detrás del automático quiero que cuando
+    se pulse el automático y la energía comienza a fluir también simulen que está
+    corriendo electricidad por dentro de éstos. La simulación tiene que ser muy
+    ténue, pero visible.
+
+    SOLUCIÓN:
+    - Al encender el automático, los dos anillos de fondo pasan a trazos luminosos
+      tenues que giran en sentidos y velocidades diferentes. Al volver a la landing,
+      la animación se detiene.
+    - Se respeta la preferencia de movimiento reducido ya existente.
+    - Se actualiza VERSION a 0.23.4 y las referencias de caché de CSS y JavaScript.
+    - Validado con git diff --check.
+    ================================================================================
+
+    2026-11-13 15:19:40 (aumentar cabeza de los remaches)
+    PROMPT:
+    La cabeza de los remaches tiene que tener un diámetro mayor que los taladros
+    porque si no, el remache parece que se ha colado dentro de los taladros.
+
+    SOLUCIÓN:
+    - Se aumentan las cabezas de 13 × 9 px a 28 × 18 px para que cubran los taladros
+      y sobresalgan visiblemente alrededor.
+    - Se actualiza VERSION a 0.23.3 y las referencias de caché de CSS y JavaScript.
+    - Validado con git diff --check.
+    ================================================================================
+
+    2026-11-13 15:47:05 (añadir reflejo tenue al logotipo)
+    PROMPT:
+    Bajo las letras ICG VISION quiero que simules un efecto espejo muy ténue.
+
+    SOLUCIÓN:
+    - Se añade una reflexión tenue y breve bajo el título de la landing, con un
+      degradado que la desvanece antes de alcanzar el subtítulo.
+    - Se actualiza VERSION a 0.23.7 y las referencias de caché de CSS y JavaScript.
+    ================================================================================
+
+    2026-11-13 15:51:21 (acercar reflejo al título)
+    PROMPT:
+    el efecto queda muy abajo, quiero que quede pegado a las letras, de tal manera,
+    que parezca que están apolladas en una superficie reflectante.
+
+    SOLUCIÓN:
+    - Se reduce el desplazamiento del reflejo a un ligero solapamiento con las letras
+      y se acentúa mínimamente el reflejo inicial manteniendo su desvanecimiento.
+    - Se actualiza VERSION a 0.23.8 y las referencias de caché de CSS y JavaScript.
+    ================================================================================
+
+    2026-11-13 15:57:55 (pegar reflejo a ICG VISION)
+    PROMPT:
+    el efecto sigue apareciendo muy abajo. Como ves aparece debajo de las letras
+    "INFORME DE CABLEADO...." y quiero que aparezca pegado a "ICG VISION"
+
+    SOLUCIÓN:
+    - Se invierte la orientación del degradado de la máscara del reflejo para que
+      la parte visible comience justo debajo de ICG VISION y se desvanezca hacia
+      abajo, antes del subtítulo.
+    - Se actualiza VERSION a 0.23.9 y las referencias de caché de CSS y JavaScript.
+    ================================================================================
+
+    2026-11-13 16:02:35 (acercar y atenuar reflejo)
+    PROMPT:
+    acércalo un poco más y hazme más ténue, menos marcado
+
+    SOLUCIÓN:
+    - Se reduce ligeramente la separación del reflejo respecto a las letras y se
+      baja su opacidad del 32 % al 18 %, manteniendo el degradado hacia abajo.
+    - Se actualiza VERSION a 0.23.10 y las referencias de caché de CSS y JavaScript.
+    ================================================================================
+
+    2026-11-13 16:06:19 (reducir tamaño de la versión en la landing)
+    PROMPT:
+    haz el tamaño de la versión 2 tamaños más pequeño del actual
+
+    SOLUCIÓN:
+    - Se reduce de 11 px a 9 px el tamaño del número de versión en la landing.
+    - Se actualiza VERSION a 0.23.11 y las referencias de caché de CSS y JavaScript.
+    ================================================================================
