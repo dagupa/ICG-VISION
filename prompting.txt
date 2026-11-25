@@ -18,7 +18,6 @@ SOLUCIÓN:
   estados de progreso, puentes, diodos, barras colectoras y cambio de tema.
 - VERSION se actualiza a 0.18.0 por tratarse de una mejora.
 ================================================================================
-
 2026-10-20 14:50:33 (mostrar el diodo también en Modo VISION)
 PROMPT:
 En el modo VISION también se mostrará la imagen del diodo en lugar de
@@ -1798,4 +1797,15 @@ SOLUCIÓN:
     SOLUCIÓN:
     - Se reduce de 11 px a 9 px el tamaño del número de versión en la landing.
     - Se actualiza VERSION a 0.23.11 y las referencias de caché de CSS y JavaScript.
+    ================================================================================
+    2026-11-25 15:39:15 (ignorar S/T y S/M como errores del Excel)
+    PROMPT:
+    Aunque en realidad son errores, no es necesario que se muestren como tal porque luego al crear el fichero txt esos valores se borran. El fichero txt se usa luego para cargar los datos en Sap y el problema es que tanto S/T como S/M no son códigos de terminales o de manguitos y si los subes a Sap da error. Haciendo esa limpieza al crear el txt ya no es necesario que la aplicación los considere como error y que parpadeen al cargar el archivo. Si tienes alguna duda, pregúntame antes de hacer nada.
+
+    SOLUCIÓN:
+    - Se dejan de marcar S/T y S/M como terminales o manguitos inexistentes y se excluyen
+      también de las comprobaciones de compatibilidad y sección.
+    - La exportación a TXT sigue vaciando los marcadores y ahora reconoce también
+      variantes en minúsculas o con espacios.
+    - Se actualiza VERSION a 0.23.12 y la referencia de caché de JavaScript.
     ================================================================================

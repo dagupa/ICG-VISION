@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.23.11';
+    const VERSION = '0.23.12';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -770,10 +770,14 @@ function markConnectionDone(posicion) {
            if (!code) return false;
            return KNOWN_TERMINAL_EXCEPTIONS.has(code.toString().trim().toUpperCase());
        }
+       const NO_COMPONENT_MARKERS = new Set(['S/T', 'S/M']);
+       function isNoComponentMarker(code) {
+           return NO_COMPONENT_MARKERS.has(String(code ?? '').trim().toUpperCase());
+       }
        function isValidTerminalCode(code) {
            if (!code) return true;
            const idToSearch = code.toString().trim().toUpperCase();
-           if (idToSearch.startsWith('KN-PELAR') || KNOWN_TERMINAL_EXCEPTIONS.has(idToSearch)) return true;
+           if (isNoComponentMarker(idToSearch) || idToSearch.startsWith('KN-PELAR') || KNOWN_TERMINAL_EXCEPTIONS.has(idToSearch)) return true;
            return crimpingMasterData.some(item => item.id.toString().toUpperCase() === idToSearch);
        }
        function isValidCableCode(code) {
@@ -782,7 +786,8 @@ function markConnectionDone(posicion) {
        }
        function isValidSleeveCode(code) {
            if (!code) return true;
-           return VALID_SLEEVE_CODES.has(code.toString().trim().toUpperCase());
+           const idToSearch = code.toString().trim().toUpperCase();
+           return isNoComponentMarker(idToSearch) || VALID_SLEEVE_CODES.has(idToSearch);
        }
 
        function saveError() {
@@ -804,7 +809,7 @@ function markConnectionDone(posicion) {
                    input.focus();
                    return;
                }
-               const compat = key === 'de_terminal' || key === 'para_terminal'
+               const compat = (key === 'de_terminal' || key === 'para_terminal') && !isNoComponentMarker(terminalValue)
                    ? checkSectionCompatibility(terminalValue, seccionValue)
                    : null;
                if (compat && !compat.ok) {
@@ -864,7 +869,7 @@ function markConnectionDone(posicion) {
                const changes = errorsMap[r.posicion] || {};
                return TXT_KEYS.map(k => {
                    const v = changes[k] !== undefined ? changes[k] : (r[k] || '');
-                   if (TXT_BLANK_IF[k] && TXT_BLANK_IF[k].includes(v)) return '';
+                   if (TXT_BLANK_IF[k] && TXT_BLANK_IF[k].includes(String(v).trim().toUpperCase())) return '';
                    return k === 'longitud' ? normalizeLengthDecimalSeparator(v) : v;
                }).join('\t');
            });
@@ -1873,7 +1878,7 @@ function selectSidebarCrimpTool(encodedImage) {
             dupB.forEach(v => _dupOrdenes.add(v));
 
             // Sección faltante con terminal asignado
-            const _tv = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t) && !isKnownTerminalException(t));
+            const _tv = t => !!(t && !isNoComponentMarker(t) && !isKN(t) && !isKnownTerminalException(t));
             const secMissingPos = data
                 .filter(r => !r.seccion && (_tv(r.de_terminal) || _tv(r.para_terminal)))
                 .map(r => r.posicion).filter(Boolean);
@@ -1885,7 +1890,7 @@ function selectSidebarCrimpTool(encodedImage) {
             // Terminal incompatible con la sección
             const termIncompatPos = data
                 .filter(r => {
-                    const chk = key => { const v = r[key]||''; if (!v || v==='S/T' || isKN(v) || !r.seccion) return false; const sc = checkSectionCompatibility(v, r.seccion); return sc && !sc.ok; };
+                    const chk = key => { const v = r[key]||''; if (!v || isNoComponentMarker(v) || isKN(v) || !r.seccion) return false; const sc = checkSectionCompatibility(v, r.seccion); return sc && !sc.ok; };
                     return chk('de_terminal') || chk('para_terminal');
                 })
                 .map(r => r.posicion).filter(Boolean);
@@ -3460,7 +3465,7 @@ function handleHelpEasterEgg() {
            // Pre-scan: detectar si hay filas con incompatibilidad de sección en cada columna de terminal
            const _hasTermError = key => d.some(r => {
                const v = r[key] || '';
-               if (!v || v === 'S/T' || isKN(v) || !r.seccion) return false;
+               if (!v || isNoComponentMarker(v) || isKN(v) || !r.seccion) return false;
                const sc = checkSectionCompatibility(v, r.seccion);
                return sc && !sc.ok;
            });
@@ -3479,7 +3484,7 @@ function handleHelpEasterEgg() {
            const hasSleeveNotFound = d.some(r => r.de_manguito && !isValidSleeveCode(r.de_manguito));
 
            // Pre-scan: detectar si hay filas con sección vacía pero con terminal asignado
-           const _tvh = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t) && !isKnownTerminalException(t));
+           const _tvh = t => !!(t && !isNoComponentMarker(t) && !isKN(t) && !isKnownTerminalException(t));
            const hasSeccionMissingErrors = d.some(r => !r.seccion && (_tvh(r.de_terminal) || _tvh(r.para_terminal)));
            const hasDupPosicion = _dupPosicions.size > 0;
            const hasDupOrden    = _dupOrdenes.size > 0;
@@ -3546,7 +3551,7 @@ function handleHelpEasterEgg() {
                } else {
                    d = d.filter(r => {
                        const v = r[filterColumn] || '';
-                       if (!v || isKN(v)) return false;
+                       if (!v || isNoComponentMarker(v) || isKN(v)) return false;
                        if (filterType === 'notFound') return !isValidTerminalCode(v);
                        if (!r.seccion) return false;
                        const sc = checkSectionCompatibility(v, r.seccion);
@@ -3579,7 +3584,7 @@ function handleHelpEasterEgg() {
                const usesSelectedTool = selectedSidebarCrimpTool && ['de', 'para'].some(side => {
                    if (!sFilterTerms.includes((r[`${side}_elemento`] || '').toLowerCase())) return false;
                    const terminal = (r[`${side}_terminal`] || '').trim();
-                   if (!terminal || terminal === 'S/T' || isKN(terminal)) return false;
+                   if (!terminal || isNoComponentMarker(terminal) || isKN(terminal)) return false;
                    const crimpData = getCrimpingInfo(terminal, r.seccion);
                    return crimpData?.img_tenaza?.trim() === selectedSidebarCrimpTool;
                });
@@ -3610,14 +3615,14 @@ function handleHelpEasterEgg() {
                        const isCellModified = changedValue !== undefined || (c.key === 'orden' && r.orderChanged && !r.deleted);
                        const cellClass = isCellModified ? (c.key === 'orden' && r.orderChanged ? 'cell-order-changed' : 'cell-modified') : '';
                        const isTerminalCol = c.key === 'de_terminal' || c.key === 'para_terminal';
-                       const termSC = isTerminalCol && v && v !== 'S/T' && !isKN(v) && r.seccion ? checkSectionCompatibility(v, r.seccion) : null;
+                       const termSC = isTerminalCol && v && !isNoComponentMarker(v) && !isKN(v) && r.seccion ? checkSectionCompatibility(v, r.seccion) : null;
                        const hasIncompat = termSC && !termSC.ok;
                        const hasTermNotFound = isTerminalCol && v && !isKN(v) && !isValidTerminalCode(v);
                        const hasCableNotFound = c.key === 'cod_cable' && v && !isValidCableCode(v);
                        const hasSleeveNotFound = c.key === 'de_manguito' && v && !isValidSleeveCode(v);
                        const isDupCell = (c.key === 'posicion' && _dupPosicions.has((r.posicion||'').toString().trim())) || (c.key === 'orden' && _dupOrdenes.has((r.orden||'').toString().trim()));
                        const dupTooltip = c.key === 'posicion' ? 'Posición duplicada — existe otra fila con el mismo valor' : 'Orden duplicada — existe otra fila con el mismo valor';
-                       const _termHasVal = t => !!(t && t !== 'S/T' && t !== 'S/M' && !isKN(t) && !isKnownTerminalException(t));
+                       const _termHasVal = t => !!(t && !isNoComponentMarker(t) && !isKN(t) && !isKnownTerminalException(t));
                        const hasMissingSeccion = c.key === 'seccion' && !v && (_termHasVal(r.de_terminal) || _termHasVal(r.para_terminal));
                        const hasNonNumLong = c.key === 'longitud' && _nonNumericLongitud.has((r.posicion||'').toString().trim());
                        return `<td class="p-3 text-xs border-r border-sap-border/20 ${isElementCol?'font-bold text-sap-blue cursor-pointer hover:underline':''} ${cellClass} ${hasIncompat?'cell-incompat-blink':''} ${hasTermNotFound?'cell-notfound-blink':''} ${hasCableNotFound?'cell-cable-notfound-blink':''} ${hasSleeveNotFound?'cell-sleeve-notfound-blink':''} ${isDupCell?'cell-dup-blink':''} ${hasMissingSeccion?'cell-seccion-missing':''} ${hasNonNumLong?'cell-nonnum-blink':''}"
