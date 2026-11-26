@@ -266,7 +266,12 @@
            <div id="summaryView" class="hidden p-6 bg-sap-bg dark:bg-sap-darkBg flex-1 overflow-auto">
                <div class="max-w-6xl mx-auto">
                    <div class="flex items-center justify-between mb-6 border-b-2 border-sap-blue pb-2">
-                       <h2 id="summaryTitle" class="text-xl font-bold text-sap-text dark:text-white"></h2>
+                       <div class="flex items-center gap-3">
+                           <h2 id="summaryTitle" class="text-xl font-bold text-sap-text dark:text-white"></h2>
+                           <button id="summaryToolsButton" onclick="openTerminalToolsReport()" title="Ver informe de herramientas" aria-label="Ver informe de herramientas" class="hidden p-2 rounded text-sap-blue hover:bg-sap-blue/10 transition-colors">
+                               <i data-lucide="wrench" class="w-5 h-5"></i>
+                           </button>
+                       </div>
                        <div class="flex items-center gap-3">
                            <div class="flex items-center bg-sap-shell/5 p-1 rounded border border-sap-border/50">
                                <button onclick="setSummaryMode('cards')" id="btnSummaryCards" class="p-1.5 rounded text-sap-secondaryText"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
@@ -515,7 +520,8 @@
                    <h4 class="text-xs font-black text-sap-blue uppercase mb-4 border-b border-sap-blue/20 pb-1">6. Vistas resumen</h4>
                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="cable" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Lista de cables</p><p class="text-[11px] leading-tight opacity-80">Agrupa todos los códigos de cable distintos con su descripción y cantidad de apariciones.</p></div></div>
-                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="plug" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Lista de terminales</p><p class="text-[11px] leading-tight opacity-80">Agrupa todos los terminales/pines del informe con su descripción y cantidad total.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="plug" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Lista de terminales</p><p class="text-[11px] leading-tight opacity-80">Agrupa todos los terminales/pines del informe con su descripción, imagen y cantidad total.</p></div></div>
+                       <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="wrench" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Informe de herramientas</p><p class="text-[11px] leading-tight opacity-80">En la lista de terminales, pulsa el icono de herramienta junto al título para ver las herramientas necesarias agrupadas por tipo y en orden: pelacables, tenazas, posicionadores y extractores. Cada tarjeta muestra su foto y descripción; despliega el resumen para consultar los terminales/pines y secciones asociados, con sus miniaturas.</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="tag" class="w-5 h-5 text-sap-blue"></i></div><div><p class="text-xs font-bold">Lista de manguitos</p><p class="text-[11px] leading-tight opacity-80">Agrupa todos los manguitos con su cantidad. Incluye botones para descargar los ficheros de marcado o enviarlos por Outlook.</p></div></div>
                        <div class="flex gap-3 bg-white dark:bg-sap-darkCard p-3 rounded-lg border border-sap-border shadow-sm"><div class="p-2 bg-sap-shell/5 rounded h-fit shrink-0"><i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-600"></i></div><div><p class="text-xs font-bold">Exportar resumen a Excel</p><p class="text-[11px] leading-tight opacity-80">Descarga la vista resumen activa (cables, terminales o manguitos) como fichero .xlsx.</p></div></div>
                    </div>
@@ -774,6 +780,25 @@
        </div>
    </div>
 
+   <!-- Informe de herramientas para terminales y pines -->
+   <div id="terminalToolsReportModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-[310] p-4" onclick="if(event.target === this) closeTerminalToolsReport()">
+       <section role="dialog" aria-modal="true" aria-labelledby="terminalToolsReportTitle" class="bg-white dark:bg-sap-darkCard w-full max-w-5xl max-h-[90vh] rounded-xl shadow-2xl border border-sap-border overflow-hidden flex flex-col text-left">
+           <header class="bg-sap-shell p-4 flex justify-between items-center text-white shrink-0">
+               <div class="flex items-center gap-3">
+                   <i data-lucide="wrench" class="w-5 h-5 text-sap-blue"></i>
+                   <div>
+                       <h2 id="terminalToolsReportTitle" class="font-bold text-sm uppercase tracking-widest">Informe de herramientas necesarias</h2>
+                       <p class="text-[11px] text-slate-300 mt-1">Resumen de herramientas necesarias para cablear este equipo</p>
+                   </div>
+               </div>
+               <button type="button" onclick="closeTerminalToolsReport()" title="Cerrar informe" aria-label="Cerrar informe" class="p-2 rounded hover:bg-white/10">
+                   <i data-lucide="x" class="w-4 h-4"></i>
+               </button>
+           </header>
+           <div id="terminalToolsReportContent" class="p-5 overflow-y-auto custom-scrollbar bg-sap-bg dark:bg-sap-darkBg"></div>
+       </section>
+   </div>
+
    <!-- Modal Crimpado Técnico -->
    <div id="crimpingModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center z-[300] p-4 text-left">
        <div class="bg-white dark:bg-sap-darkCard max-w-4xl w-full rounded-xl shadow-2xl border border-sap-border overflow-hidden flex flex-col max-h-[90vh]">
@@ -824,6 +849,6 @@
 
    <!-- Inicialización de Scripts en orden de precedencia lógica -->
     <script src="js/master-data.js"></script>
-    <script src="js/app.js?v=industrial-landing-13" defer></script>
+    <script src="js/app.js?v=industrial-landing-21" defer></script>
 </body>
 </html>

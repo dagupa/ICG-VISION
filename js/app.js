@@ -3,7 +3,7 @@
     // · MAYOR      : cambio de versión principal
     // · MEJORA     : nueva funcionalidad
     // · CORRECCIÓN : fix de errores
-    const VERSION = '0.23.12';
+    const VERSION = '0.23.20';
 
     // Variable para guardado de progreso
         let hasUnsavedChanges = false;
@@ -112,6 +112,11 @@
  
         let currentSortCol = null, sortAsc = true;
        let rawData = [], reportMetadata = {}, masterMap = { cables: {}, terminals: {}, sleeves: {} };
+       const MASTER_COMPONENT_DESCRIPTIONS = new Map(
+           crimpingMasterData
+               .filter(item => item.id && item.txt_pin?.trim())
+               .map(item => [item.id.toString().trim().toUpperCase(), item.txt_pin.trim()])
+       );
     let currentView = 'table', filterText = '', filterMarcaText = '', filterTerminalError = null, selectedMaterial = null, selectedSidebarCrimpTool = null, selectedConnectionPosition = null, currentLang = 'es';
     let selectedGraphMaterial = null, selectedGraphTool = null, selectedGraphPositions = new Set(), selectedGraphPins = new Set(), showOnlyGraphSelection = false;
        let summaryViewMode = 'cards'; 
@@ -2057,6 +2062,7 @@ function selectSidebarCrimpTool(encodedImage) {
                        'para_elemento','para_punto','para_terminal','observaciones'];
                    return DATA_KEYS.some(k => (r[k]||'').trim() !== '');
                });
+               masterMap = { cables: {}, terminals: {}, sleeves: {} };
                rawData.forEach(r => { if (r.cod_cable && r.desc_cable) masterMap.cables[r.cod_cable.toString().trim()] = r.desc_cable; if (r.de_terminal && r.desc_terminal_de) masterMap.terminals[r.de_terminal.toString().trim()] = r.desc_terminal_de; if (r.para_terminal && r.desc_terminal_para) masterMap.terminals[r.para_terminal.toString().trim()] = r.desc_terminal_para; if (r.de_manguito && r.desc_manguito) masterMap.sleeves[r.de_manguito.toString().trim()] = r.desc_manguito; });
  loadProgress(); loadErrors(); hasUnsavedChanges = false; updateSaveButton(); updateGlobalProgress(); updateErrorBadge(); document.getElementById('landingPage').classList.add('hidden'); updateMetadataUI(); _checkDuplicateColumns(rawData); currentView = 'table'; clearAllFilters();
            }; reader.readAsArrayBuffer(f);
@@ -2069,13 +2075,14 @@ function selectSidebarCrimpTool(encodedImage) {
            grid.innerHTML = ''; tableB.innerHTML = ''; let stats = {}; 
            const exportGroup = document.getElementById('sleeveExportGroup');
            exportGroup.classList.toggle('hidden', currentView !== 'summary-sleeves');
+           document.getElementById('summaryToolsButton')?.classList.toggle('hidden', currentView !== 'summary-terminals');
  
            if (currentView === 'summary-cables') { 
                title.innerText = i18n[currentLang].cableSum; rawData.forEach(r => { if(r.cod_cable && r.cod_cable.trim()) { const c = r.cod_cable.trim(); if(!stats[c]) stats[c]={count:0,length:0,desc:masterMap.cables[c]||""}; stats[c].count++; stats[c].length+=parseFloat((r.longitud||"0").toString().replace(',','.'))||0; } }); 
            } else if (currentView === 'summary-terminals') { 
-               title.innerText = i18n[currentLang].termList; rawData.forEach(r => { [r.de_terminal, r.para_terminal].forEach(t => { if (t && t.toUpperCase()!=='S/T' && !isKN(t)) { const c = t.trim(); if(!stats[c]) stats[c]={count:0,desc:masterMap.terminals[c]||""}; stats[c].count++; } }); }); 
+               title.innerText = i18n[currentLang].termList; rawData.forEach(r => { [r.de_terminal, r.para_terminal].forEach(t => { if (t && t.toUpperCase()!=='S/T' && !isKN(t)) { const c = t.trim(); if(!stats[c]) stats[c]={count:0,desc:masterMap.terminals[c]||MASTER_COMPONENT_DESCRIPTIONS.get(c.toUpperCase())||""}; stats[c].count++; } }); });
            } else { 
-               title.innerText = i18n[currentLang].sleeveList; rawData.forEach(r => { if(r.de_manguito && r.de_manguito.toUpperCase()!=='S/M') { const c = r.de_manguito.trim(); if(!stats[c]) stats[c]={count:0,desc:masterMap.sleeves[c]||""}; stats[c].count++; } }); 
+               title.innerText = i18n[currentLang].sleeveList; rawData.forEach(r => { if(r.de_manguito && r.de_manguito.toUpperCase()!=='S/M') { const c = r.de_manguito.trim(); if(!stats[c]) stats[c]={count:0,desc:masterMap.sleeves[c]||MASTER_COMPONENT_DESCRIPTIONS.get(c.toUpperCase())||""}; stats[c].count++; } });
            }
            currentSummaryStats = stats; const entries = Object.entries(stats).sort((a, b) => a[0].localeCompare(b[0], undefined, {numeric: true}));
            if (!entries.length) { grid.innerHTML = `<p class="col-span-full py-12 text-center text-sap-secondaryText">${i18n[currentLang].noItems}</p>`; return; }
@@ -2083,13 +2090,146 @@ function selectSidebarCrimpTool(encodedImage) {
            document.getElementById('btnSummaryTable').classList.toggle('text-sap-blue', summaryViewMode === 'table');
            if (summaryViewMode === 'cards') {
                grid.classList.remove('hidden'); tableC.classList.add('hidden');
-               grid.innerHTML = entries.map(([ref, val]) => `<div class="bg-blue-50/20 dark:bg-slate-800/50 p-4 rounded-sm border-t-4 border-t-sap-blue border-l-4 border-l-sap-blue/20 border-r border-b border-sap-border dark:border-slate-700 shadow-sm group hover:shadow-lg transition-all text-left"><div class="text-[9px] font-black text-sap-secondaryText uppercase mb-1 tracking-wider">${ref}</div><div class="text-xs font-bold mb-4 h-8 overflow-hidden leading-snug">${val.desc || '---'}</div><div class="flex justify-between items-end"><div><div class="text-[9px] uppercase font-black text-sap-blue/60">${currentView === 'summary-cables' ? 'Cortes' : 'Cantidad'}</div><div class="text-2xl font-black tabular-nums">${val.count}</div></div>${val.length?`<div><div class="text-[9px] uppercase font-black text-sap-blue/60">Cantidad</div><div class="text-lg font-black text-sap-blue">${val.length.toFixed(2)}m</div></div>`:''}</div></div>`).join('');
+               grid.innerHTML = entries.map(([ref, val]) => {
+                   const terminalImage = currentView === 'summary-terminals'
+                       ? `<div class="h-20 mb-3 flex items-center justify-center rounded border border-sap-border bg-white dark:bg-slate-900"><img src="${CRIMP_PATHS.terminales}${encodeURIComponent(ref)}.jpg" alt="Imagen del terminal" loading="lazy" class="max-h-16 max-w-full object-contain p-1" onerror="handlePinError(this)"></div>`
+                       : '';
+                   return `<div class="bg-blue-50/20 dark:bg-slate-800/50 p-4 rounded-sm border-t-4 border-t-sap-blue border-l-4 border-l-sap-blue/20 border-r border-b border-sap-border dark:border-slate-700 shadow-sm group hover:shadow-lg transition-all text-left"><div class="text-[9px] font-black text-sap-secondaryText uppercase mb-1 tracking-wider">${ref}</div>${terminalImage}<div class="text-xs font-bold mb-4 h-8 overflow-hidden leading-snug">${val.desc || '---'}</div><div class="flex justify-between items-end"><div><div class="text-[9px] uppercase font-black text-sap-blue/60">${currentView === 'summary-cables' ? 'Cortes' : 'Cantidad'}</div><div class="text-2xl font-black tabular-nums">${val.count}</div></div>${val.length?`<div><div class="text-[9px] uppercase font-black text-sap-blue/60">Cantidad</div><div class="text-lg font-black text-sap-blue">${val.length.toFixed(2)}m</div></div>`:''}</div></div>`;
+               }).join('');
            } else {
                grid.classList.add('hidden'); tableC.classList.remove('hidden');
                tableB.innerHTML = entries.map(([ref, val]) => `<tr class="border-b border-sap-border dark:border-slate-700 hover:bg-sap-blue/5 transition-colors"><td class="p-3 text-xs font-bold text-sap-blue">${ref}</td><td class="p-3 text-xs">${val.desc || '---'}</td><td class="p-3 text-sm font-black text-center tabular-nums">${val.count}</td></tr>`).join('');
            }
        }
  
+       function openTerminalToolsReport() {
+           const modal = document.getElementById('terminalToolsReportModal');
+           const content = document.getElementById('terminalToolsReportContent');
+           if (!modal || !content) {
+               showNotification('No se pudo abrir el informe de herramientas', 'error');
+               return;
+           }
+
+           const toolDefinitions = [
+               { id: 'pelacables', label: 'Pelacables', imageKey: 'img_pela', descriptionKey: 'txt_pela', imagePath: CRIMP_PATHS.pelacables },
+               { id: 'crimpadora', label: 'Tenaza de crimpado', imageKey: 'img_tenaza', descriptionKey: 'txt_tenaza', imagePath: CRIMP_PATHS.crimpadoras },
+               { id: 'posicionador', label: 'Posicionador', imageKey: 'img_pos', descriptionKey: 'txt_pos', imagePath: CRIMP_PATHS.posicionadores },
+               { id: 'extractor', label: 'Extractor', imageKey: 'img_ext', descriptionKey: 'txt_ext', imagePath: CRIMP_PATHS.extractores }
+           ];
+           const tools = new Map();
+           const terminalSections = new Set();
+           const unavailable = new Set();
+
+           rawData.forEach(row => {
+               const section = String(row.seccion || '').trim();
+               ['de_terminal', 'para_terminal'].forEach(key => {
+                   const terminal = String(row[key] || '').trim();
+                   if (!terminal || isNoComponentMarker(terminal) || isKN(terminal)) return;
+
+                   const sectionLabel = section ? `${section} mm²` : 'sección no definida';
+                   const terminalSection = `${terminal} · ${sectionLabel}`;
+                   terminalSections.add(terminalSection);
+                   const crimpData = getCrimpingInfo(terminal, section);
+                   if (!crimpData) {
+                       unavailable.add(terminalSection);
+                       return;
+                   }
+
+                   const hasCrimpTool = String(crimpData.img_tenaza || '').trim() !== '';
+                   toolDefinitions.forEach((definition, categoryOrder) => {
+                       const image = String(crimpData[definition.imageKey] || '').trim();
+                       if (!image) return;
+
+                       const toolKey = `${definition.id}|${image.toUpperCase()}`;
+                       if (!tools.has(toolKey)) {
+                           tools.set(toolKey, {
+                               label: definition.label,
+                               categoryOrder,
+                               image,
+                               imagePath: definition.imagePath,
+                               descriptions: new Set(),
+                               terminalSections: new Map()
+                           });
+                       }
+                       const tool = tools.get(toolKey);
+                       const description = definition.getDescription
+                           ? definition.getDescription(crimpData)
+                           : String(crimpData[definition.descriptionKey] || '').trim();
+                       tool.descriptions.add(description || image);
+                       tool.terminalSections.set(terminalSection, terminal);
+                   });
+                   if (!hasCrimpTool) unavailable.add(terminalSection);
+               });
+           });
+
+           const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
+               '&': '&amp;',
+               '<': '&lt;',
+               '>': '&gt;',
+               '"': '&quot;',
+               "'": '&#39;'
+           })[character]);
+           const orderedTools = Array.from(tools.values()).sort((a, b) =>
+               a.categoryOrder - b.categoryOrder || a.image.localeCompare(b.image, undefined, { numeric: true })
+           );
+           const toolGroups = new Map();
+           orderedTools.forEach(tool => {
+               if (!toolGroups.has(tool.categoryOrder)) {
+                   toolGroups.set(tool.categoryOrder, { label: tool.label, tools: [] });
+               }
+               toolGroups.get(tool.categoryOrder).tools.push(tool);
+           });
+           const toolSections = Array.from(toolGroups.values()).map(group => `
+               <section>
+                   <div class="flex items-center justify-between border-b border-sap-border pb-2 mb-3">
+                       <h3 class="text-sm font-black uppercase tracking-wider text-sap-blue">${escapeHtml(group.label)}</h3>
+                       <span class="text-[10px] font-bold text-sap-secondaryText">${group.tools.length} herramienta(s)</span>
+                   </div>
+                   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                       ${group.tools.map(tool => `
+                           <article class="bg-white dark:bg-sap-darkCard border border-sap-border rounded-lg shadow-sm overflow-hidden flex flex-col">
+                               <div class="h-36 bg-white dark:bg-slate-900 border-b border-sap-border flex items-center justify-center p-3">
+                                   <img src="${tool.imagePath}${encodeURIComponent(tool.image)}.jpg" alt="Imagen: ${escapeHtml(tool.label)}" loading="lazy" class="max-h-full max-w-full object-contain" onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden')">
+                                   <span class="hidden text-xs text-sap-secondaryText">Imagen no disponible</span>
+                               </div>
+                               <div class="p-4 flex flex-col gap-3">
+                                   <p class="text-sm font-bold text-sap-text dark:text-white">${Array.from(tool.descriptions).map(escapeHtml).join(' / ')}</p>
+                                   <details class="text-[11px] text-sap-secondaryText">
+                                       <summary class="cursor-pointer font-bold">Requerida por ${tool.terminalSections.size} terminal(es)/sección(es)</summary>
+                                       <ul class="mt-2 space-y-1 max-h-28 overflow-y-auto pl-1">${Array.from(tool.terminalSections.entries()).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).map(([item, terminal]) => `<li class="flex items-center gap-2"><img src="${CRIMP_PATHS.terminales}${encodeURIComponent(terminal)}.jpg" alt="" aria-hidden="true" loading="lazy" class="w-8 h-7 shrink-0 rounded border border-sap-border bg-white object-contain p-0.5" onerror="this.classList.add('hidden')"><span>${escapeHtml(item)}</span></li>`).join('')}</ul>
+                                   </details>
+                               </div>
+                           </article>`).join('')}
+                   </div>
+               </section>`).join('');
+           const missingDetails = unavailable.size
+               ? `<details class="mt-5 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs text-amber-800 dark:text-amber-200">
+                   <summary class="cursor-pointer font-bold">${unavailable.size} combinación(es) de terminal/sección sin herramientas completas en el catálogo</summary>
+                   <ul class="mt-2 space-y-1 max-h-36 overflow-y-auto pl-4 list-disc">${Array.from(unavailable).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+               </details>`
+               : '';
+
+           content.innerHTML = `
+               <div class="mb-5 flex flex-wrap items-center justify-between gap-2">
+                   <p class="text-sm font-bold text-sap-text dark:text-white">${orderedTools.length} herramienta(s) distintas</p>
+                   <p class="text-xs text-sap-secondaryText">Para ${terminalSections.size} combinación(es) de terminal/sección</p>
+               </div>
+               ${orderedTools.length
+                   ? `<div class="space-y-7">${toolSections}</div>`
+                   : '<p class="py-10 text-center text-sm text-sap-secondaryText">No se encontraron herramientas asociadas a los terminales del informe.</p>'}
+               ${missingDetails}`;
+           modal.classList.remove('hidden');
+           modal.classList.add('flex');
+           if (window.lucide) lucide.createIcons();
+       }
+
+       function closeTerminalToolsReport() {
+           const modal = document.getElementById('terminalToolsReportModal');
+           if (!modal) return;
+           modal.classList.add('hidden');
+           modal.classList.remove('flex');
+       }
+
        function setSummaryMode(mode) { summaryViewMode = mode; renderSummary(); lucide.createIcons(); }
         function sortTable(key) {
    if (currentSortCol === key) {

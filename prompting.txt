@@ -1809,3 +1809,84 @@ SOLUCIÓN:
       variantes en minúsculas o con espacios.
     - Se actualiza VERSION a 0.23.12 y la referencia de caché de JavaScript.
     ================================================================================
+
+    2026-11-26 08:57:02 (mostrar descripciones en las listas de materiales)
+    PROMPT:
+    cuando seleccionas la lista de terminales, te muestra los códigos, pero no las descripciones. Revisa qué puede estar ocurriendo y revisa de paso la lista de cables y de manguitos por si ocurriera lo mismo.
+
+    SOLUCIÓN:
+    - Se añade una descripción de respaldo para terminales y manguitos desde el catálogo de crimpado cuando la hoja no incluye las columnas de descripción.
+    - Se confirma que los cables dependen de la descripción de la columna X del Excel; no existe un catálogo de cables en master-data.js para completar valores ausentes.
+    - Se reinicia el mapa de descripciones al cargar cada fichero para evitar reutilizar datos del anterior.
+    - Se actualiza VERSION a 0.23.13 y la referencia de caché de JavaScript.
+    ================================================================================
+
+    2026-11-26 09:20:35 (añadir imágenes a tarjetas de terminales)
+    PROMPT:
+    no, disculpa la confusión, ya he visto que funciona correctamente. Ahora lo que quiero es que añadas a cada tarjeta de terminal del listado de terminales su imagen correspondiente.
+
+    SOLUCIÓN:
+    - Se añade a cada tarjeta de terminal la imagen JPG del catálogo Terminales, usando el código como nombre de archivo.
+    - Si la imagen no existe, se muestra el icono alternativo ya usado por la aplicación.
+    - Las listas de cables y manguitos y la vista de tabla no cambian.
+    - Se actualiza VERSION a 0.23.14 y la referencia de caché de JavaScript.
+    ================================================================================
+
+    2026-11-26 09:26:49 (informe de herramientas para terminales)
+    PROMPT:
+    añade a la derecha del texto "Lista de terminales / pines" el icono de las herramientas que ya hemos usado en otros lugares del programa. En este caso, al pulsarlo nos mostrará un informe con todas las herramientas necesarias para poner todos los pines / terminales del informe. En dicho informe aparecerá una foto de la herramienta necesaria con su descripción. El objetivo es tener de una manera rápida la relación de herramientas que se van a necesitar en las líneas de producción.
+
+    SOLUCIÓN:
+    - Se añade el acceso con icono de herramienta junto al título de la lista de terminales/pines.
+    - El informe agrupa las herramientas del catálogo asociadas a los terminales y secciones: pelacables, tenazas, posicionadores, extractores y regulación, con imagen y descripción.
+    - Cada herramienta permite consultar los terminales/secciones que la requieren y el informe advierte de combinaciones sin información completa en el catálogo.
+    - Se actualiza VERSION a 0.23.15 y la referencia de caché de JavaScript.
+    ================================================================================
+
+    2026-11-26 09:39:58 (excluir regulación del informe de herramientas)
+    PROMPT:
+    está muy bien, pero sobra la información de la regulación
+
+    SOLUCIÓN:
+    - Se elimina la regulación de las categorías del informe; se mantienen pelacables, tenazas, posicionadores y extractores.
+    - Se actualiza VERSION a 0.23.16 y la referencia de caché de JavaScript.
+    ================================================================================
+
+    2026-11-26 09:48:30 (orden de herramientas en el informe)
+    PROMPT:
+    quiero que se muestren en orden: pelacables, tenazas, posicionadores, extractores...
+
+    SOLUCIÓN:
+    - Se mantiene el orden de las categorías definido para el informe: pelacables, tenazas, posicionadores y extractores.
+    - Dentro de cada categoría, las herramientas continúan ordenadas por nombre de imagen.
+    - Se actualiza VERSION a 0.23.17 y la referencia de caché de JavaScript.
+    ================================================================================
+
+    2026-11-26 09:51:29 (separar informe por tipo de herramienta)
+    PROMPT:
+    crea apartados independientes para tipo de herramienta.
+
+    SOLUCIÓN:
+    - Se agrupan las tarjetas en apartados independientes por categoría de herramienta, manteniendo el orden establecido.
+    - Se actualiza VERSION a 0.23.18 y la referencia de caché de JavaScript.
+    ================================================================================
+
+    2026-11-26 09:56:01 (mostrar miniaturas de terminales en el resumen de herramientas)
+    PROMPT:
+    en el desplegable de la herramienta requerida que te muestra un resumen de los terminales / pines quier que se muestre también su imagen. La imagen será pequeña acorte al texto
+
+    SOLUCIÓN:
+    - Se añade una miniatura del terminal o pin junto a cada código en el resumen desplegable de cada herramienta.
+    - Las miniaturas usan el código del terminal para resolver la imagen y se ocultan si no existe el archivo.
+    - Se actualiza VERSION a 0.23.19 y la referencia de caché de JavaScript.
+    ================================================================================
+
+    2026-11-26 09:59:57 (actualizar la ayuda con las últimas mejoras)
+    PROMPT:
+    Actualiza la ayuda con las últimas mejoras.
+
+    SOLUCIÓN:
+    - Se actualiza la ayuda de la lista de terminales para indicar que muestra descripción e imagen.
+    - Se documenta el informe de herramientas, sus categorías y orden, y las miniaturas de terminales/pines en el detalle desplegable.
+    - Se actualiza VERSION a 0.23.20 y la referencia de caché de JavaScript.
+    ================================================================================
